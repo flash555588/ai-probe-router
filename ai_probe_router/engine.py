@@ -31,6 +31,7 @@ from .models.probe import ProbeRequirement, ProbeStyle
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.pin_mapper import solve_mapping
 from .solvers.placement_solver import find_placement, place_pogo_array
+from .verification.manufacturing_report import generate_manufacturing_report
 from .verification.pin_report import PinMapReport
 from .verification.report import CoverageReport, NetCoverage
 
@@ -92,6 +93,9 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     coverage.write(report_path)
     if pin_report is not None:
         pin_report.write(out_dir / "pin_mapping_report.txt")
+
+    mfg_report = generate_manufacturing_report(board, coverage)
+    mfg_report.write(out_dir / "manufacturing_report.txt")
 
     return coverage, pin_report
 
