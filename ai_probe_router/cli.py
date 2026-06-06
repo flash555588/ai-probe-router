@@ -9,7 +9,10 @@ from rich.console import Console
 from rich.table import Table
 
 from .config import load_config
+from .eda_adapters.kicad.pcb_parser import parse_pcb
+from .eda_adapters.kicad.pcb_writer import write_pcb
 from .engine import run
+from .routing.ses_import import import_ses
 
 console = Console()
 
@@ -146,6 +149,21 @@ def inspect_sch(sch_file: str):
     console.print(f"\nComponents: {len(sch.components)}")
     console.print(f"Net labels: {len(sch.labels)}")
     console.print(f"Wires: {len(sch.wires)}")
+
+
+@main.command()
+@click.argument("pcb_file", type=click.Path(exists=True))
+@click.argument("ses_file", type=click.Path(exists=True))
+def route(pcb_file: str, ses_file: str):
+    """Import FreeRouting SES result into a KiCad PCB."""
+    board = parse_pcb(pcb_file)
+    import_ses(board, ses_file)
+    out_path = Path(pcb_file).with_suffix(".routed.kicad_pcb")
+    write_pcb(board, out_path)
+    console.print(f"[green]Routed PCB written to:[/] {out_path}")
+    segs = sum(1 for n in board.raw if isinstance(n, list) and n[0] == "segment")
+    vias = sum(1 for n in board.raw if isinstance(n, list) and n[0] == "via")
+    console.print(f"Segments: {segs}, Vias: {vias}")
 
 
 @main.command()
