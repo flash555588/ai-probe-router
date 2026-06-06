@@ -26,6 +26,7 @@ from .eda_adapters.kicad.sch_writer import (
 )
 from .models.board import Board, Schematic
 from .models.dev_board import DevelopmentBoard
+from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.pin_mapper import solve_mapping
@@ -180,9 +181,14 @@ def _run_phase1(
                 else:
                     add_testpoint_symbol(sch, req.net_name, sx, sy, ref=tp_ref)
 
+        review_needed = role in {
+            NetRole.HIGH_SPEED, NetRole.CLOCK, NetRole.ANALOG,
+        } or req.current_ma > 500
+
         report.entries.append(NetCoverage(
             net_name=req.net_name, role=role, required=req.required,
             has_testpoint=placed, probe_x=px, probe_y=py, side=cfg.probe.side,
+            review_required=review_needed,
         ))
         if placed:
             report.covered += 1

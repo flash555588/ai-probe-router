@@ -17,6 +17,7 @@ class NetCoverage:
     probe_x: float = 0.0
     probe_y: float = 0.0
     side: str = "top"
+    review_required: bool = False
 
 
 @dataclass
@@ -67,15 +68,26 @@ class CoverageReport:
             for msg in self.constraint_messages:
                 lines.append(f"    - {msg}")
         lines.append("")
+        review_nets = [e.net_name for e in self.entries if e.review_required]
+        if review_nets:
+            lines.append("  Human review required:")
+            for name in review_nets:
+                lines.append(f"    - {name}")
+            lines.append("")
         lines.append("  Net Details:")
-        lines.append("  " + "-" * 56)
-        lines.append(f"  {'Net':<20} {'Role':<14} {'Req':>3}  {'TP':>3}  {'Location'}")
-        lines.append("  " + "-" * 56)
+        lines.append("  " + "-" * 60)
+        header = (
+            f"  {'Net':<20} {'Role':<14} {'Req':>3}  "
+            f"{'TP':>3}  {'Review':>6}  {'Location'}"
+        )
+        lines.append(header)
+        lines.append("  " + "-" * 60)
         for e in self.entries:
             loc = f"({e.probe_x:.1f}, {e.probe_y:.1f}) {e.side}" if e.has_testpoint else "—"
             tp = "YES" if e.has_testpoint else "NO"
             req = "YES" if e.required else "no"
-            lines.append(f"  {e.net_name:<20} {e.role.name:<14} {req:>3}  {tp:>3}  {loc}")
+            rev = "YES" if e.review_required else "no"
+            lines.append(f"  {e.net_name:<20} {e.role.name:<14} {req:>3}  {tp:>3}  {rev:>6}  {loc}")
         lines.append("")
         lines.append("=" * 60)
         return "\n".join(lines)

@@ -56,12 +56,14 @@ def generate(config_file: str, project_dir: str):
     table.add_column("Role", style="green")
     table.add_column("Required")
     table.add_column("Testpoint")
+    table.add_column("Review")
     table.add_column("Location")
     for e in report.entries:
         tp = "[green]YES[/]" if e.has_testpoint else "[red]NO[/]"
         req = "YES" if e.required else "no"
+        rev = "[yellow]YES[/]" if e.review_required else "no"
         loc = f"({e.probe_x:.1f}, {e.probe_y:.1f}) {e.side}" if e.has_testpoint else "—"
-        table.add_row(e.net_name, e.role.name, req, tp, loc)
+        table.add_row(e.net_name, e.role.name, req, tp, rev, loc)
     console.print(table)
     console.print()
     console.print(f"Coverage: {report.coverage_pct:.0f}% "
