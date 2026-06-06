@@ -149,3 +149,45 @@ def test_no_pin_reuse():
     assert result.ok
     pin_indices = [a.pin_index for a in result.assignments]
     assert len(pin_indices) == len(set(pin_indices))
+
+
+def test_differential_pair_mapping():
+    board = _make_dev_board()
+    # Add adjacent pins with USB capability
+    board.pins.extend([
+        DevBoardPin(name="PA11", capabilities=["GPIO", "USB_DP"]),
+        DevBoardPin(name="PA12", capabilities=["GPIO", "USB_DM"]),
+    ])
+    reqs = [
+        ProbeRequirement(
+            net_name="USB_DP", role="high_speed", required=True,
+            pair_net_name="USB_DM",
+        ),
+        ProbeRequirement(
+            net_name="USB_DM", role="high_speed", required=True,
+            pair_net_name="USB_DP",
+        ),
+    ]
+    result = solve_mapping(reqs, board)
+    assert result.ok
+    assert len(result.assignments) == 2
+    idxs = [a.pin_index for a in result.assignments]
+    # PA11 and PA12 should be adjacent (indices 8 and 9)
+    assert abs(idxs[0] - idxs[1]) == 1
+
+
+def test_differential_pair_fallback_when_no_adjacent():
+    board = _make_dev_board()
+    reqs = [
+        ProbeRequirement(
+            net_name="USB_DP", role="high_speed", required=True,
+            pair_net_name="USB_DM",
+        ),
+        ProbeRequirement(
+            net_name="USB_DM", role="high_speed", required=True,
+            pair_net_name="USB_DP",
+        ),
+    ]
+    result = solve_mapping(reqs, board)
+    # Board has no USB pins, so both should fail as required
+    assert not result.ok

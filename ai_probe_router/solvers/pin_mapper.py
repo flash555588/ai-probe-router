@@ -64,14 +64,30 @@ def solve_mapping(
 ) -> MappingResult:
     result = MappingResult()
     used_pins: set[int] = set()
+    pair_map = _build_pair_map(requirements)
+    processed: set[str] = set()
 
     sorted_reqs = _sort_requirements(requirements)
 
     for req in sorted_reqs:
+        if req.net_name in processed:
+            continue
+
+        pair_req = pair_map.get(req.net_name)
+        if pair_req is not None and pair_req.net_name not in processed:
+            # Try to assign differential pair to adjacent pins
+            pair_result = _assign_differential_pair(
+                board, req, pair_req, used_pins, result,
+            )
+            if pair_result:
+                processed.add(req.net_name)
+                processed.add(pair_req.net_name)
+                continue
+            # Fallback to individual assignment if pair assignment fails
+
         needed_caps = _role_to_capabilities(req.role, req.net_name)
         candidates = _find_candidates(board, needed_caps, req, used_pins)
 
-        # Prefer user-specified pins first
         preferred = [c for c in candidates if c.pin.name in req.preferred_devboard_pins]
         if preferred:
             candidates = preferred
@@ -82,32 +98,13 @@ def solve_mapping(
                     f"No pin found for required net '{req.net_name}' (role={req.role})"
                 )
             result.unmapped.append(req)
+            processed.add(req.net_name)
             continue
 
-        # Pick best candidate (highest score = most specific match)
         best = max(candidates, key=lambda c: c.score)
         used_pins.add(best.index)
-
-        count = max(req.duplicate_probe_count, 1)
-        for i in range(count):
-            if i == 0:
-                result.assignments.append(PinAssignment(
-                    net_name=req.net_name,
-                    pin_name=best.pin.name,
-                    pin_index=best.index,
-                    score=best.score,
-                ))
-            else:
-                # For duplicates (e.g. multiple GND), find next best unused ground pin
-                extra = _find_next_ground_or_duplicate(board, used_pins, req)
-                if extra:
-                    used_pins.add(extra.index)
-                    result.assignments.append(PinAssignment(
-                        net_name=req.net_name,
-                        pin_name=extra.pin.name,
-                        pin_index=extra.index,
-                        score=extra.score,
-                    ))
+        _add_assignments(result, board, used_pins, req, best)
+        processed.add(req.net_name)
 
     return result
 
@@ -117,6 +114,100 @@ class _Candidate:
     pin: DevBoardPin
     index: int
     score: float
+
+
+def _build_pair_map(reqs: list[ProbeRequirement]) -> dict[str, ProbeRequirement]:
+    pair_map: dict[str, ProbeRequirement] = {}
+    for req in reqs:
+        if req.pair_net_name:
+            pair_map[req.net_name] = next(
+                (r for r in reqs if r.net_name == req.pair_net_name), None,
+            )
+    return {k: v for k, v in pair_map.items() if v is not None}
+
+
+def _is_adjacent(idx1: int, idx2: int, pins_per_row: int = 20) -> bool:
+    """Return True if two pin indices are adjacent on the connector."""
+    if idx1 == idx2:
+        return False
+    row1, col1 = divmod(idx1, pins_per_row)
+    row2, col2 = divmod(idx2, pins_per_row)
+    # Same row, adjacent columns
+    if row1 == row2 and abs(col1 - col2) == 1:
+        return True
+    # Same column, adjacent rows
+    if col1 == col2 and abs(row1 - row2) == 1:
+        return True
+    return False
+
+
+def _assign_differential_pair(
+    board: DevelopmentBoard,
+    req_a: ProbeRequirement,
+    req_b: ProbeRequirement,
+    used_pins: set[int],
+    result: MappingResult,
+) -> bool:
+    """Try to assign a differential pair to adjacent pins.
+
+    Returns True if successful.
+    """
+    caps_a = _role_to_capabilities(req_a.role, req_a.net_name)
+    caps_b = _role_to_capabilities(req_b.role, req_b.net_name)
+
+    cands_a = _find_candidates(board, caps_a, req_a, used_pins)
+    if not cands_a:
+        return False
+
+    for cand_a in sorted(cands_a, key=lambda c: c.score, reverse=True):
+        # Look for adjacent pin for req_b
+        cands_b = _find_candidates(board, caps_b, req_b, used_pins | {cand_a.index})
+        for cand_b in cands_b:
+            if _is_adjacent(cand_a.index, cand_b.index):
+                used_pins.add(cand_a.index)
+                used_pins.add(cand_b.index)
+                result.assignments.append(PinAssignment(
+                    net_name=req_a.net_name,
+                    pin_name=cand_a.pin.name,
+                    pin_index=cand_a.index,
+                    score=cand_a.score,
+                ))
+                result.assignments.append(PinAssignment(
+                    net_name=req_b.net_name,
+                    pin_name=cand_b.pin.name,
+                    pin_index=cand_b.index,
+                    score=cand_b.score,
+                ))
+                return True
+    return False
+
+
+def _add_assignments(
+    result: MappingResult,
+    board: DevelopmentBoard,
+    used_pins: set[int],
+    req: ProbeRequirement,
+    best: _Candidate,
+) -> None:
+    count = max(req.duplicate_probe_count, 1)
+    for i in range(count):
+        if i == 0:
+            result.assignments.append(PinAssignment(
+                net_name=req.net_name,
+                pin_name=best.pin.name,
+                pin_index=best.index,
+                score=best.score,
+            ))
+        else:
+            extra = _find_next_ground_or_duplicate(board, used_pins, req)
+            if extra:
+                used_pins.add(extra.index)
+                result.assignments.append(PinAssignment(
+                    net_name=req.net_name,
+                    pin_name=extra.pin.name,
+                    pin_index=extra.index,
+                    score=extra.score,
+                ))
 
 
 def _sort_requirements(reqs: list[ProbeRequirement]) -> list[ProbeRequirement]:
@@ -187,6 +278,12 @@ def _role_to_capabilities(role: str, net_name: str) -> set[str]:
     if role_lc in ("analog",):
         caps.add("ADC1")
         caps.add("GPIO")
+    if role_lc in ("high_speed",):
+        if "usb" in net_lc:
+            caps.add("USB_DP")
+            caps.add("USB_DM")
+        if "eth" in net_lc:
+            caps.add("ETH")
     if role_lc in ("gpio",):
         caps.add("GPIO")
 

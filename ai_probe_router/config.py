@@ -63,6 +63,7 @@ def load_config(path: str | Path) -> ProjectConfig:
             preferred_devboard_pins=net_entry.get("preferred_devboard_pins", []),
             duplicate_probe_count=net_entry.get("duplicate_probe_count", 1),
             current_ma=net_entry.get("current_ma", 0),
+            pair_net_name=net_entry.get("pair_with", ""),
         ))
     rr = raw.get("routing_rules", {})
     cfg.constraints.routing = RoutingRules(

@@ -18,6 +18,7 @@ class ProbeRequirement:
     preferred_devboard_pins: list[str] = field(default_factory=list)
     duplicate_probe_count: int = 1
     current_ma: float = 0.0
+    pair_net_name: str = ""
 
 
 @dataclass
