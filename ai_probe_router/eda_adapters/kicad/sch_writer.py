@@ -8,7 +8,7 @@ from pathlib import Path
 from ...models.board import Schematic
 from ...models.protection import ProtectionComponent, ProtectionType
 from ...solvers.pin_mapper import PinAssignment
-from ..kicad.sexpr import serialize
+from ..kicad.sexpr import QuotedStr, serialize
 
 _TESTPOINT_LIB_SYMBOL = [
     "symbol", "Connector:TestPoint",
@@ -25,8 +25,8 @@ _TESTPOINT_LIB_SYMBOL = [
      ["pin", "passive", "line",
       ["at", "0", "0", "90"],
       ["length", "0"],
-      ["name", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]],
-      ["number", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
+      ["name", QuotedStr("1"), ["effects", ["font", ["size", "1.27", "1.27"]]]],
+      ["number", QuotedStr("1"), ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
 ]
 
 _RESISTOR_LIB_SYMBOL = [
@@ -45,12 +45,12 @@ _RESISTOR_LIB_SYMBOL = [
       ["at", "0", "3.81", "270"],
       ["length", "1.27"],
       ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
-      ["number", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]]],
+      ["number", QuotedStr("1"), ["effects", ["font", ["size", "1.27", "1.27"]]]]],
      ["pin", "passive", "line",
       ["at", "0", "-3.81", "90"],
       ["length", "1.27"],
       ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
-      ["number", "2", ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
+      ["number", QuotedStr("2"), ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
 ]
 
 _FERRITE_LIB_SYMBOL = [
@@ -77,14 +77,49 @@ _FERRITE_LIB_SYMBOL = [
       ["at", "0", "3.81", "270"],
       ["length", "1.27"],
       ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
-      ["number", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]]],
+      ["number", QuotedStr("1"), ["effects", ["font", ["size", "1.27", "1.27"]]]]],
      ["pin", "passive", "line",
       ["at", "0", "-3.81", "90"],
       ["length", "1.27"],
       ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
-      ["number", "2", ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
+      ["number", QuotedStr("2"), ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
 ]
 
+
+def _make_probe_fields(
+    x: float,
+    y: float,
+    role: str = "",
+    required: bool = False,
+    current_ma: float = 0.0,
+    side: str = "top",
+) -> list[list]:
+    """Return KiCad property nodes for probe metadata fields."""
+    fields: list[list] = []
+    offset = 2.54
+    if role:
+        fields.append(
+            ["property", "PROBE_ROLE", role,
+             ["at", str(x + offset), str(y - offset), "0"],
+             ["effects", ["font", ["size", "1.27", "1.27"]]]]
+        )
+    fields.append(
+        ["property", "TEST_REQUIRED", "yes" if required else "no",
+         ["at", str(x + offset), str(y - offset - 1.27), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]]
+    )
+    if current_ma > 0:
+        fields.append(
+            ["property", "CURRENT_LIMIT", f"{current_ma}mA",
+             ["at", str(x + offset), str(y - offset - 2.54), "0"],
+             ["effects", ["font", ["size", "1.27", "1.27"]]]]
+        )
+    fields.append(
+        ["property", "ACCESS_SIDE", side,
+         ["at", str(x + offset), str(y - offset - 3.81), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]]
+    )
+    return fields
 
 def add_testpoint_symbol(
     sch: Schematic,
@@ -93,6 +128,10 @@ def add_testpoint_symbol(
     y: float,
     *,
     ref: str = "TP?",
+    role: str = "",
+    required: bool = False,
+    current_ma: float = 0.0,
+    side: str = "top",
 ) -> None:
     _ensure_lib_symbol(sch)
     uid = str(_uuid.uuid4())
@@ -112,8 +151,9 @@ def add_testpoint_symbol(
         ["property", "Value", f"TP_{net_name}",
          ["at", str(x + 1.27), str(y + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["pin", "1", ["uuid", str(_uuid.uuid4())]],
+        ["pin", QuotedStr("1"), ["uuid", str(_uuid.uuid4())]],
     ]
+    symbol_node[8:8] = _make_probe_fields(x, y, role, required, current_ma, side)
     label_uid = str(_uuid.uuid4())
     label_node = [
         "label", net_name,
@@ -141,6 +181,10 @@ def add_protected_testpoint_symbol(
     *,
     tp_ref: str = "TP?",
     prot_ref: str = "R?",
+    role: str = "",
+    required: bool = False,
+    current_ma: float = 0.0,
+    side: str = "top",
 ) -> None:
     """Place protection component in series between net and testpoint.
 
@@ -179,11 +223,11 @@ def add_protected_testpoint_symbol(
         ["property", "Reference", prot_ref,
          ["at", str(prot_x + 1.27), str(prot_y), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["property", "Value", protection.value,
+        ["property", "Value", QuotedStr(protection.value),
          ["at", str(prot_x + 1.27), str(prot_y + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["pin", "1", ["uuid", str(_uuid.uuid4())]],
-        ["pin", "2", ["uuid", str(_uuid.uuid4())]],
+        ["pin", QuotedStr("1"), ["uuid", str(_uuid.uuid4())]],
+        ["pin", QuotedStr("2"), ["uuid", str(_uuid.uuid4())]],
     ]
     sch.raw.append(prot_node)
 
@@ -205,8 +249,9 @@ def add_protected_testpoint_symbol(
         ["property", "Value", f"TP_{net_name}",
          ["at", str(x + 1.27), str(y + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["pin", "1", ["uuid", str(_uuid.uuid4())]],
     ]
+    tp_node[-1:-1] = _make_probe_fields(x, y, role, required, current_ma, side)
+    tp_node.append(["pin", QuotedStr("1"), ["uuid", str(_uuid.uuid4())]])
     sch.raw.append(tp_node)
 
     # Wire: net label down to protection pin 1
@@ -288,7 +333,7 @@ def add_connector_symbol(
     for a in assignments:
         pin_uid = str(_uuid.uuid4())
         symbol_node.append(
-            ["pin", str(a.pin_index + 1), ["uuid", pin_uid]]
+            ["pin", QuotedStr(str(a.pin_index + 1)), ["uuid", pin_uid]]
         )
 
     sch.raw.append(symbol_node)
@@ -386,5 +431,5 @@ def _ensure_generic_lib_symbol(
 
 
 def write_schematic(sch: Schematic, path: str | Path) -> None:
-    text = serialize(sch.raw)
+    text = serialize(sch.raw) + "\n"
     Path(path).write_text(text, encoding="utf-8")

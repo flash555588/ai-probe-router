@@ -35,8 +35,7 @@ def _extract_components(tree: list) -> list[Component]:
 
 def _parse_component(node: list) -> Component | None:
     lib_id = _find_str(node, "lib_id", "")
-    if lib_id.startswith("power:"):
-        pass
+    is_power = lib_id.startswith("power:")
     at = _find_list(node, "at")
     x, y, rot = 0.0, 0.0, 0.0
     if at and len(at) >= 3:
@@ -44,6 +43,7 @@ def _parse_component(node: list) -> Component | None:
         if len(at) >= 4:
             rot = float(at[3])
     uuid = _find_str(node, "uuid", "")
+    dnp = _find_str(node, "dnp", "no") == "yes"
     props = {}
     ref = ""
     value = ""
@@ -62,6 +62,7 @@ def _parse_component(node: list) -> Component | None:
         ref=ref, value=value, lib_id=lib_id,
         x=x, y=y, rotation=rot,
         pins=pins, properties=props, uuid=uuid,
+        dnp=dnp, is_power_symbol=is_power,
     )
 
 

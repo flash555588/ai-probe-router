@@ -109,13 +109,21 @@ def _check_component_collision(
             fp_bounds.max_x + pad_radius,
             fp_bounds.max_y + pad_radius,
         )
-        if expanded.contains(x, y):
-            result.add(Violation(
-                rule="component_collision",
-                message=f"Probe at ({x:.2f}, {y:.2f}) overlaps with {fp.ref} ({fp.value})",
-                x=x, y=y,
-            ))
-            break
+        if not expanded.contains(x, y):
+            continue
+        # Fine-grained per-pad check using bounding-circle approximation
+        for pad in fp.pads:
+            half_diag = math.hypot(pad.width, pad.height) / 2
+            if half_diag <= 0:
+                continue
+            dist = math.hypot(x - pad.x, y - pad.y)
+            if dist < half_diag + pad_radius:
+                result.add(Violation(
+                    rule="component_collision",
+                    message=f"Probe at ({x:.2f}, {y:.2f}) overlaps with {fp.ref} pad {pad.number}",
+                    x=x, y=y,
+                ))
+                return
 
 
 def _check_probe_spacing(

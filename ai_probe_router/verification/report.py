@@ -35,6 +35,7 @@ class CoverageReport:
     constraint_ok: bool | None = None
     constraint_violations: int = 0
     constraint_messages: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
     @property
     def coverage_pct(self) -> float:
@@ -44,9 +45,9 @@ class CoverageReport:
 
     def summary_text(self) -> str:
         lines = [
-            "=" * 60,
+            "=" * 72,
             "  AI Probe Router — Testpoint Coverage Report",
-            "=" * 60,
+            "=" * 72,
             "",
             f"  Requested nets:   {self.total_nets_requested}",
             f"  Covered:          {self.covered}",
@@ -77,7 +78,7 @@ class CoverageReport:
                 lines.append(f"    - {name}")
             lines.append("")
         lines.append("  Net Details:")
-        lines.append("  " + "-" * 60)
+        lines.append("  " + "-" * 72)
         header = (
             f"  {'Net':<20} {'Role':<14} {'Req':>3}  "
             f"{'TP':>3}  {'Review':>6}  {'Trace':>5}  {'Clr':>4}  {'Location'}"

@@ -68,3 +68,52 @@ def test_load_sample_config(tmp_path):
     assert len(cfg.nets_to_expose) == 9
     assert cfg.nets_to_expose[0].net_name == "SWDIO"
     assert cfg.probe.pad_diameter_mm == 1.5
+
+
+def test_load_config_missing_dev_board_raises(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+
+development_board:
+  pin_database: nonexistent.yaml
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+    try:
+        load_config(cfg_path)
+    except ValueError as exc:
+        assert "nonexistent.yaml" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for missing dev board database")
+
+
+def test_load_config_empty_nets_raises(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+
+nets_to_expose: []
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+    try:
+        load_config(cfg_path)
+    except ValueError as exc:
+        assert "nets_to_expose" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for empty nets_to_expose")

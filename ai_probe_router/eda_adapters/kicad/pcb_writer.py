@@ -8,7 +8,7 @@ from pathlib import Path
 from ...models.board import Board
 from ...models.protection import ProtectionComponent
 from ...solvers.pin_mapper import PinAssignment
-from ..kicad.sexpr import serialize
+from ..kicad.sexpr import QuotedStr, serialize
 
 
 def add_testpoint_footprint(
@@ -47,7 +47,7 @@ def add_testpoint_footprint(
          ["at", str(x), str(y + 2), "0"],
          ["layer", fab],
          ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
-        ["pad", "1", "smd", "circle",
+        ["pad", QuotedStr("1"), "smd", "circle",
          ["at", "0", "0"],
          ["size", str(pad_diameter), str(pad_diameter)],
          ["layers", layer, mask],
@@ -110,17 +110,17 @@ def add_protection_footprint(
          ["at", "0", str(-1.5), "0"],
          ["layer", silk],
          ["effects", ["font", ["size", "0.8", "0.8"], ["thickness", "0.12"]]]],
-        ["property", "Value", protection.value,
+        ["property", "Value", QuotedStr(protection.value),
          ["at", "0", str(1.5), "0"],
          ["layer", fab],
          ["effects", ["font", ["size", "0.8", "0.8"], ["thickness", "0.12"]]]],
-        ["pad", "1", "smd", "roundrect",
+        ["pad", QuotedStr("1"), "smd", "roundrect",
          ["at", str(-half_span), "0"],
          ["size", str(pw), str(ph)],
          ["layers", layer, mask],
          ["roundrect_rratio", "0.25"],
          ["net", str(src_net_id), src_net_name]],
-        ["pad", "2", "smd", "roundrect",
+        ["pad", QuotedStr("2"), "smd", "roundrect",
          ["at", str(half_span), "0"],
          ["size", str(pw), str(ph)],
          ["layers", layer, mask],
@@ -169,7 +169,7 @@ def add_connector_footprint(
 
     # Generate pads for each assigned pin
     for a in assignments:
-        pad_num = str(a.pin_index + 1)
+        pad_num = QuotedStr(str(a.pin_index + 1))
         row = a.pin_index // pins_per_row
         col = a.pin_index % pins_per_row
         px = col * pitch
@@ -201,7 +201,7 @@ def add_connector_footprint(
         px = col * pitch
         py = row * pitch
         pad_node = [
-            "pad", str(i + 1), "thru_hole", "circle",
+            "pad", QuotedStr(str(i + 1)), "thru_hole", "circle",
             ["at", str(px), str(py)],
             ["size", "1.7", "1.7"],
             ["drill", "1.0"],
@@ -283,7 +283,7 @@ def add_fiducial_footprint(
          ["at", str(x), str(y + 2), "0"],
          ["layer", "F.Fab"],
          ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
-        ["pad", "", "smd", "circle",
+        ["pad", QuotedStr(""), "smd", "circle",
          ["at", "0", "0"],
          ["size", str(diameter_mm), str(diameter_mm)],
          ["layers", "F.Cu", "F.Mask"],
@@ -316,7 +316,7 @@ def add_tooling_hole_footprint(
          ["at", str(x), str(y + 2), "0"],
          ["layer", "F.Fab"],
          ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
-        ["pad", "", "np_thru_hole", "circle",
+        ["pad", QuotedStr(""), "np_thru_hole", "circle",
          ["at", "0", "0"],
          ["size", str(size_mm), str(size_mm)],
          ["drill", str(drill_mm)],
@@ -325,6 +325,50 @@ def add_tooling_hole_footprint(
     board.raw.append(fp_node)
 
 
+def add_net_class(
+    board: Board,
+    name: str,
+    description: str = "",
+    *,
+    clearance: float = 0.15,
+    trace_width: float = 0.15,
+    via_dia: float = 0.8,
+    via_drill: float = 0.4,
+    uvia_dia: float = 0.3,
+    uvia_drill: float = 0.1,
+    diff_pair_width: float | None = None,
+    diff_pair_gap: float | None = None,
+) -> None:
+    """Insert or update a net_class at root level (KiCad 10 compatible)."""
+    class_node = [
+        "net_class", QuotedStr(name), QuotedStr(description),
+        ["clearance", str(clearance)],
+        ["trace_width", str(trace_width)],
+        ["via_dia", str(via_dia)],
+        ["via_drill", str(via_drill)],
+        ["uvia_dia", str(uvia_dia)],
+        ["uvia_drill", str(uvia_drill)],
+    ]
+    if diff_pair_width is not None:
+        class_node.append(["diff_pair_width", str(diff_pair_width)])
+    if diff_pair_gap is not None:
+        class_node.append(["diff_pair_gap", str(diff_pair_gap)])
+
+    # Remove existing net_class with same name from root level
+    board.raw[:] = [
+        n for n in board.raw
+        if not (isinstance(n, list) and len(n) > 1 and n[0] == "net_class" and n[1] == name)
+    ]
+
+    # Insert after last net node (or after setup/layers)
+    insert_at = 2
+    for i, node in enumerate(board.raw):
+        if isinstance(node, list) and len(node) > 0 and node[0] in (
+            "general", "paper", "layers", "setup", "net",
+        ):
+            insert_at = i + 1
+    board.raw.insert(insert_at, class_node)
+
 def write_pcb(board: Board, path: str | Path) -> None:
-    text = serialize(board.raw)
+    text = serialize(board.raw) + "\n"
     Path(path).write_text(text, encoding="utf-8")

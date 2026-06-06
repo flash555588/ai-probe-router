@@ -6,6 +6,11 @@ This module handles tokenizing, parsing into nested Python lists, and serializin
 
 from __future__ import annotations
 
+
+class QuotedStr(str):
+    """A string that was originally quoted in the source file."""
+
+
 SExpr = str | list["SExpr"]
 
 
@@ -17,14 +22,14 @@ def parse(text: str) -> SExpr:
 
 def serialize(expr: SExpr, indent: int = 0) -> str:
     if isinstance(expr, str):
-        if _needs_quoting(expr):
+        if isinstance(expr, QuotedStr) or _needs_quoting(expr):
             return '"' + expr.replace("\\", "\\\\").replace('"', '\\"') + '"'
         return expr
     parts: list[str] = []
     if not expr:
         return "()"
     tag = expr[0] if isinstance(expr[0], str) else None
-    compact = tag in _COMPACT_TAGS or len(expr) <= 3 and all(isinstance(e, str) for e in expr)
+    compact = tag in _COMPACT_TAGS or all(isinstance(e, str) for e in expr)
     if compact:
         inner = " ".join(serialize(e, 0) for e in expr)
         return f"({inner})"
@@ -54,10 +59,17 @@ _COMPACT_TAGS = frozenset({
 def _needs_quoting(s: str) -> bool:
     if not s:
         return True
-    for c in s:
-        if c in ' \t\n\r()"\\':
-            return True
-    return False
+    # Numbers (int/float/negative) don't need quoting
+    try:
+        float(s)
+        return False
+    except ValueError:
+        pass
+    # Lowercase keywords (letters, digits, underscores) don't need quoting
+    if s[0].islower() and all(c.islower() or c.isdigit() or c == '_' for c in s):
+        return False
+    # Everything else needs quoting (uppercase, dots, colons, hyphens, etc.)
+    return True
 
 
 def _tokenize(text: str) -> list[str]:
@@ -114,5 +126,5 @@ def _read(tokens: list[str], pos: int) -> tuple[SExpr, int]:
     if tok == ")":
         raise ValueError("Unexpected ')'")
     if tok.startswith("\x00"):
-        return tok[1:], pos + 1
+        return QuotedStr(tok[1:]), pos + 1
     return tok, pos + 1

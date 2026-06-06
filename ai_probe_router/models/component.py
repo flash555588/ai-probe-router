@@ -24,3 +24,5 @@ class Component:
     pins: list[Pin] = field(default_factory=list)
     properties: dict[str, str] = field(default_factory=dict)
     uuid: str = ""
+    dnp: bool = False
+    is_power_symbol: bool = False

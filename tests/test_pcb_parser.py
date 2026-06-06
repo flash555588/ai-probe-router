@@ -96,6 +96,51 @@ def test_non_edge_cuts_ignored(tmp_path):
     assert len(board.edges) == 0
 
 
+PCB_WITH_GR_ARC = """\
+(kicad_pcb
+  (version 20240108)
+  (generator "test")
+  (layers (0 "F.Cu" signal) (44 "Edge.Cuts" user))
+  (net 0 "")
+  (gr_arc (start 0 0) (mid 10 10) (end 20 0) (layer "Edge.Cuts") (width 0.1))
+)
+"""
+
+PCB_WITH_GR_POLY = """\
+(kicad_pcb
+  (version 20240108)
+  (generator "test")
+  (layers (0 "F.Cu" signal) (44 "Edge.Cuts" user))
+  (net 0 "")
+  (gr_poly
+    (pts (xy 0 0) (xy 50 0) (xy 50 50) (xy 0 50))
+    (layer "Edge.Cuts")
+    (uuid "poly-001"))
+)
+"""
+
+
+def test_gr_arc_parsed_as_edges(tmp_path):
+    pcb_file = tmp_path / "arc.kicad_pcb"
+    pcb_file.write_text(PCB_WITH_GR_ARC)
+    board = parse_pcb(pcb_file)
+    assert len(board.edges) >= 8
+    bounds = board.board_bounds()
+    assert bounds is not None
+    assert bounds.max_x > 15
+
+
+def test_gr_poly_parsed_as_edges(tmp_path):
+    pcb_file = tmp_path / "poly.kicad_pcb"
+    pcb_file.write_text(PCB_WITH_GR_POLY)
+    board = parse_pcb(pcb_file)
+    assert len(board.edges) == 4
+    bounds = board.board_bounds()
+    assert bounds is not None
+    assert bounds.width == 50
+    assert bounds.height == 50
+
+
 def test_minimal_project_pcb():
     pcb_file = Path(__file__).parent.parent / "examples" / "minimal_project" / "main.kicad_pcb"
     if not pcb_file.exists():

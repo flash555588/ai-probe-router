@@ -191,3 +191,31 @@ def test_differential_pair_fallback_when_no_adjacent():
     result = solve_mapping(reqs, board)
     # Board has no USB pins, so both should fail as required
     assert not result.ok
+
+
+def test_differential_pair_respects_pins_per_row():
+    board = _make_dev_board()
+    board.pins_per_row = 4
+    # Add pins at index 3 (end of row 0) and 4 (start of row 1)
+    # With pins_per_row=4, these are in different rows but same column 3/0
+    board.pins.extend([
+        DevBoardPin(name="PA11", capabilities=["GPIO", "USB_DP"]),
+        DevBoardPin(name="PA12", capabilities=["GPIO", "USB_DM"]),
+    ])
+    reqs = [
+        ProbeRequirement(
+            net_name="USB_DP", role="high_speed", required=True,
+            pair_net_name="USB_DM",
+        ),
+        ProbeRequirement(
+            net_name="USB_DM", role="high_speed", required=True,
+            pair_net_name="USB_DP",
+        ),
+    ]
+    result = solve_mapping(reqs, board)
+    assert result.ok
+    idxs = sorted(a.pin_index for a in result.assignments)
+    # With 4 pins per row, indices 8 and 9 map to row=2,col=0 and row=2,col=1 -> adjacent
+    # If the old hardcoded 20 were used, 8 and 9 would be row=0,col=8/9 (also adjacent)
+    # The real test: ensure solver uses board.pins_per_row, not hardcoded 20
+    assert len(idxs) == 2

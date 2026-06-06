@@ -69,9 +69,9 @@ def _write_library(lines: list[str], board: Board) -> None:
         if not fp.pads:
             continue
         lines.append(f'    (image "{fp.lib_id}"')
-        # Simple rectangular outline around pads
-        px = [p.x for p in fp.pads]
-        py = [p.y for p in fp.pads]
+        # Simple rectangular outline around pads (relative to footprint origin)
+        px = [p.local_x for p in fp.pads]
+        py = [p.local_y for p in fp.pads]
         if px and py:
             min_x, max_x = min(px), max(px)
             min_y, max_y = min(py), max(py)
@@ -88,7 +88,7 @@ def _write_library(lines: list[str], board: Board) -> None:
             lines.append(f'      (outline (path signal 0 {c_str}))')
         for pad in fp.pads:
             lines.append(
-                f'      (pin "{pad.number}" {_um(pad.x)} {_um(pad.y)})'
+                f'      (pin "{pad.number}" {_um(pad.local_x)} {_um(pad.local_y)})'
             )
         lines.append("    )")
     lines.append("  )")

@@ -17,6 +17,8 @@ class Pad:
     net_name: str = ""
     net_id: int = 0
     layers: list[str] = field(default_factory=list)
+    local_x: float = 0.0
+    local_y: float = 0.0
 
 
 @dataclass

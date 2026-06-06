@@ -55,7 +55,10 @@ def load_config(path: str | Path) -> ProjectConfig:
         require_fiducials=pi.get("require_fiducials", False),
         require_tooling_holes=pi.get("require_tooling_holes", False),
     )
-    for net_entry in raw.get("nets_to_expose", []):
+    nets_to_expose = raw.get("nets_to_expose", [])
+    if not nets_to_expose:
+        raise ValueError("Configuration must specify at least one net in 'nets_to_expose'")
+    for net_entry in nets_to_expose:
         cfg.nets_to_expose.append(ProbeRequirement(
             net_name=net_entry.get("net", ""),
             role=net_entry.get("role", "digital"),
@@ -87,6 +90,10 @@ def load_config(path: str | Path) -> ProjectConfig:
         resolved = Path(path).parent / db_path
         if resolved.exists():
             cfg.development_board = load_dev_board(resolved)
+        else:
+            raise ValueError(
+                f"Development board pin database not found: {resolved}"
+            )
 
     prot = raw.get("protection", {})
     if prot:

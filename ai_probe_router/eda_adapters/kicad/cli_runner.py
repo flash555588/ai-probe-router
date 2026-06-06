@@ -23,6 +23,7 @@ def find_kicad_cli() -> str | None:
         if path:
             return path
     candidates = [
+        Path("C:/Program Files/KiCad/10.0/bin/kicad-cli.exe"),
         Path("C:/Program Files/KiCad/9.0/bin/kicad-cli.exe"),
         Path("C:/Program Files/KiCad/8.0/bin/kicad-cli.exe"),
         Path("/usr/bin/kicad-cli"),
@@ -60,7 +61,7 @@ def run_drc(pcb_path: str | Path, output_dir: str | Path | None = None) -> Check
 def _run(cmd: list[str], report_path: Path) -> CheckResult:
     try:
         proc = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=120,
+            cmd, capture_output=True, text=True, encoding="utf-8", timeout=120,
         )
     except FileNotFoundError:
         return CheckResult(ok=None, error=f"Command not found: {cmd[0]}")
@@ -68,17 +69,31 @@ def _run(cmd: list[str], report_path: Path) -> CheckResult:
         return CheckResult(ok=None, error="kicad-cli timed out")
 
     violations: list[dict] = []
+    report_loaded = False
     if report_path.exists():
         try:
             data = json.loads(report_path.read_text(encoding="utf-8"))
             violations = data.get("violations", data.get("errors", []))
+            report_loaded = True
         except (json.JSONDecodeError, KeyError):
             pass
 
-    ok = proc.returncode == 0 and len(violations) == 0
+    stdout = proc.stdout or ""
+    stderr = proc.stderr or ""
+
+    if report_loaded:
+        ok = len(violations) == 0
+        error = ""
+    elif proc.returncode == 0:
+        ok = True
+        error = ""
+    else:
+        ok = False
+        error = stderr.strip() or f"kicad-cli exited with code {proc.returncode}"
+
     return CheckResult(
         ok=ok,
         violations=violations,
-        raw_output=proc.stdout + proc.stderr,
-        error="" if ok else proc.stderr.strip(),
+        raw_output=stdout + stderr,
+        error=error,
     )

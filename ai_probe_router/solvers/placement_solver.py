@@ -30,7 +30,7 @@ def find_placement(
     constraints: Constraints,
     existing_probes: list[tuple[float, float]],
     index: int = 0,
-) -> tuple[float, float]:
+) -> tuple[float, float] | None:
     pads = board.find_pads_by_net(req.net_name)
     target_positions = [(p.x, p.y) for _, p in pads]
 
@@ -50,12 +50,8 @@ def find_placement(
     if best is not None and best.valid:
         return best.x, best.y
 
-    # Fallback: if no fully valid candidate, pick the best one anyway
-    if best is not None:
-        return best.x, best.y
-
-    grid = probe_cfg.preferred_grid_mm
-    return _snap(10.0 + index * grid, grid), _snap(10.0, grid)
+    # No valid candidate found; caller decides fallback behavior
+    return None
 
 
 def _generate_candidates(

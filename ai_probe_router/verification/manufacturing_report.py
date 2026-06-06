@@ -87,7 +87,12 @@ def generate_manufacturing_report(
 
         for node in board.raw:
             if isinstance(node, list) and node[0] == "zone":
-                report.keepout_zone_count += 1
+                # Count only keepout zones, not copper pours
+                if any(
+                    isinstance(child, list) and child[0] == "keepout"
+                    for child in node[1:]
+                ):
+                    report.keepout_zone_count += 1
 
     class_counts: dict[str, int] = {}
     for e in coverage.entries:

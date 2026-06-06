@@ -19,4 +19,5 @@ class DevelopmentBoard:
     name: str
     connector_type: str = "dual_row_header"
     pitch_mm: float = 2.54
+    pins_per_row: int = 20
     pins: list[DevBoardPin] = field(default_factory=list)

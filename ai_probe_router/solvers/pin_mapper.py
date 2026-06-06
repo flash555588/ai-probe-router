@@ -44,6 +44,7 @@ def load_dev_board(path: str | Path) -> DevelopmentBoard:
         name=b.get("name", "unknown"),
         connector_type=conn.get("type", "dual_row_header"),
         pitch_mm=conn.get("pitch_mm", 2.54),
+        pins_per_row=conn.get("pins_per_row", 20),
     )
     for p in b.get("pins", []):
         board.pins.append(DevBoardPin(
@@ -126,9 +127,11 @@ def _build_pair_map(reqs: list[ProbeRequirement]) -> dict[str, ProbeRequirement]
     return {k: v for k, v in pair_map.items() if v is not None}
 
 
-def _is_adjacent(idx1: int, idx2: int, pins_per_row: int = 20) -> bool:
+def _is_adjacent(idx1: int, idx2: int, pins_per_row: int) -> bool:
     """Return True if two pin indices are adjacent on the connector."""
     if idx1 == idx2:
+        return False
+    if pins_per_row <= 0:
         return False
     row1, col1 = divmod(idx1, pins_per_row)
     row2, col2 = divmod(idx2, pins_per_row)
@@ -163,7 +166,7 @@ def _assign_differential_pair(
         # Look for adjacent pin for req_b
         cands_b = _find_candidates(board, caps_b, req_b, used_pins | {cand_a.index})
         for cand_b in cands_b:
-            if _is_adjacent(cand_a.index, cand_b.index):
+            if _is_adjacent(cand_a.index, cand_b.index, board.pins_per_row):
                 used_pins.add(cand_a.index)
                 used_pins.add(cand_b.index)
                 result.assignments.append(PinAssignment(

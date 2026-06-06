@@ -52,3 +52,44 @@ def test_ses_import_layer_mapping(tmp_path):
     seg = [n for n in board.raw if n[0] == "segment"][0]
     layer_node = [c for c in seg if c[0] == "layer"][0]
     assert layer_node[1] == "B.Cu"
+
+
+def test_ses_import_multi_path_wire(tmp_path):
+    board = _make_board()
+    ses = '''(session "test"
+  (route
+    (net "SIG"
+      (wire
+        (path TOP 150 0 0 10000 0)
+        (path TOP 150 10000 0 20000 0)
+      )
+    )
+  )
+)'''
+    path = tmp_path / "test.ses"
+    path.write_text(ses, encoding="utf-8")
+    import_ses(board, path)
+    segs = [n for n in board.raw if isinstance(n, list) and n[0] == "segment"]
+    assert len(segs) == 2
+
+
+def test_ses_import_via_reordered_attrs(tmp_path):
+    board = _make_board()
+    ses = '''(session "test"
+  (route
+    (net "SIG"
+      (via (via_via TOP BOTTOM) (xy 30000 40000))
+    )
+  )
+)'''
+    path = tmp_path / "test.ses"
+    path.write_text(ses, encoding="utf-8")
+    import_ses(board, path)
+    vias = [n for n in board.raw if isinstance(n, list) and n[0] == "via"]
+    assert len(vias) == 1
+    at = [c for c in vias[0] if c[0] == "at"][0]
+    assert at[1] == "30.0"
+    assert at[2] == "40.0"
+    layers = [c for c in vias[0] if c[0] == "layers"][0]
+    assert "F.Cu" in layers
+    assert "B.Cu" in layers

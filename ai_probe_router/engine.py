@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .ai.net_classifier import classify_net
+from .ai.rule_generator import generate_rules
 from .config import ProjectConfig
 from .eda_adapters.kicad.cli_runner import run_drc, run_erc
 from .eda_adapters.kicad.pcb_parser import parse_pcb
@@ -12,6 +13,7 @@ from .eda_adapters.kicad.pcb_writer import (
     add_connector_footprint,
     add_fiducial_footprint,
     add_keepout_zone,
+    add_net_class,
     add_protection_footprint,
     add_testpoint_footprint,
     add_tooling_hole_footprint,
@@ -29,6 +31,7 @@ from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
 from .routing.dsn_export import export_dsn
+from .routing.freerouting_bridge import route_board as run_freerouting_route
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.pin_mapper import solve_mapping
 from .solvers.placement_solver import find_placement, place_pogo_array
@@ -45,9 +48,9 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     board: Board | None = None
     sch: Schematic | None = None
 
-    if pcb_path.exists():
+    if cfg.board_file and pcb_path.is_file():
         board = parse_pcb(pcb_path)
-    if sch_path.exists():
+    if cfg.schematic_file and sch_path.is_file():
         sch = parse_schematic(sch_path)
 
     pin_report: PinMapReport | None = None
@@ -72,6 +75,21 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             coverage.constraint_violations = len(validation.violations)
             coverage.constraint_ok = validation.ok
             coverage.constraint_messages = [v.message for v in validation.violations]
+
+        # Write net classes from generated rules
+        net_names = [e.net_name for e in coverage.entries]
+        roles = {n: classify_net(n) for n in net_names}
+        rules = generate_rules(roles, cfg.nets_to_expose)
+        for r in rules.net_rules:
+            add_net_class(
+                board,
+                name=f"NET_{r.net_name}",
+                description=r.role.name.lower(),
+                clearance=r.clearance_mm,
+                trace_width=r.trace_width_mm,
+                diff_pair_width=r.trace_width_mm if r.differential_pair else None,
+                diff_pair_gap=0.15 if r.differential_pair else None,
+            )
 
         out_pcb = out_dir / pcb_path.name
         write_pcb(board, out_pcb)
@@ -99,7 +117,18 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     mfg_report.write(out_dir / "manufacturing_report.txt")
 
     if board is not None:
-        export_dsn(board, out_dir / "routing.dsn")
+        dsn_path = out_dir / "routing.dsn"
+        export_dsn(board, dsn_path)
+        # Attempt auto-routing via FreeRouting (best-effort)
+        route_result = run_freerouting_route(board, dsn_path, out_dir, timeout_sec=60)
+        if route_result.ok:
+            coverage.notes.append(
+                f"Auto-routed in {route_result.duration_sec:.1f}s"
+            )
+        else:
+            coverage.notes.append(
+                f"Auto-route skipped: {route_result.error}"
+            )
 
     return coverage, pin_report
 
@@ -137,12 +166,16 @@ def _run_phase1(
             if board is not None:
                 if is_pogo and pos_index < len(pogo_positions):
                     x, y = pogo_positions[pos_index]
+                    pos_index += 1
                 else:
-                    x, y = find_placement(
+                    placement = find_placement(
                         board, req, cfg.probe, cfg.constraints,
                         placed_probes, index=i,
                     )
-                pos_index += 1
+                    if placement is None:
+                        continue
+                    x, y = placement
+                    pos_index += 1
                 px, py = x, y
 
                 if protection is not None:
@@ -177,17 +210,29 @@ def _run_phase1(
                     board, x, y, keepout_size, keepout_size,
                 )
 
-            if sch is not None and i == 0:
+            if sch is not None:
                 sx, sy = _find_sch_placement(sch, req, cfg)
+                # Offset duplicate schematic symbols vertically to avoid overlap
+                sy += i * 5.08
                 if protection is not None:
                     prot_sch_ref = f"{protection.ref_prefix}{prot_counter - 1}"
                     add_protected_testpoint_symbol(
                         sch, req.net_name, sx, sy,
                         protection,
                         tp_ref=tp_ref, prot_ref=prot_sch_ref,
+                        role=role.name.lower(),
+                        required=req.required,
+                        current_ma=req.current_ma,
+                        side=cfg.probe.side,
                     )
                 else:
-                    add_testpoint_symbol(sch, req.net_name, sx, sy, ref=tp_ref)
+                    add_testpoint_symbol(
+                        sch, req.net_name, sx, sy, ref=tp_ref,
+                        role=role.name.lower(),
+                        required=req.required,
+                        current_ma=req.current_ma,
+                        side=cfg.probe.side,
+                    )
 
         review_needed = role in {
             NetRole.HIGH_SPEED, NetRole.CLOCK, NetRole.ANALOG,
@@ -222,21 +267,24 @@ def _place_fiducials_and_tooling(board: Board, cfg: ProjectConfig) -> None:
     fid_offset = max(edge, 3.0)
 
     if cfg.probe.require_fiducials:
+        # Clamp offset so positions stay inside the board and don't cross
+        clamped_fid = min(fid_offset, bounds.width / 4, bounds.height / 4)
         # Three fiducials: bottom-left, bottom-right, top-left
         fid_positions = [
-            (bounds.min_x + fid_offset, bounds.min_y + fid_offset),
-            (bounds.max_x - fid_offset, bounds.min_y + fid_offset),
-            (bounds.min_x + fid_offset, bounds.max_y - fid_offset),
+            (bounds.min_x + clamped_fid, bounds.min_y + clamped_fid),
+            (bounds.max_x - clamped_fid, bounds.min_y + clamped_fid),
+            (bounds.min_x + clamped_fid, bounds.max_y - clamped_fid),
         ]
         for i, (fx, fy) in enumerate(fid_positions, start=1):
             add_fiducial_footprint(board, fx, fy, ref=f"FID{i}")
 
     if cfg.probe.require_tooling_holes:
-        # Two tooling holes along bottom edge, spaced from corners
         th_offset = max(edge, 5.0)
+        clamped_th = min(th_offset, bounds.width / 4, bounds.height / 4)
+        # Two tooling holes along bottom edge, spaced from corners
         th_positions = [
-            (bounds.min_x + th_offset, bounds.min_y + th_offset),
-            (bounds.max_x - th_offset, bounds.min_y + th_offset),
+            (bounds.min_x + clamped_th, bounds.min_y + clamped_th),
+            (bounds.max_x - clamped_th, bounds.min_y + clamped_th),
         ]
         for i, (tx, ty) in enumerate(th_positions, start=1):
             add_tooling_hole_footprint(board, tx, ty, ref=f"TH{i}")
@@ -264,20 +312,30 @@ def _run_phase2(
                 pins_per_row=20,
             )
         if board is not None:
+            bounds = board.board_bounds()
+            if bounds:
+                # Place connector to the right of the board, aligned vertically
+                conn_w = 20 * dev_board.pitch_mm
+                conn_h = 2 * dev_board.pitch_mm
+                margin = 5.0
+                cx = bounds.max_x + margin
+                cy = (bounds.min_y + bounds.max_y) / 2 - conn_h / 2
+            else:
+                conn_w = 20 * dev_board.pitch_mm
+                conn_h = 2 * dev_board.pitch_mm
+                cx, cy = 150.0, 100.0
             add_connector_footprint(
                 board, result.assignments,
                 ref="J1",
-                x=150.0, y=100.0,
+                x=cx, y=cy,
                 rows=2,
                 pins_per_row=20,
                 pitch=dev_board.pitch_mm,
                 side=cfg.probe.side,
             )
             # Keepout around connector
-            conn_w = 20 * dev_board.pitch_mm
-            conn_h = 2 * dev_board.pitch_mm
             add_keepout_zone(
-                board, 150.0 + conn_w / 2, 100.0 + conn_h / 2,
+                board, cx + conn_w / 2, cy + conn_h / 2,
                 conn_w + 2.0, conn_h + 2.0,
             )
 

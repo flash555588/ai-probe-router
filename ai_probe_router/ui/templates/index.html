@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Probe Router</title>
+<style>
+  :root { --bg:#0f1115; --card:#1a1d23; --text:#e4e6eb; --muted:#9ca3af; --accent:#60a5fa; --danger:#f87171; --ok:#4ade80; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+  .container { max-width:900px; margin:0 auto; padding:2rem 1rem; }
+  h1 { margin:0 0 .5rem; font-size:1.6rem; }
+  .subtitle { color:var(--muted); margin-bottom:1.5rem; }
+  .card { background:var(--card); border:1px solid #2a2e36; border-radius:10px; padding:1.25rem; margin-bottom:1rem; }
+  label { display:block; font-weight:600; margin-bottom:.4rem; font-size:.9rem; }
+  input[type="file"], textarea { width:100%; background:#121418; border:1px solid #2a2e36; color:var(--text); border-radius:6px; padding:.6rem; font-size:.9rem; }
+  textarea { min-height:220px; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; resize:vertical; }
+  .btn { display:inline-block; border:none; background:var(--accent); color:#0b1220; font-weight:700; padding:.6rem 1.2rem; border-radius:6px; cursor:pointer; font-size:.95rem; text-decoration:none; }
+  .btn:hover { opacity:.9; }
+  .hint { color:var(--muted); font-size:.8rem; margin-top:.35rem; }
+  .files { display:grid; gap:.6rem; }
+  .file-row { display:flex; align-items:center; gap:.6rem; }
+  .file-row input { flex:1; }
+  .results { margin-top:1rem; }
+  .result-item { display:flex; align-items:center; justify-content:space-between; padding:.6rem .8rem; background:#121418; border:1px solid #2a2e36; border-radius:6px; margin-bottom:.5rem; }
+  .badge { font-size:.75rem; font-weight:700; padding:.15rem .5rem; border-radius:999px; background:#374151; color:#e5e7eb; }
+  .badge.ok { background:#14532d; color:var(--ok); }
+  .badge.warn { background:#451a03; color:#fbbf24; }
+  pre { background:#121418; border:1px solid #2a2e36; border-radius:6px; padding:.8rem; overflow:auto; font-size:.82rem; color:var(--muted); }
+  .hidden { display:none; }
+  .spinner { display:inline-block; width:1rem;height:1rem;border:2px solid rgba(255,255,255,.2);border-top-color:var(--text);border-radius:50%;animation:spin 1s linear infinite; vertical-align:middle; margin-left:.5rem; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AI Probe Router</h1>
+  <p class="subtitle">Upload a KiCad project, configure nets, and generate testpoint + dev-board interface designs automatically.</p>
+
+  <form id="uploadForm" enctype="multipart/form-data">
+    <div class="card">
+      <label>Project files</label>
+      <div class="files">
+        <div class="file-row"><input type="file" name="pcb" accept=".kicad_pcb" required></div>
+        <div class="file-row"><input type="file" name="sch" accept=".kicad_sch"></div>
+      </div>
+      <p class="hint">Required: .kicad_pcb. Optional: .kicad_sch.</p>
+    </div>
+
+    <div class="card">
+      <label>Configuration (YAML)</label>
+      <textarea id="configYaml" name="config">project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+  require_fiducials: true
+  require_tooling_holes: true
+
+nets_to_expose:
+  - net: GND
+    role: ground
+    required: true
+  - net: 3V3
+    role: power
+    required: true
+</textarea>
+      <p class="hint">Edit nets_to_expose to control which signals get testpoints.</p>
+    </div>
+
+    <button type="submit" class="btn">Generate<span id="spinner" class="spinner hidden"></span></button>
+  </form>
+
+  <div id="output" class="hidden">
+    <div class="card">
+      <label>Results</label>
+      <div id="resultList" class="results"></div>
+      <pre id="reportText"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('uploadForm');
+  const spinner = document.getElementById('spinner');
+  const output = document.getElementById('output');
+  const resultList = document.getElementById('resultList');
+  const reportText = document.getElementById('reportText');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    spinner.classList.remove('hidden');
+    output.classList.add('hidden');
+    resultList.innerHTML = '';
+    reportText.textContent = '';
+
+    const fd = new FormData(form);
+    const yamlText = document.getElementById('configYaml').value;
+    fd.set('config', new Blob([yamlText], {type:'text/yaml'}), 'config.yaml');
+
+    try {
+      const res = await fetch('/generate', { method:'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        reportText.textContent = data.detail || 'Unknown error';
+        output.classList.remove('hidden');
+        return;
+      }
+
+      output.classList.remove('hidden');
+      data.files.forEach(f => {
+        const row = document.createElement('div');
+        row.className = 'result-item';
+        const b64 = f.content;
+        const mime = f.name.endsWith('.yaml') ? 'text/yaml' : (f.name.endsWith('.txt') ? 'text/plain' : 'application/octet-stream');
+        const href = 'data:' + mime + ';base64,' + b64;
+        row.innerHTML = `<span>${f.name} <span class="badge">${f.size}</span></span><a class="btn" href="${href}" download="${f.name}">Download</a>`;
+        resultList.appendChild(row);
+      });
+      if (data.report) {
+        reportText.textContent = data.report;
+      }
+    } catch (err) {
+      output.classList.remove('hidden');
+      reportText.textContent = String(err);
+    } finally {
+      spinner.classList.add('hidden');
+    }
+  });
+</script>
+</body>
+</html>

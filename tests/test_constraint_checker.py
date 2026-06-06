@@ -57,8 +57,8 @@ def test_board_edge_clearance():
 
 def test_component_collision():
     board = _make_board()
-    # (97, 96) is within U1's footprint bounds (pads at 95..100, 95..96.5 + margin)
-    result = check_placement(97, 96, board, Constraints(), ProbeConfig())
+    # (95, 96.5) is directly on pad 1 of U1
+    result = check_placement(95, 96.5, board, Constraints(), ProbeConfig())
     assert not result.ok
     assert any(v.rule == "component_collision" for v in result.violations)
 
@@ -123,3 +123,29 @@ def test_testpoint_not_checked_for_collision():
     )
     result = check_placement(110, 110, board, Constraints(), ProbeConfig())
     assert result.ok
+
+
+def test_rotated_pad_collision_detected():
+    # A 10x1 mm pad rotated 45 degrees at (100, 100)
+    # Pad local corners at (-5, -0.5) and (5, 0.5); rotated and translated
+    # Pad center is at (100, 100)
+    fp = Footprint(
+        ref="U2", value="Rotated", x=100, y=100, rotation=45,
+        pads=[
+            Pad(number="1", x=100, y=100, width=10.0, height=1.0, net_name="NET"),
+        ],
+    )
+    board = Board(
+        footprints=[fp],
+        nets={"NET": 1},
+        edges=[
+            EdgeSegment(50, 50, 150, 50),
+            EdgeSegment(150, 50, 150, 150),
+            EdgeSegment(150, 150, 50, 150),
+            EdgeSegment(50, 150, 50, 50),
+        ],
+    )
+    # Probe at (103, 103) is close to the rotated pad corner
+    result = check_placement(103, 103, board, Constraints(), ProbeConfig(pad_diameter_mm=1.0))
+    assert not result.ok
+    assert any(v.rule == "component_collision" for v in result.violations)
