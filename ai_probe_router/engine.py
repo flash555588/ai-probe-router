@@ -10,8 +10,10 @@ from .eda_adapters.kicad.cli_runner import run_drc, run_erc
 from .eda_adapters.kicad.pcb_parser import parse_pcb
 from .eda_adapters.kicad.pcb_writer import (
     add_connector_footprint,
+    add_fiducial_footprint,
     add_protection_footprint,
     add_testpoint_footprint,
+    add_tooling_hole_footprint,
     write_pcb,
 )
 from .eda_adapters.kicad.sch_parser import parse_schematic
@@ -166,7 +168,39 @@ def _run_phase1(
         else:
             report.missing += 1
 
+    if board is not None:
+        _place_fiducials_and_tooling(board, cfg)
+
     return report
+
+
+def _place_fiducials_and_tooling(board: Board, cfg: ProjectConfig) -> None:
+    bounds = board.board_bounds()
+    if bounds is None:
+        return
+
+    edge = cfg.constraints.placement.min_distance_from_board_edge_mm
+    fid_offset = max(edge, 3.0)
+
+    if cfg.probe.require_fiducials:
+        # Three fiducials: bottom-left, bottom-right, top-left
+        fid_positions = [
+            (bounds.min_x + fid_offset, bounds.min_y + fid_offset),
+            (bounds.max_x - fid_offset, bounds.min_y + fid_offset),
+            (bounds.min_x + fid_offset, bounds.max_y - fid_offset),
+        ]
+        for i, (fx, fy) in enumerate(fid_positions, start=1):
+            add_fiducial_footprint(board, fx, fy, ref=f"FID{i}")
+
+    if cfg.probe.require_tooling_holes:
+        # Two tooling holes along bottom edge, spaced from corners
+        th_offset = max(edge, 5.0)
+        th_positions = [
+            (bounds.min_x + th_offset, bounds.min_y + th_offset),
+            (bounds.max_x - th_offset, bounds.min_y + th_offset),
+        ]
+        for i, (tx, ty) in enumerate(th_positions, start=1):
+            add_tooling_hole_footprint(board, tx, ty, ref=f"TH{i}")
 
 
 def _run_phase2(

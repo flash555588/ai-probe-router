@@ -10,8 +10,8 @@ probe_interface:
   min_probe_spacing_mm: 2.54
   preferred_grid_mm: 2.54
   require_silkscreen_labels: true
-  require_fiducials: false
-  require_tooling_holes: false
+  require_fiducials: true
+  require_tooling_holes: true
 
 nets_to_expose:
   - net: SWDIO

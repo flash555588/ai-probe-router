@@ -212,6 +212,75 @@ def add_connector_footprint(
     board.raw.append(fp_node)
 
 
+def add_fiducial_footprint(
+    board: Board,
+    x: float,
+    y: float,
+    *,
+    ref: str = "FID?",
+    diameter_mm: float = 1.0,
+    mask_diameter_mm: float = 2.0,
+) -> None:
+    """Place a fiducial marker (copper circle with larger mask opening)."""
+    uid = str(_uuid.uuid4())
+    fp_name = "Fiducial:Fiducial_{:.1f}mm_Mask{:.1f}mm".format(
+        diameter_mm, mask_diameter_mm,
+    )
+    fp_node = [
+        "footprint", fp_name,
+        ["layer", "F.Cu"],
+        ["uuid", uid],
+        ["at", str(x), str(y)],
+        ["property", "Reference", ref,
+         ["at", str(x), str(y - 2), "0"],
+         ["layer", "F.SilkS"],
+         ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
+        ["property", "Value", f"FID_{ref}",
+         ["at", str(x), str(y + 2), "0"],
+         ["layer", "F.Fab"],
+         ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
+        ["pad", "", "smd", "circle",
+         ["at", "0", "0"],
+         ["size", str(diameter_mm), str(diameter_mm)],
+         ["layers", "F.Cu", "F.Mask"],
+         ["solder_mask_margin", str((mask_diameter_mm - diameter_mm) / 2)]],
+    ]
+    board.raw.append(fp_node)
+
+
+def add_tooling_hole_footprint(
+    board: Board,
+    x: float,
+    y: float,
+    *,
+    ref: str = "TH?",
+    drill_mm: float = 3.2,
+    size_mm: float = 3.2,
+) -> None:
+    """Place a non-plated tooling/mounting hole."""
+    uid = str(_uuid.uuid4())
+    fp_node = [
+        "footprint", f"MountingHole:MountingHole_{drill_mm}mm",
+        ["layer", "Edge.Cuts"],
+        ["uuid", uid],
+        ["at", str(x), str(y)],
+        ["property", "Reference", ref,
+         ["at", str(x), str(y - 2), "0"],
+         ["layer", "F.SilkS"],
+         ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
+        ["property", "Value", f"MOUNT_{ref}",
+         ["at", str(x), str(y + 2), "0"],
+         ["layer", "F.Fab"],
+         ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
+        ["pad", "", "np_thru_hole", "circle",
+         ["at", "0", "0"],
+         ["size", str(size_mm), str(size_mm)],
+         ["drill", str(drill_mm)],
+         ["layers", "*.Cu", "*.Mask"]],
+    ]
+    board.raw.append(fp_node)
+
+
 def write_pcb(board: Board, path: str | Path) -> None:
     text = serialize(board.raw)
     Path(path).write_text(text, encoding="utf-8")
