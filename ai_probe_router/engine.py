@@ -25,10 +25,10 @@ from .eda_adapters.kicad.sch_writer import (
 )
 from .models.board import Board, Schematic
 from .models.dev_board import DevelopmentBoard
-from .models.probe import ProbeRequirement
+from .models.probe import ProbeRequirement, ProbeStyle
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.pin_mapper import solve_mapping
-from .solvers.placement_solver import find_placement
+from .solvers.placement_solver import find_placement, place_pogo_array
 from .verification.pin_report import PinMapReport
 from .verification.report import CoverageReport, NetCoverage
 
@@ -104,6 +104,15 @@ def _run_phase1(
     prot_counter = _next_prot_ref(board)
     placed_probes: list[tuple[float, float]] = []
 
+    is_pogo = cfg.probe.style == ProbeStyle.POGO_PAD
+    pogo_positions: list[tuple[float, float]] = []
+    if is_pogo and board is not None:
+        expanded_reqs = _expand_reqs(cfg.nets_to_expose)
+        pogo_positions = place_pogo_array(
+            board, expanded_reqs, cfg.probe, cfg.constraints,
+        )
+
+    pos_index = 0
     for req in cfg.nets_to_expose:
         role = classify_net(req.net_name)
         count = max(req.duplicate_probe_count, 1)
@@ -116,10 +125,14 @@ def _run_phase1(
             tp_counter += 1
 
             if board is not None:
-                x, y = find_placement(
-                    board, req, cfg.probe, cfg.constraints,
-                    placed_probes, index=i,
-                )
+                if is_pogo and pos_index < len(pogo_positions):
+                    x, y = pogo_positions[pos_index]
+                else:
+                    x, y = find_placement(
+                        board, req, cfg.probe, cfg.constraints,
+                        placed_probes, index=i,
+                    )
+                pos_index += 1
                 px, py = x, y
 
                 if protection is not None:
@@ -236,6 +249,15 @@ def _run_phase2(
             )
 
     return pin_report
+
+
+def _expand_reqs(reqs: list[ProbeRequirement]) -> list[ProbeRequirement]:
+    result: list[ProbeRequirement] = []
+    for req in reqs:
+        count = max(req.duplicate_probe_count, 1)
+        for _ in range(count):
+            result.append(req)
+    return result
 
 
 def _next_tp_ref(board: Board | None) -> int:

@@ -3,7 +3,7 @@
 from ai_probe_router.models.board import Board, EdgeSegment, Footprint, Pad
 from ai_probe_router.models.constraints import Constraints
 from ai_probe_router.models.probe import ProbeConfig, ProbeRequirement
-from ai_probe_router.solvers.placement_solver import find_placement
+from ai_probe_router.solvers.placement_solver import find_placement, place_pogo_array
 
 
 def _make_board() -> Board:
@@ -99,3 +99,38 @@ def test_multiple_placements_spread():
     for i in range(len(placed)):
         for j in range(i + 1, len(placed)):
             assert placed[i] != placed[j]
+
+
+def test_pogo_array_positions():
+    board = _make_board()
+    reqs = [
+        ProbeRequirement(net_name="A", role="debug"),
+        ProbeRequirement(net_name="B", role="debug"),
+        ProbeRequirement(net_name="C", role="debug"),
+    ]
+    probe = ProbeConfig(
+        style=ProbeConfig().style, preferred_grid_mm=2.54,
+    )
+    positions = place_pogo_array(board, reqs, probe, Constraints())
+    assert len(positions) == 3
+    # Should be aligned to grid
+    for x, y in positions:
+        assert abs(x - round(x / 2.54) * 2.54) < 0.01
+        assert abs(y - round(y / 2.54) * 2.54) < 0.01
+
+
+def test_pogo_array_inside_board():
+    board = _make_board()
+    reqs = [ProbeRequirement(net_name="A", role="debug") for _ in range(4)]
+    positions = place_pogo_array(board, reqs, ProbeConfig(), Constraints())
+    bounds = board.board_bounds()
+    for x, y in positions:
+        assert bounds.contains(x, y)
+
+
+def test_pogo_array_no_board_fallback():
+    board = Board(footprints=[], nets={}, edges=[])
+    reqs = [ProbeRequirement(net_name="A", role="debug") for _ in range(2)]
+    positions = place_pogo_array(board, reqs, ProbeConfig(), Constraints())
+    assert len(positions) == 2
+    assert positions[0] != positions[1]

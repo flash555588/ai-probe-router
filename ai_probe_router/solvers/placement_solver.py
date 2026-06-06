@@ -121,3 +121,39 @@ def _snap(val: float, grid: float) -> float:
     if grid <= 0:
         return val
     return round(val / grid) * grid
+
+
+def place_pogo_array(
+    board: Board,
+    reqs: list[ProbeRequirement],
+    probe_cfg: ProbeConfig,
+    constraints: Constraints,
+) -> list[tuple[float, float]]:
+    """Place all probe pads in a centralized grid array.
+
+    Returns a list of (x, y) positions aligned to probe_cfg.preferred_grid_mm.
+    The array is placed along the bottom edge of the board, inset from edges.
+    """
+    bounds = board.board_bounds()
+    if bounds is None:
+        grid = probe_cfg.preferred_grid_mm
+        return [(_snap(10.0 + i * grid, grid), _snap(10.0, grid)) for i in range(len(reqs))]
+
+    grid = probe_cfg.preferred_grid_mm
+    edge = constraints.placement.min_distance_from_board_edge_mm
+    margin = max(edge, 3.0)
+
+    # Place array along bottom edge, left-aligned with margin
+    start_x = _snap(bounds.min_x + margin, grid)
+    start_y = _snap(bounds.min_y + margin, grid)
+
+    positions: list[tuple[float, float]] = []
+    cols = max(1, int((bounds.width - 2 * margin) // grid))
+    for i in range(len(reqs)):
+        col = i % cols
+        row = i // cols
+        x = start_x + col * grid
+        y = start_y + row * grid
+        positions.append((x, y))
+
+    return positions
