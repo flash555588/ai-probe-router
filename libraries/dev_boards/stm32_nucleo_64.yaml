@@ -1,0 +1,114 @@
+board:
+  name: stm32_nucleo_64
+  connector:
+    type: dual_row_header
+    pitch_mm: 2.54
+    rows: 2
+    pins_per_row: 20
+  pins:
+    # CN5 Arduino compatible header (top rows) + CN6 (bottom)
+    - name: D0_PA3
+      capabilities: [GPIO, USART2_RX, ADC1_IN3, TIM2_CH4]
+      current_ma: 25
+    - name: D1_PA2
+      capabilities: [GPIO, USART2_TX, ADC1_IN2, TIM2_CH3]
+      current_ma: 25
+    - name: D2_PA10
+      capabilities: [GPIO, USART1_RX, TIM1_CH3]
+      current_ma: 25
+    - name: D3_PB3
+      capabilities: [GPIO, SPI1_SCK, TIM2_CH2, I2C2_SDA]
+      current_ma: 25
+    - name: D4_PB5
+      capabilities: [GPIO, SPI1_MOSI, TIM3_CH2, I2C1_SMBA]
+      current_ma: 25
+    - name: D5_PB4
+      capabilities: [GPIO, SPI1_MISO, TIM3_CH1]
+      current_ma: 25
+    - name: D6_PB10
+      capabilities: [GPIO, USART3_TX, I2C2_SCL, TIM2_CH3]
+      current_ma: 25
+    - name: D7_PA8
+      capabilities: [GPIO, USART1_CK, TIM1_CH1, USB_SOF]
+      current_ma: 25
+    - name: D8_PA9
+      capabilities: [GPIO, USART1_TX, TIM1_CH2, USB_VBUS]
+      current_ma: 25
+    - name: D9_PC7
+      capabilities: [GPIO, TIM3_CH2, TIM8_CH2]
+      current_ma: 25
+    - name: D10_PB6
+      capabilities: [GPIO, USART1_TX, I2C1_SCL, TIM4_CH1]
+      current_ma: 25
+    - name: D11_PA7
+      capabilities: [GPIO, SPI1_MOSI, ADC1_IN7, TIM3_CH2, TIM1_CH1N]
+      current_ma: 25
+    - name: D12_PA6
+      capabilities: [GPIO, SPI1_MISO, ADC1_IN6, TIM3_CH1, TIM1_BKIN]
+      current_ma: 25
+    - name: D13_PA5
+      capabilities: [GPIO, SPI1_SCK, ADC1_IN5, TIM2_CH1]
+      current_ma: 25
+    - name: D14_PB9
+      capabilities: [GPIO, I2C1_SDA, TIM4_CH4, SPI2_NSS]
+      current_ma: 25
+    - name: D15_PB8
+      capabilities: [GPIO, I2C1_SCL, TIM4_CH3, SPI2_SCK]
+      current_ma: 25
+    # Analog
+    - name: A0_PA0
+      capabilities: [GPIO, ADC1_IN0, TIM2_CH1, WKUP]
+      current_ma: 25
+    - name: A1_PA1
+      capabilities: [GPIO, ADC1_IN1, TIM2_CH2]
+      current_ma: 25
+    - name: A2_PA4
+      capabilities: [GPIO, ADC1_IN4, SPI1_NSS, TIM3_CH2]
+      current_ma: 25
+    - name: A3_PB0
+      capabilities: [GPIO, ADC1_IN8, TIM3_CH3]
+      current_ma: 25
+    - name: A4_PC1
+      capabilities: [GPIO, ADC1_IN11, I2C2_SDA]
+      current_ma: 25
+    - name: A5_PC0
+      capabilities: [GPIO, ADC1_IN10, I2C2_SCL]
+      current_ma: 25
+    # Debug pins
+    - name: PA13
+      capabilities: [GPIO, SWDIO, USART3_CTS]
+      current_ma: 25
+      fixed: true
+    - name: PA14
+      capabilities: [GPIO, SWCLK, USART3_RTS]
+      current_ma: 25
+      fixed: true
+    # Power
+    - name: 3V3
+      capabilities: [POWER_3V3]
+      current_ma: 500
+      is_power: true
+    - name: 5V
+      capabilities: [POWER_5V]
+      current_ma: 500
+      is_power: true
+    - name: GND_1
+      capabilities: [GND]
+      current_ma: 1000
+      is_ground: true
+    - name: GND_2
+      capabilities: [GND]
+      current_ma: 1000
+      is_ground: true
+    - name: GND_3
+      capabilities: [GND]
+      current_ma: 1000
+      is_ground: true
+    - name: GND_4
+      capabilities: [GND]
+      current_ma: 1000
+      is_ground: true
+    # Reset
+    - name: NRST
+      capabilities: [NRST, RESET]
+      current_ma: 25

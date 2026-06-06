@@ -1,0 +1,916 @@
+Understood — the solution should be an **EDA-stage design automation system**, not a physical robot. In that case, the project should be framed as:
+
+> **An AI-assisted schematic/layout co-designer that automatically adds probe/test interfaces, maps probe pins to development-board pins, places the required pads/connectors, and routes the PCB under manufacturability, electrical, and mechanical constraints.**
+
+Below is a more appropriate implementation plan.
+
+---
+
+# 1. Target output of the system
+
+The system should produce design artifacts such as:
+
+1. **Updated schematic**
+
+   * Added probe pins, test pads, pogo-pin connector, board-to-board connector, or fixture connector.
+   * Net labels and net ties.
+   * Optional protection/conditioning circuits: series resistors, ESD protection, pull-ups, level shifters, isolation, current sense, muxes.
+
+2. **Updated PCB layout**
+
+   * Probe pads or pogo-pin target pads placed in valid locations.
+   * Development-board headers or sockets placed with correct mechanical footprint.
+   * Routed traces between probe interface and target nets.
+   * Proper clearances, trace widths, via rules, keepouts, test access rules, silkscreen labels, fiducials, and mounting/tooling holes.
+
+3. **Verification reports**
+
+   * ERC report.
+   * DRC report.
+   * Net coverage report.
+   * Testpoint/probe coverage report.
+   * Pin-mapping report.
+   * Manufacturing output readiness report.
+
+A practical first implementation should target **KiCad**, because its schematic and PCB files are structured text formats, its PCB editor has Python scripting support, and its CLI can automate operations on schematics and PCBs. KiCad 9 documentation confirms CLI automation for schematics, PCBs, symbols, and footprints, while its PCB editor supports DRC, custom design rules, interactive routing, and exports such as Gerber, IPC-2581, ODB++, STEP, and others. ([KiCad 文档][1])
+
+---
+
+# 2. Recommended system architecture
+
+## A. EDA integration layer
+
+Start with a **KiCad plugin plus backend solver**.
+
+### KiCad-side plugin
+
+The plugin should:
+
+* Read the active schematic and PCB.
+* Let the user define probe requirements.
+* Display proposed pin mappings.
+* Insert generated symbols/footprints.
+* Place probe pads/connectors.
+* Run ERC/DRC checks.
+* Export routing jobs or invoke the routing backend.
+
+KiCad’s PCB editor supports Python action plugins, which are discovered by the PCB editor at startup, making it suitable for this kind of workflow extension. ([KiCad 开发文档][2])
+
+### Backend service
+
+The backend should handle:
+
+* Netlist analysis.
+* Constraint solving.
+* Pin assignment.
+* Placement optimization.
+* Routing orchestration.
+* AI reasoning and rule interpretation.
+* Report generation.
+
+Keep the “AI” outside the critical verification path. The AI may propose mappings and changes, but deterministic rules, DRC/ERC, and explicit constraints should decide whether a result is accepted.
+
+---
+
+# 3. Core data model
+
+Define a normalized internal model independent of the EDA tool.
+
+## Main entities
+
+```text
+Project
+ ├── Schematic
+ │    ├── Components
+ │    ├── Pins
+ │    ├── Nets
+ │    ├── Net classes
+ │    └── Electrical rules
+ │
+ ├── PCB
+ │    ├── Board outline
+ │    ├── Layers
+ │    ├── Footprints
+ │    ├── Pads
+ │    ├── Tracks
+ │    ├── Vias
+ │    ├── Keepouts
+ │    └── Mechanical constraints
+ │
+ ├── ProbeInterface
+ │    ├── Probe pins
+ │    ├── Pogo/test pads
+ │    ├── Connector pinout
+ │    ├── Allowed side: top/bottom
+ │    ├── Pitch
+ │    ├── Pad diameter
+ │    ├── Force/fixture notes
+ │    └── Current/voltage limits
+ │
+ ├── DevelopmentBoard
+ │    ├── Board footprint
+ │    ├── Header locations
+ │    ├── Pin capabilities
+ │    ├── Fixed pins
+ │    ├── Alternate-function pins
+ │    └── Mechanical keepouts
+ │
+ └── Constraints
+      ├── Electrical
+      ├── Routing
+      ├── Mechanical
+      ├── Manufacturing
+      ├── Test-access
+      └── User preferences
+```
+
+KiCad uses s-expression file formats for schematics, PCB boards, symbol libraries, footprint libraries, and related design data, which makes parser-based automation realistic. ([KiCad 开发文档][3])
+
+---
+
+# 4. Input format
+
+Use a project-level YAML or JSON file to describe what the system should generate.
+
+Example:
+
+```yaml
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: pogo_pad_array
+  side: bottom
+  pad_diameter_mm: 1.2
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+  require_fiducials: true
+  require_tooling_holes: true
+
+development_board:
+  name: custom_stm32_dev_board
+  connector:
+    type: dual_row_header
+    pitch_mm: 2.54
+  pin_database: stm32_dev_board_pins.yaml
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA13]
+  - net: SWCLK
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA14]
+  - net: UART_TX
+    role: digital
+    required: true
+    preferred_devboard_pins: [PA9, PB6]
+  - net: UART_RX
+    role: digital
+    required: true
+    preferred_devboard_pins: [PA10, PB7]
+  - net: GND
+    role: ground
+    required: true
+    duplicate_probe_count: 4
+  - net: 3V3
+    role: power
+    required: true
+    current_ma: 300
+
+routing_rules:
+  default_trace_width_mm: 0.15
+  power_trace_width_mm: 0.5
+  min_clearance_mm: 0.15
+  max_vias_per_signal: 2
+  avoid_under_components: true
+
+placement_rules:
+  keep_probe_pads_on_grid: true
+  avoid_tall_components: true
+  min_distance_from_board_edge_mm: 2.0
+  group_by_function: true
+```
+
+This file becomes the contract between the AI layer and the deterministic EDA automation layer.
+
+---
+
+# 5. Schematic-stage automation
+
+The schematic-stage module should do more than simply add wires. It should synthesize a valid interface circuit.
+
+## A. Net discovery
+
+The system should parse the schematic and classify nets:
+
+* Power: `VBUS`, `VIN`, `5V`, `3V3`, `1V8`
+* Ground: `GND`, `AGND`, `PGND`
+* Debug: `SWD`, `JTAG`, `UART`, `RESET`, `BOOT`
+* Communication: `I2C`, `SPI`, `CAN`, `USB`, `Ethernet`
+* Analog: ADC inputs, sensor lines, references
+* High-speed or sensitive nets: clocks, USB D+/D−, differential pairs, RF
+
+## B. Probe interface generation
+
+For each net requiring access, the system decides whether to add:
+
+* A simple test pad.
+* A pogo-pin pad.
+* A connector pin.
+* A protected signal path.
+* A buffered signal path.
+* A level shifter.
+* A muxed connection.
+* A current-limited power path.
+* A net tie.
+* A removable jumper.
+* A series resistor for debug/programming access.
+
+For example:
+
+```text
+MCU_SWDIO ── 33 Ω ── PROBE_SWDIO
+MCU_SWCLK ── 33 Ω ── PROBE_SWCLK
+NRST     ── 100 Ω ── PROBE_NRST
+3V3      ── ferrite/current-limit option ── PROBE_3V3
+GND      ── multiple probe pads
+```
+
+## C. ERC-aware schematic modification
+
+The system must not only draw wires. It should:
+
+* Insert symbols from a controlled library.
+* Assign reference designators.
+* Add net labels.
+* Add no-connect markers where appropriate.
+* Preserve hierarchy.
+* Add fields such as `PROBE_ROLE`, `TEST_REQUIRED`, `CURRENT_LIMIT`, and `ACCESS_SIDE`.
+* Run ERC afterward.
+
+---
+
+# 6. Development-board pin mapping
+
+This is the key “AI-driven connection” problem.
+
+The system should map target nets to available development-board pins using a hybrid method:
+
+1. **LLM/AI layer**
+
+   * Reads pinout tables and datasheets.
+   * Understands user intent.
+   * Suggests possible mappings.
+
+2. **Deterministic solver**
+
+   * Enforces constraints.
+   * Prevents illegal pin use.
+   * Optimizes layout/routing cost.
+   * Produces a repeatable answer.
+
+Use an optimization solver such as OR-Tools CP-SAT, MILP, or a custom bipartite matching solver.
+
+## Example constraints
+
+```text
+SWDIO must connect only to a pin supporting SWDIO.
+SWCLK must connect only to a pin supporting SWCLK.
+UART_TX must connect to a pin with UART TX capability.
+UART_RX must connect to the matching UART RX instance where possible.
+I2C_SCL and I2C_SDA must share the same I2C peripheral instance if applicable.
+Differential pairs must be assigned to adjacent or paired pins.
+Power pins must satisfy current rating.
+Analog nets must avoid noisy digital connector regions.
+Ground must have multiple contacts.
+No two required nets may share the same physical pin unless explicitly allowed.
+```
+
+## Objective function
+
+Minimize:
+
+```text
+weighted_cost =
+    route_length_cost
+  + crossing_cost
+  + via_cost
+  + layer_change_cost
+  + signal_integrity_penalty
+  + connector_pin_conflict_penalty
+  + mechanical_keepout_penalty
+  + user_preference_penalty
+```
+
+This produces a pin mapping that is not only electrically valid but also layout-friendly.
+
+---
+
+# 7. PCB layout-stage automation
+
+## A. Footprint insertion
+
+The system should add or update:
+
+* Probe pad footprints.
+* Pogo-pin landing pads.
+* Testpoint footprints.
+* Development-board socket/header footprints.
+* Mounting holes.
+* Fiducials.
+* Optional alignment holes for a bed-of-nails fixture.
+* Silkscreen labels.
+
+KiCad already has a TestPoint footprint library described as containing test points, measurement points, and probe connection points, so the first prototype can use standard KiCad footprints rather than inventing all footprints from scratch. ([KiCad][4])
+
+## B. Candidate pad placement
+
+For each net, generate candidate probe locations:
+
+1. Existing exposed pad on the same net.
+2. Existing via on the same net, if allowed.
+3. New dedicated test pad connected by a short stub.
+4. New pad connected through resistor/protection path.
+5. Connector pin escape route.
+
+Each candidate should be scored.
+
+### Placement scoring
+
+```text
+score =
+    accessibility_score
+  - routing_distance_penalty
+  - congestion_penalty
+  - component_height_penalty
+  - edge_distance_penalty
+  - bottom_side_penalty_if_top_fixture
+  - signal_integrity_penalty
+  - manufacturing_penalty
+```
+
+For in-circuit assembly testing, access may differ from bare-board fabrication testing because a populated board can block access to component pads or vias under components; Altium’s testpoint documentation explicitly distinguishes fabrication and assembly testpoints for this reason. ([Altium][5])
+
+## C. Probe-field layout
+
+The system should support at least three layouts:
+
+### 1. Distributed test pads
+
+Pads are placed close to their target nets.
+
+Best for:
+
+* Debug access.
+* Small boards.
+* Manual probing.
+* Flying-probe-like access.
+
+### 2. Centralized pogo pad array
+
+Pads are arranged on a grid, usually on one side of the board.
+
+Best for:
+
+* Bed-of-nails fixture.
+* Repeated production test.
+* Cleaner fixture design.
+
+### 3. Connector-based interface
+
+Signals route to a board edge connector or header.
+
+Best for:
+
+* Development boards.
+* Debug adapters.
+* Reusable probe harnesses.
+
+Your system should allow the user to choose one of these modes.
+
+---
+
+# 8. Routing strategy
+
+Do not depend only on a neural network to route the board. Use a hybrid router.
+
+## Recommended approach
+
+```text
+AI planner
+   ↓
+Constraint generator
+   ↓
+EDA-native router / external autorouter
+   ↓
+DRC/ERC feedback
+   ↓
+AI repair loop
+   ↓
+Human approval
+```
+
+## For KiCad prototype
+
+A practical routing path is:
+
+1. Generate/update schematic.
+2. Update PCB from schematic.
+3. Place footprints.
+4. Generate routing constraints.
+5. Export routing job.
+6. Route using an autorouter.
+7. Import the result.
+8. Run DRC.
+9. Score the result.
+10. Iterate if needed.
+
+FreeRouting is a suitable open-source routing engine for an MVP because it imports Specctra/Electra DSN files and exports Specctra session files, and it can be used through GUI, CLI, or API. ([GitHub][6])
+
+## Router design if you build your own
+
+For a custom router, implement it in three layers:
+
+### 1. Global router
+
+Find rough routes and congestion.
+
+Algorithms:
+
+* Rectilinear Steiner tree.
+* A* on coarse grid.
+* Negotiated congestion.
+* Multi-commodity flow approximation.
+
+### 2. Detailed router
+
+Create actual copper geometry.
+
+Algorithms:
+
+* A* or Lee maze routing.
+* Rip-up and reroute.
+* Via-cost optimization.
+* Differential-pair routing mode.
+* Length-matching mode.
+
+### 3. Cleanup router
+
+Improve quality.
+
+Operations:
+
+* Remove unnecessary jogs.
+* Reduce vias.
+* Widen power traces.
+* Add teardrops if desired.
+* Smooth trace exits.
+* Refill zones.
+* Re-run DRC.
+
+---
+
+# 9. Constraint engine
+
+The constraint engine is the heart of the system.
+
+## Electrical constraints
+
+Examples:
+
+```text
+GND:
+  duplicate_probe_count: 4
+  allow_shared_contacts: true
+
+3V3:
+  min_trace_width_mm: 0.5
+  max_voltage_drop_mv: 50
+  require_current_limit: true
+
+USB_DP_DN:
+  differential_pair: true
+  impedance_ohms: 90
+  auto_route: false_or_assisted
+  require_human_review: true
+
+ADC_INPUT:
+  avoid_near_clocks: true
+  guard_ring_optional: true
+  max_stub_length_mm: 5
+```
+
+## Mechanical constraints
+
+Examples:
+
+```text
+probe_pad:
+  min_diameter_mm: 1.0
+  preferred_diameter_mm: 1.5
+  min_spacing_mm: 2.54
+  side: bottom
+  keepout_from_components_mm: 1.0
+  keepout_from_board_edge_mm: 2.0
+```
+
+## Manufacturing constraints
+
+Examples:
+
+```text
+fabrication:
+  min_trace_width_mm: 0.15
+  min_clearance_mm: 0.15
+  min_drill_mm: 0.3
+  preferred_via_drill_mm: 0.3
+  soldermask_expansion_mm: 0.05
+```
+
+KiCad’s PCB editor supports net classes, DRC, custom design rules, and scriptable design rules, which makes it a reasonable first platform for enforcing these generated constraints. ([KiCad 文档][7])
+
+---
+
+# 10. AI responsibilities versus deterministic responsibilities
+
+This distinction is important.
+
+## AI should handle
+
+* Reading datasheets and pinout tables.
+* Interpreting user intent.
+* Suggesting interface circuits.
+* Explaining tradeoffs.
+* Ranking candidate mappings.
+* Proposing fixes after ERC/DRC failure.
+* Generating constraint files.
+* Producing human-readable reports.
+
+## Deterministic software should handle
+
+* Netlist correctness.
+* Pin uniqueness.
+* Voltage/current compatibility.
+* Footprint placement legality.
+* DRC/ERC.
+* Routing geometry.
+* Manufacturing rule enforcement.
+* Final connectivity checks.
+
+In other words, the AI should be a **planner and repair assistant**, not the only authority on whether the PCB is correct.
+
+---
+
+# 11. Suggested implementation phases
+
+## Phase 1 — KiCad proof of concept
+
+Goal: Automatically expose selected schematic nets as probe pads.
+
+Features:
+
+* Parse `.kicad_sch` and `.kicad_pcb`.
+* Let user select nets to expose.
+* Add testpoint symbols to schematic.
+* Add matching footprints to PCB.
+* Place pads near target components.
+* Generate a testpoint coverage report.
+* Run KiCad ERC/DRC through CLI.
+
+Deliverable:
+
+```text
+Input: existing KiCad project
+Output: updated schematic, updated PCB, testpoint report
+```
+
+---
+
+## Phase 2 — Probe-to-development-board mapping
+
+Goal: Automatically connect target nets to development-board pins.
+
+Features:
+
+* Development-board pin database.
+* Pin capability model.
+* Constraint solver for mapping.
+* Generated schematic connector.
+* Generated PCB connector/header footprint.
+* Net class assignment.
+* Routing-cost-aware pin assignment.
+
+Deliverable:
+
+```text
+Input: target nets + development-board definition
+Output: schematic connector section + valid pin mapping
+```
+
+---
+
+## Phase 3 — Automated placement and routing
+
+Goal: Place probe interface and route the PCB.
+
+Features:
+
+* Place probe pads/header/socket.
+* Generate keepouts.
+* Export to autorouter or invoke routing backend.
+* Import routed result.
+* Run DRC.
+* Iterate with repair suggestions.
+
+Deliverable:
+
+```text
+Input: schematic + board constraints
+Output: routed PCB candidate with DRC report
+```
+
+---
+
+## Phase 4 — Design-for-test and fixture awareness
+
+Goal: Make the generated design suitable for production or repeatable lab use.
+
+Features:
+
+* Probe accessibility checking.
+* Pogo-pin pitch enforcement.
+* Fixture alignment holes.
+* Fiducials.
+* One-side probe preference.
+* Component-height keepouts.
+* Probe force grouping.
+* Test coverage report.
+
+Deliverable:
+
+```text
+Output: PCB + probe fixture metadata + test-access report
+```
+
+---
+
+## Phase 5 — Multi-tool support
+
+After KiCad is stable, add adapters for:
+
+* Altium Designer.
+* Autodesk Fusion/EAGLE.
+* OrCAD/Allegro.
+* EasyEDA, if needed.
+
+Altium is relevant for a commercial version because it has built-in support for assigning testpoints for fabrication and assembly testing, and also provides scripting examples in DelphiScript, JScript, and VBScript. ([Altium][5])
+
+---
+
+# 12. Recommended MVP scope
+
+For a realistic MVP, avoid trying to route every class of signal automatically at first.
+
+Start with:
+
+```text
+Supported:
+  - GPIO
+  - UART
+  - I2C
+  - SPI, low-speed
+  - SWD/JTAG
+  - RESET/BOOT
+  - Power monitor points
+  - Ground points
+  - Low-speed analog test points
+
+Assisted/manual-review:
+  - USB
+  - Ethernet
+  - RF
+  - DDR
+  - High-current power paths
+  - Precision analog
+  - Switching regulator hot loops
+```
+
+The system can still place and constrain sensitive nets, but it should mark them as requiring stricter rules and review.
+
+---
+
+# 13. Example end-to-end workflow
+
+```text
+1. User opens KiCad project.
+
+2. User launches "AI Probe Interface Designer".
+
+3. Plugin extracts:
+   - schematic nets
+   - PCB geometry
+   - existing footprints
+   - board outline
+   - net classes
+   - constraints
+
+4. User selects:
+   - development board type
+   - desired probe style
+   - nets to expose
+   - manufacturing constraints
+
+5. AI classifies nets:
+   - debug
+   - power
+   - ground
+   - digital
+   - analog
+   - sensitive/high-speed
+
+6. Solver creates candidate mappings:
+   - net → dev board pin
+   - net → probe pad
+   - net → connector pin
+
+7. System generates schematic ECO:
+   - connector symbols
+   - testpoint symbols
+   - protection circuits
+   - net labels
+
+8. System updates PCB:
+   - inserts footprints
+   - places probe pads
+   - places connector/header
+   - applies keepouts
+   - applies net classes
+
+9. Router runs:
+   - routes low-speed/debug/probe nets
+   - avoids protected/sensitive zones
+   - respects constraints
+
+10. Verification runs:
+   - ERC
+   - DRC
+   - connectivity comparison
+   - testpoint coverage
+   - mechanical clearance checks
+
+11. User receives:
+   - modified KiCad project
+   - pin mapping table
+   - DRC/ERC report
+   - probe layout drawing
+   - manufacturing notes
+```
+
+---
+
+# 14. Minimal internal modules
+
+A practical codebase could be organized like this:
+
+```text
+ai-probe-router/
+ ├── eda_adapters/
+ │    ├── kicad/
+ │    │    ├── sch_parser.py
+ │    │    ├── pcb_parser.py
+ │    │    ├── pcb_writer.py
+ │    │    ├── plugin/
+ │    │    └── cli_runner.py
+ │    └── altium/
+ │         └── future_adapter/
+ │
+ ├── models/
+ │    ├── net.py
+ │    ├── component.py
+ │    ├── footprint.py
+ │    ├── board.py
+ │    ├── probe.py
+ │    ├── dev_board.py
+ │    └── constraints.py
+ │
+ ├── libraries/
+ │    ├── dev_boards/
+ │    ├── probe_footprints/
+ │    ├── interface_circuits/
+ │    └── design_rules/
+ │
+ ├── solvers/
+ │    ├── pin_mapper.py
+ │    ├── placement_solver.py
+ │    ├── routing_cost.py
+ │    └── constraint_checker.py
+ │
+ ├── routing/
+ │    ├── freerouting_bridge.py
+ │    ├── dsn_export.py
+ │    ├── ses_import.py
+ │    └── custom_router_future.py
+ │
+ ├── ai/
+ │    ├── datasheet_extractor.py
+ │    ├── net_classifier.py
+ │    ├── rule_generator.py
+ │    └── drc_repair_agent.py
+ │
+ ├── verification/
+ │    ├── erc.py
+ │    ├── drc.py
+ │    ├── connectivity.py
+ │    ├── test_coverage.py
+ │    └── report.py
+ │
+ └── ui/
+      ├── web_app/
+      └── kicad_panel/
+```
+
+---
+
+# 15. Key design decisions
+
+I would make these choices early:
+
+| Area                    | Recommendation                               |
+| ----------------------- | -------------------------------------------- |
+| First EDA tool          | KiCad                                        |
+| AI role                 | Planner, classifier, repair suggester        |
+| Authority               | Deterministic rules + ERC/DRC                |
+| First routing backend   | FreeRouting or KiCad-assisted flow           |
+| First supported signals | Low-speed debug/control/power monitor        |
+| First probe style       | Test pads or pogo-pad array                  |
+| Pin assignment          | Constraint solver, not pure LLM              |
+| File format             | Native KiCad plus JSON/YAML constraint model |
+| Verification            | ERC, DRC, netlist equivalence, test coverage |
+
+---
+
+# 16. Most important practical constraints to model
+
+Your system should explicitly model these from day one:
+
+1. **Probe accessibility**
+
+   * Is the pad reachable after assembly?
+   * Is it blocked by tall components?
+   * Is it on the correct board side?
+
+2. **Probe spacing**
+
+   * Avoid pogo-pin collisions.
+   * Respect fixture manufacturing pitch.
+
+3. **Electrical compatibility**
+
+   * Voltage levels.
+   * Current capacity.
+   * Pull-ups/pull-downs.
+   * Shared bus rules.
+   * Debug/programming pin requirements.
+
+4. **Routing manufacturability**
+
+   * Trace width.
+   * Clearance.
+   * Via size.
+   * Annular ring.
+   * Soldermask expansion.
+
+5. **Signal integrity**
+
+   * Avoid stubs on high-speed nets.
+   * Avoid unnecessary vias.
+   * Preserve differential pair geometry.
+   * Avoid routing sensitive analog nets near clocks/switching nodes.
+
+6. **Human review gates**
+
+   * Required for high-speed, high-current, RF, DDR, USB, Ethernet, and safety-critical nets.
+
+---
+
+# 17. Final recommended product concept
+
+Build it as:
+
+> **An AI-assisted KiCad/EDA plugin that generates a probe/debug interface during schematic capture, optimizes pin mapping to development-board connectors, places test/probe pads during layout, routes low-risk nets automatically, and verifies the result through ERC/DRC plus test-access coverage analysis.**
+
+That framing keeps the project practical and valuable: it reduces manual schematic/layout work, but still respects the reality that PCB correctness depends on explicit constraints and verification, not only AI-generated geometry.
+
+[1]: https://docs.kicad.org/9.0/en/cli/cli.html?utm_source=chatgpt.com "KiCad Command-Line Interface | 9.0 | English | Documentation | KiCad"
+[2]: https://dev-docs.kicad.org/en/apis-and-binding/pcbnew/index.html?utm_source=chatgpt.com "PCB Python Bindings | Developer Documentation | KiCad"
+[3]: https://dev-docs.kicad.org/en/file-formats/sexpr-schematic/index.html?utm_source=chatgpt.com "Schematic File Format | Developer Documentation | KiCad"
+[4]: https://kicad.github.io/footprints/TestPoint.html?utm_source=chatgpt.com "Footprint Library - TestPoint - GitHub Pages"
+[5]: https://www.altium.com/documentation/altium-designer/pcb/adding-testpoints?utm_source=chatgpt.com "Assigning Testpoints on the Board | Altium Designer Technical Documentation"
+[6]: https://github.com/freerouting/freerouting?utm_source=chatgpt.com "GitHub - freerouting/freerouting: Advanced PCB auto-router"
+[7]: https://docs.kicad.org/9.0/en/pcbnew/pcbnew.html?utm_source=chatgpt.com "PCB Editor | 9.0 | English | Documentation | KiCad"
