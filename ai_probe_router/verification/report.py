@@ -18,6 +18,8 @@ class NetCoverage:
     probe_y: float = 0.0
     side: str = "top"
     review_required: bool = False
+    trace_width_mm: float = 0.15
+    clearance_mm: float = 0.15
 
 
 @dataclass
@@ -78,18 +80,22 @@ class CoverageReport:
         lines.append("  " + "-" * 60)
         header = (
             f"  {'Net':<20} {'Role':<14} {'Req':>3}  "
-            f"{'TP':>3}  {'Review':>6}  {'Location'}"
+            f"{'TP':>3}  {'Review':>6}  {'Trace':>5}  {'Clr':>4}  {'Location'}"
         )
         lines.append(header)
-        lines.append("  " + "-" * 60)
+        lines.append("  " + "-" * 72)
         for e in self.entries:
             loc = f"({e.probe_x:.1f}, {e.probe_y:.1f}) {e.side}" if e.has_testpoint else "—"
             tp = "YES" if e.has_testpoint else "NO"
             req = "YES" if e.required else "no"
             rev = "YES" if e.review_required else "no"
-            lines.append(f"  {e.net_name:<20} {e.role.name:<14} {req:>3}  {tp:>3}  {rev:>6}  {loc}")
+            lines.append(
+                f"  {e.net_name:<20} {e.role.name:<14} {req:>3}  "
+                f"{tp:>3}  {rev:>6}  {e.trace_width_mm:>5.2f}  "
+                f"{e.clearance_mm:>4.2f}  {loc}"
+            )
         lines.append("")
-        lines.append("=" * 60)
+        lines.append("=" * 72)
         return "\n".join(lines)
 
     def write(self, path: str | Path) -> None:

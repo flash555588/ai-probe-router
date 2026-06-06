@@ -185,10 +185,14 @@ def _run_phase1(
             NetRole.HIGH_SPEED, NetRole.CLOCK, NetRole.ANALOG,
         } or req.current_ma > 500
 
+        trace_w, clearance = _net_class_for_role(role, req.current_ma)
+
         report.entries.append(NetCoverage(
             net_name=req.net_name, role=role, required=req.required,
             has_testpoint=placed, probe_x=px, probe_y=py, side=cfg.probe.side,
             review_required=review_needed,
+            trace_width_mm=trace_w,
+            clearance_mm=clearance,
         ))
         if placed:
             report.covered += 1
@@ -270,6 +274,22 @@ def _run_phase2(
             )
 
     return pin_report
+
+
+def _net_class_for_role(role: NetRole, current_ma: float) -> tuple[float, float]:
+    if role == NetRole.POWER:
+        if current_ma > 500:
+            return 0.5, 0.2
+        return 0.3, 0.15
+    if role == NetRole.GROUND:
+        return 0.3, 0.15
+    if role == NetRole.HIGH_SPEED:
+        return 0.15, 0.2
+    if role == NetRole.ANALOG:
+        return 0.2, 0.25
+    if role == NetRole.CLOCK:
+        return 0.15, 0.2
+    return 0.15, 0.15
 
 
 def _expand_reqs(reqs: list[ProbeRequirement]) -> list[ProbeRequirement]:
