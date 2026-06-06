@@ -11,6 +11,7 @@ from .eda_adapters.kicad.pcb_parser import parse_pcb
 from .eda_adapters.kicad.pcb_writer import (
     add_connector_footprint,
     add_fiducial_footprint,
+    add_keepout_zone,
     add_protection_footprint,
     add_testpoint_footprint,
     add_tooling_hole_footprint,
@@ -160,6 +161,13 @@ def _run_phase1(
                 placed_probes.append((x, y))
                 placed = True
 
+                # Add keepout zone around probe pad
+                keepout_margin = 1.0
+                keepout_size = cfg.probe.pad_diameter_mm + keepout_margin * 2
+                add_keepout_zone(
+                    board, x, y, keepout_size, keepout_size,
+                )
+
             if sch is not None and i == 0:
                 sx, sy = _find_sch_placement(sch, req, cfg)
                 if protection is not None:
@@ -246,6 +254,13 @@ def _run_phase2(
                 pins_per_row=20,
                 pitch=dev_board.pitch_mm,
                 side=cfg.probe.side,
+            )
+            # Keepout around connector
+            conn_w = 20 * dev_board.pitch_mm
+            conn_h = 2 * dev_board.pitch_mm
+            add_keepout_zone(
+                board, 150.0 + conn_w / 2, 100.0 + conn_h / 2,
+                conn_w + 2.0, conn_h + 2.0,
             )
 
     return pin_report

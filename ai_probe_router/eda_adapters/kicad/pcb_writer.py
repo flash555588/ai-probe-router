@@ -212,6 +212,50 @@ def add_connector_footprint(
     board.raw.append(fp_node)
 
 
+def add_keepout_zone(
+    board: Board,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    *,
+    layers: list[str] | None = None,
+) -> None:
+    """Add a rectangular keepout zone around a probe pad or connector.
+
+    Default layers cover all copper and keepout layers.
+    """
+    if layers is None:
+        layers = ["F.Cu", "B.Cu"]
+    half_w = width / 2
+    half_h = height / 2
+    uid = str(_uuid.uuid4())
+    zone_node = [
+        "zone",
+        ["net", "0"],
+        ["net_name", ""],
+        ["layers"] + layers,
+        ["uuid", uid],
+        ["hatch", "edge", "0.5"],
+        ["connect_pads", "no"],
+        ["min_thickness", "0.25"],
+        ["keepout",
+         ["tracks", "not_allowed"],
+         ["vias", "not_allowed"],
+         ["pads", "not_allowed"],
+         ["copperpour", "not_allowed"],
+         ["footprints", "not_allowed"]],
+        ["fill", "yes"],
+        ["polygon",
+         ["pts",
+          ["xy", str(x - half_w), str(y - half_h)],
+          ["xy", str(x + half_w), str(y - half_h)],
+          ["xy", str(x + half_w), str(y + half_h)],
+          ["xy", str(x - half_w), str(y + half_h)]]],
+    ]
+    board.raw.append(zone_node)
+
+
 def add_fiducial_footprint(
     board: Board,
     x: float,
