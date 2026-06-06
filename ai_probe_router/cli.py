@@ -67,11 +67,21 @@ def generate(config_file: str, project_dir: str):
     console.print(f"Coverage: {report.coverage_pct:.0f}% "
                   f"({report.covered}/{report.total_nets_requested})")
     if report.drc_ok is not None:
-        s = "[green]PASS[/]" if report.drc_ok else f"[red]FAIL ({report.drc_violations})[/]"
+        if report.drc_ok:
+            s = "[green]PASS[/]"
+        else:
+            s = f"[red]FAIL ({report.drc_violations})[/]"
         console.print(f"DRC: {s}")
+    else:
+        console.print("DRC: [dim]SKIPPED (kicad-cli not found)[/]")
     if report.erc_ok is not None:
-        s = "[green]PASS[/]" if report.erc_ok else f"[red]FAIL ({report.erc_violations})[/]"
+        if report.erc_ok:
+            s = "[green]PASS[/]"
+        else:
+            s = f"[red]FAIL ({report.erc_violations})[/]"
         console.print(f"ERC: {s}")
+    else:
+        console.print("ERC: [dim]SKIPPED (kicad-cli not found)[/]")
     if report.constraint_ok is not None:
         if report.constraint_ok:
             s = "[green]PASS[/]"

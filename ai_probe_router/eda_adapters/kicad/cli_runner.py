@@ -11,7 +11,7 @@ from pathlib import Path
 
 @dataclass
 class CheckResult:
-    ok: bool
+    ok: bool | None
     violations: list[dict] = field(default_factory=list)
     raw_output: str = ""
     error: str = ""
@@ -38,7 +38,7 @@ def find_kicad_cli() -> str | None:
 def run_erc(schematic_path: str | Path, output_dir: str | Path | None = None) -> CheckResult:
     cli = find_kicad_cli()
     if cli is None:
-        return CheckResult(ok=False, error="kicad-cli not found")
+        return CheckResult(ok=None, error="kicad-cli not found")
     sch = Path(schematic_path)
     out_dir = Path(output_dir) if output_dir else sch.parent
     report = out_dir / (sch.stem + "_erc.json")
@@ -49,7 +49,7 @@ def run_erc(schematic_path: str | Path, output_dir: str | Path | None = None) ->
 def run_drc(pcb_path: str | Path, output_dir: str | Path | None = None) -> CheckResult:
     cli = find_kicad_cli()
     if cli is None:
-        return CheckResult(ok=False, error="kicad-cli not found")
+        return CheckResult(ok=None, error="kicad-cli not found")
     pcb = Path(pcb_path)
     out_dir = Path(output_dir) if output_dir else pcb.parent
     report = out_dir / (pcb.stem + "_drc.json")
@@ -63,9 +63,9 @@ def _run(cmd: list[str], report_path: Path) -> CheckResult:
             cmd, capture_output=True, text=True, timeout=120,
         )
     except FileNotFoundError:
-        return CheckResult(ok=False, error=f"Command not found: {cmd[0]}")
+        return CheckResult(ok=None, error=f"Command not found: {cmd[0]}")
     except subprocess.TimeoutExpired:
-        return CheckResult(ok=False, error="kicad-cli timed out")
+        return CheckResult(ok=None, error="kicad-cli timed out")
 
     violations: list[dict] = []
     if report_path.exists():

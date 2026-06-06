@@ -54,9 +54,13 @@ class CoverageReport:
         if self.erc_ok is not None:
             status = "PASS" if self.erc_ok else f"FAIL ({self.erc_violations} violations)"
             lines.append(f"  ERC:              {status}")
+        else:
+            lines.append("  ERC:              SKIPPED")
         if self.drc_ok is not None:
             status = "PASS" if self.drc_ok else f"FAIL ({self.drc_violations} violations)"
             lines.append(f"  DRC:              {status}")
+        else:
+            lines.append("  DRC:              SKIPPED")
         if self.constraint_ok is not None:
             status = "PASS" if self.constraint_ok else f"FAIL ({self.constraint_violations} issues)"
             lines.append(f"  Constraints:      {status}")
