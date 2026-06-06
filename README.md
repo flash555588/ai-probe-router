@@ -8,8 +8,13 @@ AI-assisted KiCad probe/test interface designer. Automatically generates testpoi
 - **Net classifier** — rule-based classification into power, ground, debug, communication, analog, high-speed, clock, reset, GPIO
 - **Constraint-aware placement** — generates candidate positions scored by routing cost, board edge clearance, component collision avoidance, and probe spacing
 - **Pin mapper** — maps target nets to development board pins using capability matching, current ratings, and user preferences
-- **Schematic + PCB generation** — inserts testpoint symbols/footprints and connector symbols/footprints into KiCad files
-- **Verification** — constraint validation, ERC/DRC via `kicad-cli`, coverage reports
+- **Schematic + PCB generation** — inserts testpoint symbols/footprints, connector symbols/footprints, protection circuits, fiducials, tooling holes, and keepout zones into KiCad files
+- **Protection circuit generation** — series resistors for debug/reset signals (33/100 ohm), ferrite beads for power lines
+- **Three probe layout modes** — distributed test pads, centralized pogo pad array, connector-based interface
+- **Verification** — constraint validation, ERC/DRC via `kicad-cli`, coverage reports, manufacturing readiness reports
+- **Human review gates** — flags high-speed, clock, analog, and high-current nets for mandatory review
+- **Net class recommendations** — suggests trace width and clearance per net role
+- **DSN export** — exports Specctra/Electra DSN for FreeRouting autorouter
 
 ## Installation
 
@@ -64,11 +69,15 @@ probe_interface:
   pad_diameter_mm: 1.5
   min_probe_spacing_mm: 2.54
   preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+  require_fiducials: true
+  require_tooling_holes: true
 
 nets_to_expose:
   - net: SWDIO
     role: debug
     required: true
+    preferred_devboard_pins: [PA13]
   - net: GND
     role: ground
     required: true
@@ -87,6 +96,22 @@ placement_rules:
 
 development_board:
   pin_database: path/to/dev_board_pins.yaml
+
+protection:
+  enabled: true
+  debug:
+    type: series_resistor
+    value: "33"
+    package: "0402"
+  reset:
+    type: series_resistor
+    value: "100"
+    package: "0402"
+  power:
+    type: ferrite_bead
+    value: "600R@100MHz"
+    package: "0603"
+    ref_prefix: FB
 ```
 
 ## Architecture
@@ -95,9 +120,10 @@ development_board:
 ai_probe_router/
 ├── ai/                  # Net classifier
 ├── eda_adapters/kicad/  # S-expression parser, PCB/schematic read/write
-├── models/              # Board, Net, Probe, Constraints, DevBoard
+├── models/              # Board, Net, Probe, Constraints, DevBoard, Protection
 ├── solvers/             # Constraint checker, placement solver, pin mapper, routing cost
-└── verification/        # Coverage and pin mapping reports
+├── routing/             # DSN export for autorouter
+└── verification/        # Coverage, pin mapping, manufacturing readiness reports
 ```
 
 **Design principle**: AI assists with classification and suggestions; deterministic rules enforce correctness. The constraint engine validates every placement — the system never trusts AI-generated geometry without verification.
@@ -110,6 +136,19 @@ ai_probe_router/
 | `apr inspect <pcb_file>` | List nets with roles and pad counts |
 | `apr inspect-sch <sch_file>` | List components, labels, wires |
 | `apr validate <pcb_file>` | Validate existing testpoint placement |
+
+## Output Files
+
+After running `apr generate`, the `output/` directory contains:
+
+| File | Description |
+|------|-------------|
+| `*.kicad_pcb` | Updated PCB with testpoints, connector, fiducials, tooling holes, keepouts |
+| `*.kicad_sch` | Updated schematic with testpoint symbols, connector, protection circuits |
+| `testpoint_report.txt` | Coverage report with net class recommendations and review gates |
+| `pin_mapping_report.txt` | Development board pin assignment table |
+| `manufacturing_report.txt` | Manufacturing readiness summary |
+| `routing.dsn` | Specctra DSN for FreeRouting autorouter |
 
 ## Development
 
