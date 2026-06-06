@@ -28,6 +28,7 @@ from .models.board import Board, Schematic
 from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
+from .routing.dsn_export import export_dsn
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.pin_mapper import solve_mapping
 from .solvers.placement_solver import find_placement, place_pogo_array
@@ -96,6 +97,9 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
 
     mfg_report = generate_manufacturing_report(board, coverage)
     mfg_report.write(out_dir / "manufacturing_report.txt")
+
+    if board is not None:
+        export_dsn(board, out_dir / "routing.dsn")
 
     return coverage, pin_report
 
