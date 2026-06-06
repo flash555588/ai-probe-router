@@ -1,4 +1,4 @@
-"""Write testpoint footprints and net declarations into a .kicad_pcb s-expression tree."""
+"""Write testpoint/protection footprints and net declarations into a PCB."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import uuid as _uuid
 from pathlib import Path
 
 from ...models.board import Board
+from ...models.protection import ProtectionComponent
 from ...solvers.pin_mapper import PinAssignment
 from ..kicad.sexpr import serialize
 
@@ -51,6 +52,80 @@ def add_testpoint_footprint(
          ["size", str(pad_diameter), str(pad_diameter)],
          ["layers", layer, mask],
          ["net", str(net_id), net_name]],
+    ]
+    board.raw.append(fp_node)
+
+
+def add_protection_footprint(
+    board: Board,
+    src_net_name: str,
+    probe_net_name: str,
+    x: float,
+    y: float,
+    protection: ProtectionComponent,
+    *,
+    ref: str = "R?",
+    side: str = "top",
+) -> None:
+    """Place a series resistor or ferrite bead footprint.
+
+    Pad 1 connects to src_net_name (MCU side).
+    Pad 2 connects to probe_net_name (probe side).
+    Placed horizontally, offset from testpoint position.
+    """
+    layer = "F.Cu" if side == "top" else "B.Cu"
+    silk = "F.SilkS" if side == "top" else "B.SilkS"
+    fab = "F.Fab" if side == "top" else "B.Fab"
+    mask = "F.Mask" if side == "top" else "B.Mask"
+
+    src_net_id = board.nets.get(src_net_name)
+    if src_net_id is None:
+        src_net_id = board.next_net_id()
+        board.nets[src_net_name] = src_net_id
+        board.raw.append(["net", str(src_net_id), src_net_name])
+
+    probe_net_id = board.nets.get(probe_net_name)
+    if probe_net_id is None:
+        probe_net_id = board.next_net_id()
+        board.nets[probe_net_name] = probe_net_id
+        board.raw.append(["net", str(probe_net_id), probe_net_name])
+
+    uid = str(_uuid.uuid4())
+    fp_name = protection.footprint_name
+
+    # Pad spacing depends on package size (center-to-center)
+    pad_spacing = {"0402": 0.625, "0603": 0.9, "0805": 1.1}
+    half_span = pad_spacing.get(protection.package, 0.625)
+    pad_w = {"0402": 0.6, "0603": 0.8, "0805": 1.0}
+    pad_h = {"0402": 0.5, "0603": 0.75, "0805": 0.9}
+    pw = pad_w.get(protection.package, 0.6)
+    ph = pad_h.get(protection.package, 0.5)
+
+    fp_node = [
+        "footprint", fp_name,
+        ["layer", layer],
+        ["uuid", uid],
+        ["at", str(x), str(y)],
+        ["property", "Reference", ref,
+         ["at", "0", str(-1.5), "0"],
+         ["layer", silk],
+         ["effects", ["font", ["size", "0.8", "0.8"], ["thickness", "0.12"]]]],
+        ["property", "Value", protection.value,
+         ["at", "0", str(1.5), "0"],
+         ["layer", fab],
+         ["effects", ["font", ["size", "0.8", "0.8"], ["thickness", "0.12"]]]],
+        ["pad", "1", "smd", "roundrect",
+         ["at", str(-half_span), "0"],
+         ["size", str(pw), str(ph)],
+         ["layers", layer, mask],
+         ["roundrect_rratio", "0.25"],
+         ["net", str(src_net_id), src_net_name]],
+        ["pad", "2", "smd", "roundrect",
+         ["at", str(half_span), "0"],
+         ["size", str(pw), str(ph)],
+         ["layers", layer, mask],
+         ["roundrect_rratio", "0.25"],
+         ["net", str(probe_net_id), probe_net_name]],
     ]
     board.raw.append(fp_node)
 

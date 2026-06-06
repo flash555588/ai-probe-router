@@ -4,6 +4,7 @@ from .constraints import Constraints, ManufacturingRules, PlacementRules, Routin
 from .dev_board import DevBoardPin, DevelopmentBoard
 from .net import Net, NetNode, NetRole
 from .probe import ProbeConfig, ProbeRequirement, ProbeStyle
+from .protection import ProtectionComponent, ProtectionRules, ProtectionType
 
 __all__ = [
     "Net", "NetNode", "NetRole",
@@ -12,4 +13,5 @@ __all__ = [
     "ProbeConfig", "ProbeRequirement", "ProbeStyle",
     "DevBoardPin", "DevelopmentBoard",
     "Constraints", "ManufacturingRules", "PlacementRules", "RoutingRules",
+    "ProtectionComponent", "ProtectionRules", "ProtectionType",
 ]

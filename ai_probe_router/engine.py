@@ -10,12 +10,14 @@ from .eda_adapters.kicad.cli_runner import run_drc, run_erc
 from .eda_adapters.kicad.pcb_parser import parse_pcb
 from .eda_adapters.kicad.pcb_writer import (
     add_connector_footprint,
+    add_protection_footprint,
     add_testpoint_footprint,
     write_pcb,
 )
 from .eda_adapters.kicad.sch_parser import parse_schematic
 from .eda_adapters.kicad.sch_writer import (
     add_connector_symbol,
+    add_protected_testpoint_symbol,
     add_testpoint_symbol,
     write_schematic,
 )
@@ -97,6 +99,7 @@ def _run_phase1(
 ) -> CoverageReport:
     report = CoverageReport(total_nets_requested=len(cfg.nets_to_expose))
     tp_counter = _next_tp_ref(board)
+    prot_counter = _next_prot_ref(board)
     placed_probes: list[tuple[float, float]] = []
 
     for req in cfg.nets_to_expose:
@@ -104,9 +107,10 @@ def _run_phase1(
         count = max(req.duplicate_probe_count, 1)
         placed = False
         px, py = 0.0, 0.0
+        protection = cfg.protection.get_protection(req.role)
 
         for i in range(count):
-            ref = f"TP{tp_counter}"
+            tp_ref = f"TP{tp_counter}"
             tp_counter += 1
 
             if board is not None:
@@ -115,17 +119,43 @@ def _run_phase1(
                     placed_probes, index=i,
                 )
                 px, py = x, y
-                add_testpoint_footprint(
-                    board, req.net_name, x, y,
-                    ref=ref, pad_diameter=cfg.probe.pad_diameter_mm,
-                    side=cfg.probe.side,
-                )
+
+                if protection is not None:
+                    probe_net = f"PROBE_{req.net_name}"
+                    prot_ref = f"{protection.ref_prefix}{prot_counter}"
+                    prot_counter += 1
+                    add_protection_footprint(
+                        board, req.net_name, probe_net,
+                        x - 2.0, y,
+                        protection,
+                        ref=prot_ref, side=cfg.probe.side,
+                    )
+                    add_testpoint_footprint(
+                        board, probe_net, x, y,
+                        ref=tp_ref, pad_diameter=cfg.probe.pad_diameter_mm,
+                        side=cfg.probe.side,
+                    )
+                else:
+                    add_testpoint_footprint(
+                        board, req.net_name, x, y,
+                        ref=tp_ref, pad_diameter=cfg.probe.pad_diameter_mm,
+                        side=cfg.probe.side,
+                    )
+
                 placed_probes.append((x, y))
                 placed = True
 
             if sch is not None and i == 0:
                 sx, sy = _find_sch_placement(sch, req, cfg)
-                add_testpoint_symbol(sch, req.net_name, sx, sy, ref=ref)
+                if protection is not None:
+                    prot_sch_ref = f"{protection.ref_prefix}{prot_counter - 1}"
+                    add_protected_testpoint_symbol(
+                        sch, req.net_name, sx, sy,
+                        protection,
+                        tp_ref=tp_ref, prot_ref=prot_sch_ref,
+                    )
+                else:
+                    add_testpoint_symbol(sch, req.net_name, sx, sy, ref=tp_ref)
 
         report.entries.append(NetCoverage(
             net_name=req.net_name, role=role, required=req.required,
@@ -181,6 +211,17 @@ def _next_tp_ref(board: Board | None) -> int:
     for fp in board.footprints:
         if fp.ref.startswith("TP") and fp.ref[2:].isdigit():
             max_n = max(max_n, int(fp.ref[2:]))
+    return max_n + 1
+
+
+def _next_prot_ref(board: Board | None) -> int:
+    if board is None:
+        return 1
+    max_n = 0
+    for fp in board.footprints:
+        for prefix in ("R", "FB"):
+            if fp.ref.startswith(prefix) and fp.ref[len(prefix):].isdigit():
+                max_n = max(max_n, int(fp.ref[len(prefix):]))
     return max_n + 1
 
 

@@ -1,4 +1,4 @@
-"""Write testpoint symbols and net labels into a .kicad_sch s-expression tree."""
+"""Write testpoint symbols, protection components, and labels into a schematic."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import uuid as _uuid
 from pathlib import Path
 
 from ...models.board import Schematic
+from ...models.protection import ProtectionComponent, ProtectionType
 from ...solvers.pin_mapper import PinAssignment
 from ..kicad.sexpr import serialize
 
@@ -26,6 +27,62 @@ _TESTPOINT_LIB_SYMBOL = [
       ["length", "0"],
       ["name", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]],
       ["number", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
+]
+
+_RESISTOR_LIB_SYMBOL = [
+    "symbol", "Device:R",
+    ["pin_names", ["offset", "0"]],
+    ["in_bom", "yes"],
+    ["on_board", "yes"],
+    ["symbol", "R_0_1",
+     ["rectangle",
+      ["start", "-1.016", "-2.54"],
+      ["end", "1.016", "2.54"],
+      ["stroke", ["width", "0.254"], ["type", "default"]],
+      ["fill", ["type", "none"]]]],
+    ["symbol", "R_1_1",
+     ["pin", "passive", "line",
+      ["at", "0", "3.81", "270"],
+      ["length", "1.27"],
+      ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
+      ["number", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]]],
+     ["pin", "passive", "line",
+      ["at", "0", "-3.81", "90"],
+      ["length", "1.27"],
+      ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
+      ["number", "2", ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
+]
+
+_FERRITE_LIB_SYMBOL = [
+    "symbol", "Device:FerriteBead",
+    ["pin_names", ["offset", "1.016"], "hide"],
+    ["in_bom", "yes"],
+    ["on_board", "yes"],
+    ["symbol", "FerriteBead_0_1",
+     ["polyline",
+      ["pts",
+       ["xy", "0", "-2.54"],
+       ["xy", "0", "-1.905"],
+       ["xy", "0.762", "-1.524"],
+       ["xy", "-0.762", "-0.762"],
+       ["xy", "0.762", "0"],
+       ["xy", "-0.762", "0.762"],
+       ["xy", "0.762", "1.524"],
+       ["xy", "0", "1.905"],
+       ["xy", "0", "2.54"]],
+      ["stroke", ["width", "0"], ["type", "default"]],
+      ["fill", ["type", "none"]]]],
+    ["symbol", "FerriteBead_1_1",
+     ["pin", "passive", "line",
+      ["at", "0", "3.81", "270"],
+      ["length", "1.27"],
+      ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
+      ["number", "1", ["effects", ["font", ["size", "1.27", "1.27"]]]]],
+     ["pin", "passive", "line",
+      ["at", "0", "-3.81", "90"],
+      ["length", "1.27"],
+      ["name", "~", ["effects", ["font", ["size", "1.27", "1.27"]]]],
+      ["number", "2", ["effects", ["font", ["size", "1.27", "1.27"]]]]]],
 ]
 
 
@@ -73,6 +130,125 @@ def add_testpoint_symbol(
     sch.raw.append(symbol_node)
     sch.raw.append(wire_node)
     sch.raw.append(label_node)
+
+
+def add_protected_testpoint_symbol(
+    sch: Schematic,
+    net_name: str,
+    x: float,
+    y: float,
+    protection: ProtectionComponent,
+    *,
+    tp_ref: str = "TP?",
+    prot_ref: str = "R?",
+) -> None:
+    """Place protection component in series between net and testpoint.
+
+    Layout (vertical, top-to-bottom):
+      net_label(net_name) @ (x, y+10.16)
+      wire down to resistor pin 1
+      resistor/ferrite @ (x, y+5.08)
+      wire down to testpoint
+      testpoint @ (x, y)
+      label(PROBE_net_name) connects to testpoint
+    """
+    if protection.protection_type == ProtectionType.SERIES_RESISTOR:
+        _ensure_resistor_lib_symbol(sch)
+        lib_id = "Device:R"
+    else:
+        _ensure_ferrite_lib_symbol(sch)
+        lib_id = "Device:FerriteBead"
+
+    _ensure_lib_symbol(sch)
+
+    probe_net = f"PROBE_{net_name}"
+
+    # Protection component at (x, y+5.08) — pin1 up (original net), pin2 down (probe net)
+    prot_x, prot_y = x, y + 5.08
+    prot_uid = str(_uuid.uuid4())
+    prot_node = [
+        "symbol",
+        ["lib_id", lib_id],
+        ["at", str(prot_x), str(prot_y), "0"],
+        ["unit", "1"],
+        ["exclude_from_sim", "no"],
+        ["in_bom", "yes"],
+        ["on_board", "yes"],
+        ["dnp", "no"],
+        ["uuid", prot_uid],
+        ["property", "Reference", prot_ref,
+         ["at", str(prot_x + 1.27), str(prot_y), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]],
+        ["property", "Value", protection.value,
+         ["at", str(prot_x + 1.27), str(prot_y + 1.27), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]],
+        ["pin", "1", ["uuid", str(_uuid.uuid4())]],
+        ["pin", "2", ["uuid", str(_uuid.uuid4())]],
+    ]
+    sch.raw.append(prot_node)
+
+    # Testpoint at (x, y)
+    tp_uid = str(_uuid.uuid4())
+    tp_node = [
+        "symbol",
+        ["lib_id", "Connector:TestPoint"],
+        ["at", str(x), str(y), "0"],
+        ["unit", "1"],
+        ["exclude_from_sim", "no"],
+        ["in_bom", "yes"],
+        ["on_board", "yes"],
+        ["dnp", "no"],
+        ["uuid", tp_uid],
+        ["property", "Reference", tp_ref,
+         ["at", str(x + 1.27), str(y - 1.27), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]],
+        ["property", "Value", f"TP_{net_name}",
+         ["at", str(x + 1.27), str(y + 1.27), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]],
+        ["pin", "1", ["uuid", str(_uuid.uuid4())]],
+    ]
+    sch.raw.append(tp_node)
+
+    # Wire: net label down to protection pin 1
+    pin1_y = prot_y + 3.81
+    label_y = pin1_y + 2.54
+    sch.raw.append([
+        "wire",
+        ["pts", ["xy", str(x), str(label_y)], ["xy", str(x), str(pin1_y)]],
+        ["stroke", ["width", "0"], ["type", "default"]],
+        ["uuid", str(_uuid.uuid4())],
+    ])
+
+    # Net label for original net (connects to protection pin 1)
+    sch.raw.append([
+        "label", net_name,
+        ["at", str(x), str(label_y), "0"],
+        ["effects", ["font", ["size", "1.27", "1.27"]]],
+        ["uuid", str(_uuid.uuid4())],
+    ])
+
+    # Wire: protection pin 2 down to testpoint
+    pin2_y = prot_y - 3.81
+    sch.raw.append([
+        "wire",
+        ["pts", ["xy", str(x), str(pin2_y)], ["xy", str(x), str(y)]],
+        ["stroke", ["width", "0"], ["type", "default"]],
+        ["uuid", str(_uuid.uuid4())],
+    ])
+
+    # Probe net label at testpoint (the protected side)
+    sch.raw.append([
+        "label", probe_net,
+        ["at", str(x), str(y - 2.54), "0"],
+        ["effects", ["font", ["size", "1.27", "1.27"]]],
+        ["uuid", str(_uuid.uuid4())],
+    ])
+    sch.raw.append([
+        "wire",
+        ["pts", ["xy", str(x), str(y)], ["xy", str(x), str(y - 2.54)]],
+        ["stroke", ["width", "0"], ["type", "default"]],
+        ["uuid", str(_uuid.uuid4())],
+    ])
 
 
 def add_connector_symbol(
@@ -181,6 +357,32 @@ def _ensure_connector_lib_symbol(
         ["in_bom", "yes"],
         ["on_board", "yes"],
     ]])
+
+
+def _ensure_resistor_lib_symbol(sch: Schematic) -> None:
+    _ensure_generic_lib_symbol(sch, "Device:R", _RESISTOR_LIB_SYMBOL)
+
+
+def _ensure_ferrite_lib_symbol(sch: Schematic) -> None:
+    _ensure_generic_lib_symbol(sch, "Device:FerriteBead", _FERRITE_LIB_SYMBOL)
+
+
+def _ensure_generic_lib_symbol(
+    sch: Schematic, lib_id: str, template: list,
+) -> None:
+    for node in sch.raw[1:]:
+        if isinstance(node, list) and node[0] == "lib_symbols":
+            for child in node[1:]:
+                if (
+                    isinstance(child, list)
+                    and child[0] == "symbol"
+                    and len(child) > 1
+                    and child[1] == lib_id
+                ):
+                    return
+            node.append(template)
+            return
+    sch.raw.append(["lib_symbols", template])
 
 
 def write_schematic(sch: Schematic, path: str | Path) -> None:

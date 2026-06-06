@@ -10,6 +10,11 @@ import yaml
 from .models.constraints import Constraints, PlacementRules, RoutingRules
 from .models.dev_board import DevelopmentBoard
 from .models.probe import ProbeConfig, ProbeRequirement, ProbeStyle
+from .models.protection import (
+    ProtectionComponent,
+    ProtectionRules,
+    ProtectionType,
+)
 from .solvers.pin_mapper import load_dev_board
 
 
@@ -23,6 +28,7 @@ class ProjectConfig:
     constraints: Constraints = field(default_factory=Constraints)
     development_board: DevelopmentBoard | None = None
     dev_board_pin_db: str = ""
+    protection: ProtectionRules = field(default_factory=ProtectionRules.with_defaults)
 
 
 def load_config(path: str | Path) -> ProjectConfig:
@@ -80,4 +86,28 @@ def load_config(path: str | Path) -> ProjectConfig:
         resolved = Path(path).parent / db_path
         if resolved.exists():
             cfg.development_board = load_dev_board(resolved)
+
+    prot = raw.get("protection", {})
+    if prot:
+        enabled = prot.get("enabled", True)
+        rules: dict[str, ProtectionComponent] = {}
+        type_map = {
+            "series_resistor": ProtectionType.SERIES_RESISTOR,
+            "ferrite_bead": ProtectionType.FERRITE_BEAD,
+        }
+        for role, spec in prot.items():
+            if role == "enabled" or not isinstance(spec, dict):
+                continue
+            ptype = type_map.get(spec.get("type", "series_resistor"),
+                                ProtectionType.SERIES_RESISTOR)
+            is_resistor = ptype == ProtectionType.SERIES_RESISTOR
+            default_prefix = "R" if is_resistor else "FB"
+            rules[role] = ProtectionComponent(
+                protection_type=ptype,
+                value=str(spec.get("value", "33")),
+                package=spec.get("package", "0402"),
+                ref_prefix=spec.get("ref_prefix", default_prefix),
+            )
+        cfg.protection = ProtectionRules(rules=rules, enabled=enabled)
+
     return cfg

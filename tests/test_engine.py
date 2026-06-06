@@ -106,3 +106,64 @@ placement_rules:
     cfg = load_config(tmp_path / "config.yaml")
     report, _ = run(cfg, tmp_path)
     assert report.constraint_ok is not None
+
+
+def test_engine_protection_circuits(tmp_path):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+
+    config_yaml = """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+  - net: NRST
+    role: reset
+    required: false
+  - net: GND
+    role: ground
+    required: true
+
+protection:
+  enabled: true
+  debug:
+    type: series_resistor
+    value: "33"
+    package: "0402"
+  reset:
+    type: series_resistor
+    value: "100"
+    package: "0402"
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml)
+    cfg = load_config(tmp_path / "config.yaml")
+    assert cfg.protection.enabled
+    assert cfg.protection.get_protection("debug") is not None
+    assert cfg.protection.get_protection("reset") is not None
+    assert cfg.protection.get_protection("ground") is None
+
+    report, _ = run(cfg, tmp_path)
+    assert report.covered >= 2
+
+    out_pcb = (tmp_path / "output" / "main.kicad_pcb").read_text(encoding="utf-8")
+    assert "PROBE_SWDIO" in out_pcb
+    assert "PROBE_NRST" in out_pcb
+    assert "PROBE_GND" not in out_pcb
