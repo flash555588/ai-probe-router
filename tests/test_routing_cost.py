@@ -1,7 +1,11 @@
 """Tests for routing cost estimator."""
 
-from ai_probe_router.models.board import Board, EdgeSegment, Footprint, Pad
-from ai_probe_router.solvers.routing_cost import RoutingCost, estimate_routing_cost
+from ai_probe_router.models.board import Board, BoundingBox, EdgeSegment, Footprint, Pad
+from ai_probe_router.solvers.routing_cost import (
+    RoutingCost,
+    _segment_intersects_box,
+    estimate_routing_cost,
+)
 
 
 def _make_board() -> Board:
@@ -55,3 +59,8 @@ def test_congestion_increases_cost():
     board_empty = Board(footprints=[], nets={})
     cost_empty = estimate_routing_cost(100, 100, [(100, 100)], board_empty)
     assert cost_congested.congestion_penalty > cost_empty.congestion_penalty
+
+
+def test_segment_intersection_not_sample_based():
+    box = BoundingBox(1.0, -0.1, 2.0, 0.1)
+    assert _segment_intersects_box(0.0, 0.0, 10.0, 0.0, box)

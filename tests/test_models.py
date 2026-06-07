@@ -4,6 +4,7 @@ from ai_probe_router.ai.net_classifier import classify_net
 from ai_probe_router.config import load_config
 from ai_probe_router.models.board import Board, Footprint, Pad
 from ai_probe_router.models.net import NetRole
+from ai_probe_router.models.protection import ProtectionType
 
 
 def test_classify_power():
@@ -68,6 +69,7 @@ def test_load_sample_config(tmp_path):
     assert len(cfg.nets_to_expose) == 9
     assert cfg.nets_to_expose[0].net_name == "SWDIO"
     assert cfg.probe.pad_diameter_mm == 1.5
+    assert cfg.protection.get_protection("debug") is None
 
 
 def test_load_config_missing_dev_board_raises(tmp_path):
@@ -117,3 +119,120 @@ nets_to_expose: []
         assert "nets_to_expose" in str(exc)
     else:
         raise AssertionError("Expected ValueError for empty nets_to_expose")
+
+
+def test_load_schema_v2_functional_modules_without_nets(tmp_path):
+    config = """\
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+design_goals:
+  optimize_for: [manufacturability, low_bom_cost]
+  max_added_area_mm2: 1200
+  preferred_side: top
+  human_review_required_for: [high_speed, rf]
+
+hardware_platform:
+  target_voltage_domains:
+    - name: VDD_3V3
+      voltage: 3.3
+      max_current_ma: 800
+
+functional_modules:
+  - name: debug_access
+    type: debug_swd
+    required: true
+    target_nets: [SWDIO, SWCLK, NRST, GND, 3V3]
+    allowed_implementations: [protected_pogo]
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+
+    assert cfg.schema_version == 2
+    assert cfg.nets_to_expose == []
+    assert cfg.functional_modules[0].name == "debug_access"
+    assert cfg.functional_modules[0].allowed_implementations == ["protected_pogo"]
+    assert cfg.hardware_platform.target_voltage_domains[0].voltage == 3.3
+    assert cfg.design_goals.optimize_for == ["manufacturability", "low_bom_cost"]
+
+
+def test_load_schema_v2_module_graph_fields(tmp_path):
+    config = """\
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+functional_modules:
+  - name: analog_probe
+    type: analog_measurement
+    depends_on: [debug_access]
+    budget_area_mm2: 250
+    preferred_region: top
+    version: "1.2"
+    ai_hints:
+      - type: sensitive_route
+        target: analog_probe
+      - type: unsupported_magic
+
+routing_strategy:
+  coarse_grid_mm: 4
+  max_corridor_layers: 2
+  congestion_weight: 12
+  via_weight: 6
+  length_weight: 1.5
+  sensitive_net_spacing_mm: 7
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+    module = cfg.functional_modules[0]
+
+    assert module.depends_on == ["debug_access"]
+    assert module.budget_area_mm2 == 250
+    assert module.preferred_region == "top"
+    assert module.version == "1.2"
+    assert module.ai_hints[0].supported
+    assert not module.ai_hints[1].supported
+    assert cfg.routing_strategy.coarse_grid_mm == 4
+    assert cfg.routing_strategy.sensitive_net_spacing_mm == 7
+
+
+def test_load_config_expanded_protection_type(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+
+protection:
+  enabled: true
+  debug:
+    type: esd_array
+    value: "low_cap"
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+    protection = cfg.protection.get_protection("debug")
+
+    assert protection is not None
+    assert protection.protection_type == ProtectionType.ESD_ARRAY
+    assert protection.ref_prefix == "D"

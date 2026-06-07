@@ -15,6 +15,7 @@ AI-assisted KiCad probe/test interface designer. Automatically generates testpoi
 - **Human review gates** — flags high-speed, clock, analog, and high-current nets for mandatory review
 - **Net class recommendations** — suggests trace width and clearance per net role
 - **DSN export** — exports Specctra/Electra DSN for FreeRouting autorouter
+- **Schema v2 module planning** - describes higher-level hardware modules such as SWD debug, GPIO expansion, and power monitoring, then selects a valid implementation from module libraries
 
 ## Installation
 
@@ -114,6 +115,51 @@ protection:
     ref_prefix: FB
 ```
 
+### Schema v2 Functional Modules
+
+Schema v2 keeps the old `nets_to_expose` format compatible, and also adds
+module-level design intent:
+
+```yaml
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+hardware_platform:
+  target_voltage_domains:
+    - name: VDD_3V3
+      voltage: 3.3
+      max_current_ma: 800
+
+functional_modules:
+  - name: scalable_gpio
+    type: gpio_expansion
+    channels: 16
+    depends_on: [debug_access]
+    budget_area_mm2: 250
+    preferred_region: top
+    ai_hints:
+      - type: sensitive_route
+    allowed_interfaces: [i2c, spi]
+    require_level_shift: true
+    require_esd: true
+
+routing_strategy:
+  coarse_grid_mm: 5
+  congestion_weight: 10
+  sensitive_net_spacing_mm: 5
+```
+
+The module-planning pass is rule based. It writes selected implementations,
+module graph diagnostics, bus/power reports, a per-module BOM, and routing
+feasibility corridors. It also reports module, implementation, chip, and
+footprint version metadata for compatibility and substitution review. Generated
+hierarchical sheet stubs are written under `output/generated_modules/` when a
+schematic is available. AI hints are advisory only and are reported when ignored.
+
 ## Architecture
 
 ```
@@ -147,6 +193,16 @@ After running `apr generate`, the `output/` directory contains:
 | `*.kicad_sch` | Updated schematic with testpoint symbols, connector, protection circuits |
 | `testpoint_report.txt` | Coverage report with net class recommendations and review gates |
 | `pin_mapping_report.txt` | Development board pin assignment table |
+| `module_report.txt` | Schema v2 module selections, rejected alternatives, and review gates |
+| `module_graph_report.txt` | Module instances, dependencies, generated resources, graph diagnostics |
+| `module_compatibility_report.txt` | Module, implementation, chip, footprint, and alternate compatibility matrix |
+| `bus_report.txt` | Module bus grouping, I2C address conflicts, pull-up coverage |
+| `power_report.txt` | Module voltage-domain and rail usage |
+| `routing_feasibility_report.txt` | Coarse module corridor, congestion, and sensitivity analysis |
+| `module_placement_report.txt` | Module regions, component placement scaffolds, probe/connector zones |
+| `module_instantiation_report.txt` | Generated module sheet stubs and child schematic files |
+| `generated_modules/*.kicad_sch` | Generated hierarchical module child sheets |
+| `bom_report.csv` | Per-module generated component rows |
 | `manufacturing_report.txt` | Manufacturing readiness summary |
 | `routing.dsn` | Specctra DSN for FreeRouting autorouter |
 

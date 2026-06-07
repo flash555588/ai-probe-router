@@ -9,7 +9,13 @@ from .ai.design_review import run_design_review
 from .ai.net_classifier import classify_net, classify_net_detailed
 from .ai.rule_generator import generate_rules
 from .config import ProjectConfig
-from .eda_adapters.kicad.cli_runner import run_drc, run_erc
+from .eda_adapters.kicad.cli_runner import (
+    export_drill,
+    export_gerbers,
+    export_pos,
+    run_drc,
+    run_erc,
+)
 from .eda_adapters.kicad.pcb_parser import parse_pcb
 from .eda_adapters.kicad.pcb_writer import (
     add_connector_footprint,
@@ -29,7 +35,7 @@ from .eda_adapters.kicad.sch_writer import (
     add_testpoint_symbol,
     write_schematic,
 )
-from .models.board import Board, Schematic
+from .models.board import Board, Schematic, _pad_bounds
 from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
@@ -241,6 +247,23 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         coverage.notes.append(
             f"Thermal simulation export: {thermal_path.name}"
         )
+
+    # Manufacturing exports (Gerber, Drill, Pick&Place)
+    mfg_dir = out_dir / "manufacturing"
+    mfg_dir.mkdir(exist_ok=True)
+    out_pcb_for_export = out_dir / pcb_path.name
+    if out_pcb_for_export.exists():
+        gerber_result = export_gerbers(out_pcb_for_export, mfg_dir)
+        if gerber_result.ok:
+            coverage.notes.append("Gerber files exported")
+        drill_result = export_drill(out_pcb_for_export, mfg_dir)
+        if drill_result.ok:
+            coverage.notes.append("Drill files exported")
+        pos_file = mfg_dir / "placement.csv"
+        pos_result = export_pos(out_pcb_for_export, pos_file)
+        if pos_result.ok:
+            coverage.notes.append("Pick&Place file exported")
+
     return coverage, pin_report
 
 
@@ -305,7 +328,7 @@ def _run_phase1(
                     prot_counter += 1
                     source_pos = _nearest_pad_position(board, req.net_name, x, y)
                     prot_x, prot_y, prot_rot = _find_protection_placement(
-                        board, req.net_name, x, y,
+                        board, req.net_name, x, y, protection,
                     )
                     prot_fp = add_protection_footprint(
                         board, req.net_name, probe_net,
@@ -565,6 +588,7 @@ def _find_protection_placement(
     net_name: str,
     probe_x: float,
     probe_y: float,
+    protection,
 ) -> tuple[float, float, float]:
     target = _nearest_pad_position(board, net_name, probe_x, probe_y)
     if target is None:
@@ -573,14 +597,45 @@ def _find_protection_placement(
     tx, ty = target
     dx = probe_x - tx
     dy = probe_y - ty
-    if math.hypot(dx, dy) < 1e-9:
+    dist = math.hypot(dx, dy)
+    if dist < 1e-9:
         return probe_x - 2.0, probe_y, 0.0
 
-    return (
-        (tx + probe_x) / 2,
-        (ty + probe_y) / 2,
-        math.degrees(math.atan2(dy, dx)),
-    )
+    # Candidate at midpoint
+    cx = (tx + probe_x) / 2
+    cy = (ty + probe_y) / 2
+    rot = math.degrees(math.atan2(dy, dx))
+
+    # Build occupied zones from all existing pads except current net source
+    occupied: list[BoundingBox] = []
+    for fp in board.footprints:
+        for pad in fp.pads:
+            if pad.net_name == net_name:
+                continue
+            bb = _pad_bounds(pad)
+            occupied.append(bb)
+
+    fp_half = {"0402": 0.7, "0603": 1.0, "0805": 1.3, "SOT-23-6": 1.8}.get(protection.package, 1.0)
+    margin = 2.0
+
+    for frac in [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]:
+        cx = tx + dx * frac
+        cy = ty + dy * frac
+        # Footprint bbox at this candidate
+        f_min_x = cx - fp_half
+        f_max_x = cx + fp_half
+        f_min_y = cy - fp_half
+        f_max_y = cy + fp_half
+        clear = True
+        for bb in occupied:
+            if f_min_x - margin <= bb.max_x and f_max_x + margin >= bb.min_x and f_min_y - margin <= bb.max_y and f_max_y + margin >= bb.min_y:
+                clear = False
+                break
+        if clear:
+            return cx, cy, rot
+
+    # Fallback
+    return tx + dx * 0.95, ty + dy * 0.95, rot
 
 
 def _nearest_pad_position(

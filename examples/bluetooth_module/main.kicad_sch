@@ -1,0 +1,381 @@
+(kicad_sch
+  (version 20231120)
+  (generator "eeschema")
+  (generator_version "8.0")
+  (uuid "bt-mod-001-0000-0000-000000000000")
+  (paper "A4")
+  (lib_symbols
+    (symbol "RF_Bluetooth:HC-05"
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "U"
+        (at -7.62 10.16 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "HC-05"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "HC-05_0_1"
+        (rectangle
+          (start -10.16 12.7)
+          (end 10.16 -12.7)
+          (stroke (width 0.254) (type default))
+          (fill (type background))
+        )
+      )
+      (symbol "HC-05_1_1"
+        (pin power_in line
+          (at 0 15.24 270)
+          (length 2.54)
+          (name "VCC" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
+        )
+        (pin power_in line
+          (at 0 -15.24 90)
+          (length 2.54)
+          (name "GND" (effects (font (size 1.27 1.27))))
+          (number "2" (effects (font (size 1.27 1.27))))
+        )
+        (pin output line
+          (at -12.7 5.08 0)
+          (length 2.54)
+          (name "TXD" (effects (font (size 1.27 1.27))))
+          (number "3" (effects (font (size 1.27 1.27))))
+        )
+        (pin input line
+          (at -12.7 0 0)
+          (length 2.54)
+          (name "RXD" (effects (font (size 1.27 1.27))))
+          (number "4" (effects (font (size 1.27 1.27))))
+        )
+        (pin output line
+          (at -12.7 -5.08 0)
+          (length 2.54)
+          (name "STATE" (effects (font (size 1.27 1.27))))
+          (number "5" (effects (font (size 1.27 1.27))))
+        )
+        (pin input line
+          (at 12.7 5.08 180)
+          (length 2.54)
+          (name "EN" (effects (font (size 1.27 1.27))))
+          (number "6" (effects (font (size 1.27 1.27))))
+        )
+      )
+    )
+    (symbol "Device:LED"
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "D"
+        (at 0 2.54 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "LED"
+        (at 0 -2.54 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "LED_0_1"
+        (polyline
+          (pts (xy -1.27 -1.27) (xy -1.27 1.27))
+          (stroke (width 0.254) (type default))
+          (fill (type none))
+        )
+        (polyline
+          (pts (xy 0 1.27) (xy 0 -1.27) (xy -1.27 0) (xy 0 1.27))
+          (stroke (width 0.254) (type default))
+          (fill (type outline))
+        )
+      )
+      (symbol "LED_1_1"
+        (pin passive line
+          (at -2.54 0 0)
+          (length 1.27)
+          (name "K" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
+        )
+        (pin passive line
+          (at 2.54 0 180)
+          (length 1.27)
+          (name "A" (effects (font (size 1.27 1.27))))
+          (number "2" (effects (font (size 1.27 1.27))))
+        )
+      )
+    )
+    (symbol "Device:R"
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "R"
+        (at 0 2.54 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "1k"
+        (at 0 -2.54 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "R_0_1"
+        (rectangle
+          (start -2.032 -0.762)
+          (end 2.032 0.762)
+          (stroke (width 0.254) (type default))
+          (fill (type none))
+        )
+      )
+      (symbol "R_1_1"
+        (pin passive line
+          (at -3.81 0 0)
+          (length 1.27)
+          (name "~" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
+        )
+        (pin passive line
+          (at 3.81 0 180)
+          (length 1.27)
+          (name "~" (effects (font (size 1.27 1.27))))
+          (number "2" (effects (font (size 1.27 1.27))))
+        )
+      )
+    )
+    (symbol "power:GND"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "GND"
+        (at 0 -1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "GND_0_1"
+        (polyline
+          (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+      )
+      (symbol "GND_1_1"
+        (pin power_in line
+          (at 0 0 270)
+          (length 0)
+          (name "GND" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
+        )
+      )
+    )
+    (symbol "power:+3.3V"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "+3.3V"
+        (at 0 1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "+3.3V_0_1"
+        (polyline
+          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+        (polyline
+          (pts (xy 0 0) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+        (polyline
+          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+      )
+      (symbol "+3.3V_1_1"
+        (pin power_in line
+          (at 0 0 90)
+          (length 0)
+          (name "+3.3V" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "RF_Bluetooth:HC-05")
+    (at 120 100 0)
+    (unit 1)
+    (in_bom yes)
+    (on_board yes)
+    (uuid "bt-001-0000-0000-000000000001")
+    (property "Reference" "U1"
+      (at 108 113 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "HC-05"
+      (at 108 110 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "1" (uuid "bt-p001-0001-0001-0001-000000000001"))
+    (pin "2" (uuid "bt-p001-0001-0001-0001-000000000002"))
+    (pin "3" (uuid "bt-p001-0001-0001-0001-000000000003"))
+    (pin "4" (uuid "bt-p001-0001-0001-0001-000000000004"))
+    (pin "5" (uuid "bt-p001-0001-0001-0001-000000000005"))
+    (pin "6" (uuid "bt-p001-0001-0001-0001-000000000006"))
+  )
+  (symbol
+    (lib_id "Device:LED")
+    (at 80 95 0)
+    (unit 1)
+    (in_bom yes)
+    (on_board yes)
+    (uuid "bt-002-0000-0000-000000000002")
+    (property "Reference" "D1"
+      (at 80 98 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Value" "STATUS_LED"
+      (at 80 92 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1" (uuid "bt-p002-0001-0001-0001-000000000001"))
+    (pin "2" (uuid "bt-p002-0001-0001-0001-000000000002"))
+  )
+  (symbol
+    (lib_id "Device:R")
+    (at 95 95 0)
+    (unit 1)
+    (in_bom yes)
+    (on_board yes)
+    (uuid "bt-003-0000-0000-000000000003")
+    (property "Reference" "R1"
+      (at 95 98 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Value" "1k"
+      (at 95 92 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1" (uuid "bt-p003-0001-0001-0001-000000000001"))
+    (pin "2" (uuid "bt-p003-0001-0001-0001-000000000002"))
+  )
+  (symbol
+    (lib_id "power:GND")
+    (at 120 120 0)
+    (unit 1)
+    (in_bom yes)
+    (on_board yes)
+    (uuid "bt-gnd-0000-0000-000000000001")
+    (property "Reference" "#PWR01"
+      (at 120 123.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND"
+      (at 120 121.27 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1" (uuid "bt-pgnd-0001-0001-0001-000000000001"))
+  )
+  (symbol
+    (lib_id "power:+3.3V")
+    (at 120 80 0)
+    (unit 1)
+    (in_bom yes)
+    (on_board yes)
+    (uuid "bt-vcc-0000-0000-000000000001")
+    (property "Reference" "#PWR02"
+      (at 120 83.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+3.3V"
+      (at 120 78.73 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1" (uuid "bt-pvcc-0001-0001-0001-000000000001"))
+  )
+  (wire
+    (pts (xy 120 115.24) (xy 120 120))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000001")
+  )
+  (wire
+    (pts (xy 120 84.76) (xy 120 80))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000002")
+  )
+  (wire
+    (pts (xy 107.3 105.08) (xy 100 105.08))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000003")
+  )
+  (wire
+    (pts (xy 107.3 100) (xy 100 100))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000004")
+  )
+  (wire
+    (pts (xy 107.3 94.92) (xy 100 94.92))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000005")
+  )
+  (wire
+    (pts (xy 132.7 105.08) (xy 140 105.08))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000006")
+  )
+  (wire
+    (pts (xy 82.54 95) (xy 91.19 95))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000007")
+  )
+  (wire
+    (pts (xy 98.81 95) (xy 100 95))
+    (stroke (width 0) (type default))
+    (uuid "bt-w001-0001-0001-0001-000000000008")
+  )
+  (global_label "VCC"
+    (shape input)
+    (at 100 105.08 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "bt-gl-0001-0001-0001-000000000001")
+  )
+  (global_label "GND"
+    (shape input)
+    (at 100 100 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "bt-gl-0001-0001-0001-000000000002")
+  )
+  (global_label "UART_TX"
+    (shape input)
+    (at 100 94.92 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "bt-gl-0001-0001-0001-000000000003")
+  )
+  (global_label "UART_RX"
+    (shape input)
+    (at 140 105.08 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid "bt-gl-0001-0001-0001-000000000004")
+  )
+  (global_label "STATE"
+    (shape input)
+    (at 140 94.92 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid "bt-gl-0001-0001-0001-000000000005")
+  )
+  (global_label "LED"
+    (shape input)
+    (at 100 95 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "bt-gl-0001-0001-0001-000000000006")
+  )
+  (global_label "EN"
+    (shape input)
+    (at 140 100 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid "bt-gl-0001-0001-0001-000000000007")
+  )
+)

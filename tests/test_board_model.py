@@ -63,6 +63,35 @@ def test_board_bounds_none_when_no_edges():
     assert board.board_bounds() is None
 
 
+def test_contains_point_uses_outline_not_bounds():
+    board = Board(edges=[
+        EdgeSegment(0, 0, 10, 0),
+        EdgeSegment(10, 0, 10, 4),
+        EdgeSegment(10, 4, 4, 4),
+        EdgeSegment(4, 4, 4, 10),
+        EdgeSegment(4, 10, 0, 10),
+        EdgeSegment(0, 10, 0, 0),
+    ])
+    assert board.contains_point(2, 8)
+    assert not board.contains_point(8, 8)
+
+
+def test_contains_point_treats_inner_loop_as_cutout():
+    board = Board(edges=[
+        EdgeSegment(0, 0, 40, 0),
+        EdgeSegment(40, 0, 40, 30),
+        EdgeSegment(40, 30, 0, 30),
+        EdgeSegment(0, 30, 0, 0),
+        EdgeSegment(14, 10, 26, 10),
+        EdgeSegment(26, 10, 26, 20),
+        EdgeSegment(26, 20, 14, 20),
+        EdgeSegment(14, 20, 14, 10),
+    ])
+    assert len(board.outline_loops()) == 2
+    assert board.contains_point(8, 8)
+    assert not board.contains_point(20, 15)
+
+
 def test_footprint_bounds():
     fp = Footprint(ref="U1", x=100, y=100, pads=[
         Pad(number="1", x=95, y=96.5, width=1.2, height=0.5),

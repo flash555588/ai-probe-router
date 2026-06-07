@@ -96,6 +96,35 @@ def test_non_edge_cuts_ignored(tmp_path):
     assert len(board.edges) == 0
 
 
+def test_pad_rotation_combines_with_footprint_rotation(tmp_path):
+    pcb = """\
+(kicad_pcb
+  (version 20240108)
+  (generator "test")
+  (layers (0 "F.Cu" signal) (44 "Edge.Cuts" user))
+  (net 0 "")
+  (net 1 "SIG")
+  (footprint "Test:Rotated"
+    (layer "F.Cu")
+    (at 10 20 30)
+    (property "Reference" "U1")
+    (property "Value" "ROT")
+    (pad "1" smd rect
+      (at 1 0 45)
+      (size 2 1)
+      (layers "F.Cu" "F.Mask")
+      (net 1 "SIG")))
+)
+"""
+    pcb_file = tmp_path / "rot.kicad_pcb"
+    pcb_file.write_text(pcb)
+    board = parse_pcb(pcb_file)
+    pad = board.footprints[0].pads[0]
+    assert abs(pad.rotation - 75.0) < 0.01
+    assert abs(pad.x - 10.866) < 0.01
+    assert abs(pad.y - 19.5) < 0.01
+
+
 PCB_WITH_GR_ARC = """\
 (kicad_pcb
   (version 20240108)

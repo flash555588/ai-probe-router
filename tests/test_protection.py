@@ -10,6 +10,7 @@ from ai_probe_router.models.protection import (
     ProtectionComponent,
     ProtectionRules,
     ProtectionType,
+    protection_type_from_string,
 )
 
 
@@ -69,6 +70,15 @@ def test_ferrite_lib_symbol_name():
         value="600R@100MHz",
     )
     assert comp.lib_symbol_name == "Device:FerriteBead"
+
+
+def test_expanded_protection_type_aliases():
+    assert protection_type_from_string("esd_array") == ProtectionType.ESD_ARRAY
+    assert protection_type_from_string("rc-filter") == ProtectionType.RC_FILTER
+    assert protection_type_from_string("level_shifter") == ProtectionType.LEVEL_SHIFTER
+    assert protection_type_from_string("current_limiter") == ProtectionType.CURRENT_LIMITER
+    assert protection_type_from_string("jumper") == ProtectionType.JUMPER
+    assert protection_type_from_string("resistor_array") == ProtectionType.RESISTOR_ARRAY
 
 
 def test_protected_testpoint_adds_resistor_symbol():

@@ -1,0 +1,71 @@
+project:
+  name: "bluetooth_mic_board"
+  description: "ESP32-S3 portable Bluetooth audio pickup board"
+  board_file: "main.kicad_pcb"
+  schematic_file: "main.kicad_sch"
+  mcu_profile: "../../libraries/mcu_profiles/esp32_s3.yaml"
+
+probe_interface:
+  type: "test_pad"
+  side: "bottom"
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+
+nets_to_expose:
+  - net: "ADC_MIC_GPIO1"
+    role: "analog"
+    required: true
+  - net: "KEY_VOL_UP_GPIO2"
+    role: "digital"
+    required: true
+  - net: "KEY_VOL_DOWN_GPIO4"
+    role: "digital"
+    required: true
+  - net: "LED_PWR_GPIO5"
+    role: "digital"
+    required: true
+  - net: "LED_BT_GPIO6"
+    role: "digital"
+    required: true
+  - net: "VBATT_DIV_GPIO7"
+    role: "analog"
+    required: true
+  - net: "USB_DM_GPIO19"
+    role: "high_speed"
+    required: true
+  - net: "USB_DP_GPIO20"
+    role: "high_speed"
+    required: true
+  - net: "3V3"
+    role: "power"
+    required: true
+  - net: "GND"
+    role: "ground"
+    required: true
+  - net: "VBAT"
+    role: "power"
+    required: true
+  - net: "VBUS"
+    role: "power"
+    required: false
+
+routing_rules:
+  default_trace_width_mm: 0.2
+  power_trace_width_mm: 0.5
+  min_clearance_mm: 0.15
+
+placement_rules:
+  keep_probe_pads_on_grid: true
+  avoid_tall_components: true
+  min_distance_from_board_edge_mm: 2.0
+
+protection:
+  enabled: true
+  analog:
+    type: "series_resistor"
+    value: "100"
+    package: "0402"
+  high_speed:
+    type: "ferrite_bead"
+    value: "600@100MHz"
+    package: "0402"

@@ -42,6 +42,36 @@ def test_coverage_report_with_constraints():
     assert "too close to edge" in text
 
 
+def test_coverage_report_separates_placement_from_routing():
+    report = CoverageReport(
+        total_nets_requested=1,
+        covered=1,
+        missing=0,
+        routing_ok=False,
+        routed_connections=0,
+        unrouted_connections=1,
+        entries=[
+            NetCoverage(
+                "UART_TX",
+                NetRole.COMMUNICATION,
+                True,
+                True,
+                12.0,
+                18.0,
+                "top",
+                route_status="unrouted",
+                routed_connections=0,
+                total_connections=1,
+                routing_notes=["grid_route_not_found"],
+            ),
+        ],
+    )
+    text = report.summary_text()
+    assert "Routing:          UNROUTED (0/1 connections)" in text
+    assert "YES      0/1" in text
+    assert "grid_route_not_found" in text
+
+
 def test_coverage_report_write(tmp_path):
     report = CoverageReport(total_nets_requested=1, covered=1, missing=0)
     report.entries.append(NetCoverage("GND", NetRole.GROUND, True, True))

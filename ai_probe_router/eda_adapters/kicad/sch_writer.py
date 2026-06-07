@@ -6,6 +6,7 @@ import uuid as _uuid
 from pathlib import Path
 
 from ...models.board import Schematic
+from ...models.module_graph import ModuleInstance
 from ...models.protection import ProtectionComponent, ProtectionType
 from ...solvers.pin_mapper import PinAssignment
 from ..kicad.sexpr import QuotedStr, serialize
@@ -428,6 +429,68 @@ def _ensure_generic_lib_symbol(
             node.append(template)
             return
     sch.raw.append(["lib_symbols", template])
+
+
+def add_module_sheet_symbol(
+    sch: Schematic,
+    instance: ModuleInstance,
+    sheet_file: str,
+    x: float,
+    y: float,
+    *,
+    width: float = 35.56,
+    height: float = 20.32,
+) -> None:
+    """Add a generated hierarchical sheet symbol for a module instance."""
+    uid = str(_uuid.uuid4())
+    sheet_node = [
+        "sheet",
+        ["at", str(x), str(y)],
+        ["size", str(width), str(height)],
+        ["fields_autoplaced"],
+        ["stroke", ["width", "0.1524"], ["type", "solid"]],
+        ["fill", ["color", "0", "0", "0", "0.0000"]],
+        ["uuid", uid],
+        ["property", "Sheetname", f"{instance.instance_id}_{instance.name}",
+         ["at", str(x), str(y - 1.27), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]],
+        ["property", "Sheetfile", sheet_file,
+         ["at", str(x), str(y + height + 1.27), "0"],
+         ["effects", ["font", ["size", "1.27", "1.27"]]]],
+        ["property", "APR_MODULE", instance.instance_id,
+         ["at", str(x), str(y + height + 3.81), "0"],
+         ["effects", ["font", ["size", "1.0", "1.0"]]], "hide"],
+        ["property", "APR_INSTANCE", instance.name,
+         ["at", str(x), str(y + height + 5.08), "0"],
+         ["effects", ["font", ["size", "1.0", "1.0"]]], "hide"],
+        ["property", "APR_GENERATED", "yes",
+         ["at", str(x), str(y + height + 6.35), "0"],
+         ["effects", ["font", ["size", "1.0", "1.0"]]], "hide"],
+    ]
+    for index, net_name in enumerate(_sheet_pins(instance)):
+        pin_y = y + 3.81 + index * 2.54
+        if pin_y > y + height - 2.54:
+            break
+        sheet_node.append([
+            "pin", QuotedStr(net_name), "input",
+            ["at", "0", str(round(pin_y - y, 3)), "180"],
+            ["effects", ["font", ["size", "1.0", "1.0"]]],
+            ["uuid", str(_uuid.uuid4())],
+        ])
+    sch.raw.append(sheet_node)
+
+
+def _sheet_pins(instance: ModuleInstance) -> list[str]:
+    pins = []
+    pins.extend(instance.target_nets)
+    pins.extend(instance.generated_nets)
+    pins.extend(instance.rails)
+    pins.extend(instance.voltage_domains)
+    deduped: list[str] = []
+    for pin in pins:
+        if pin and pin not in deduped:
+            deduped.append(pin)
+    return deduped
 
 
 def write_schematic(sch: Schematic, path: str | Path) -> None:

@@ -1,11 +1,13 @@
 """Tests for constraint checker."""
 
 
+from ai_probe_router.eda_adapters.kicad.pcb_writer import add_track_segment
 from ai_probe_router.models.board import Board, EdgeSegment, Footprint, Pad
 from ai_probe_router.models.constraints import Constraints, PlacementRules
 from ai_probe_router.models.probe import ProbeConfig
 from ai_probe_router.solvers.constraint_checker import (
     check_placement,
+    placement_clearance_margin,
     validate_all_probes,
 )
 
@@ -125,12 +127,59 @@ def test_testpoint_not_checked_for_collision():
     assert result.ok
 
 
+def test_probe_placement_respects_different_net_track_clearance():
+    board = _make_board()
+    add_track_segment(board, "UART_RX", 100, 102, 100, 108, width=0.2)
+
+    result = check_placement(
+        100, 104, board, Constraints(), ProbeConfig(), net_name="3V3",
+    )
+    assert not result.ok
+    assert any(v.rule == "track_clearance" for v in result.violations)
+
+    same_net = check_placement(
+        100, 104, board, Constraints(), ProbeConfig(), net_name="UART_RX",
+    )
+    assert same_net.ok
+
+
 def test_rotated_pad_collision_detected():
     # A 10x1 mm pad rotated 45 degrees at (100, 100)
     # Pad local corners at (-5, -0.5) and (5, 0.5); rotated and translated
     # Pad center is at (100, 100)
     fp = Footprint(
         ref="U2", value="Rotated", x=100, y=100, rotation=45,
+        pads=[
+            Pad(
+                number="1",
+                x=100,
+                y=100,
+                width=10.0,
+                height=1.0,
+                rotation=45,
+                net_name="NET",
+            ),
+        ],
+    )
+    board = Board(
+        footprints=[fp],
+        nets={"NET": 1},
+        edges=[
+            EdgeSegment(50, 50, 150, 50),
+            EdgeSegment(150, 50, 150, 150),
+            EdgeSegment(150, 150, 50, 150),
+            EdgeSegment(50, 150, 50, 50),
+        ],
+    )
+    # KiCad board rotations are clockwise because the board Y axis points downward.
+    result = check_placement(103, 97, board, Constraints(), ProbeConfig(pad_diameter_mm=1.0))
+    assert not result.ok
+    assert any(v.rule == "component_collision" for v in result.violations)
+
+
+def test_unrotated_rect_pad_corner_does_not_false_collide():
+    fp = Footprint(
+        ref="U2", value="Rect", x=100, y=100,
         pads=[
             Pad(number="1", x=100, y=100, width=10.0, height=1.0, net_name="NET"),
         ],
@@ -145,7 +194,30 @@ def test_rotated_pad_collision_detected():
             EdgeSegment(50, 150, 50, 50),
         ],
     )
-    # Probe at (103, 103) is close to the rotated pad corner
     result = check_placement(103, 103, board, Constraints(), ProbeConfig(pad_diameter_mm=1.0))
-    assert not result.ok
-    assert any(v.rule == "component_collision" for v in result.violations)
+    assert result.ok
+
+
+def test_placement_clearance_margin_scores_extra_room():
+    board = Board(
+        footprints=[
+            Footprint(
+                ref="U3",
+                pads=[
+                    Pad(number=str(i), x=10 + i * 0.5, y=10, width=0.28, height=1.2)
+                    for i in range(16)
+                ],
+            ),
+        ],
+        edges=[
+            EdgeSegment(0, 0, 40, 0),
+            EdgeSegment(40, 0, 40, 30),
+            EdgeSegment(40, 30, 0, 30),
+            EdgeSegment(0, 30, 0, 0),
+        ],
+    )
+    constraints = Constraints()
+    probe = ProbeConfig(pad_diameter_mm=1.0)
+    near = placement_clearance_margin(14.0, 11.8, board, constraints, probe)
+    far = placement_clearance_margin(30.0, 20.0, board, constraints, probe)
+    assert far > near

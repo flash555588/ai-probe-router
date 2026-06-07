@@ -167,3 +167,42 @@ protection:
     assert "PROBE_SWDIO" in out_pcb
     assert "PROBE_NRST" in out_pcb
     assert "PROBE_GND" not in out_pcb
+
+
+def test_engine_writes_module_report_for_schema_v2(tmp_path):
+    config_yaml = """\
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: ""
+  schematic_file: ""
+
+functional_modules:
+  - name: power_observation
+    type: current_voltage_monitor
+    required: true
+    rails: [VDD_3V3]
+    telemetry_bus: i2c
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+    cfg = load_config(tmp_path / "config.yaml")
+
+    report, _ = run(cfg, tmp_path)
+
+    assert report.total_nets_requested == 0
+    module_report = tmp_path / "output" / "module_report.txt"
+    assert module_report.exists()
+    assert "power_observation" in module_report.read_text(encoding="utf-8")
+    assert (tmp_path / "output" / "module_graph_report.txt").exists()
+    assert (tmp_path / "output" / "module_compatibility_report.txt").exists()
+    assert (tmp_path / "output" / "bus_report.txt").exists()
+    assert (tmp_path / "output" / "power_report.txt").exists()
+    assert (tmp_path / "output" / "routing_feasibility_report.txt").exists()
+    assert (tmp_path / "output" / "module_placement_report.txt").exists()
+    instantiation = tmp_path / "output" / "module_instantiation_report.txt"
+    assert instantiation.exists()
+    assert "SKIPPED (no_schematic)" in instantiation.read_text(encoding="utf-8")
+    bom = tmp_path / "output" / "bom_report.csv"
+    assert bom.exists()
+    assert "module_id,module_name" in bom.read_text(encoding="utf-8")

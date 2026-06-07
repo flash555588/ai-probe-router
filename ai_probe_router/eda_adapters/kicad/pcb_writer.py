@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import math
 import uuid as _uuid
 from pathlib import Path
 
-from ...models.board import Board
+from ...models.board import Board, Footprint, Pad
 from ...models.protection import ProtectionComponent
 from ...solvers.pin_mapper import PinAssignment
 from ..kicad.sexpr import QuotedStr, serialize
@@ -21,7 +22,7 @@ def add_testpoint_footprint(
     pad_diameter: float = 1.5,
     side: str = "top",
     label: str = "",
-) -> None:
+) -> Footprint:
     net_id = board.nets.get(net_name)
     if net_id is None:
         net_id = board.next_net_id()
@@ -34,14 +35,16 @@ def add_testpoint_footprint(
     mask = "F.Mask" if side == "top" else "B.Mask"
     uid = str(_uuid.uuid4())
 
+    fp_name = "TestPoint:TestPoint_Pad_D{:.1f}mm".format(pad_diameter)
     fp_node = [
-        "footprint", "TestPoint:TestPoint_Pad_D{:.1f}mm".format(pad_diameter),
+        "footprint", fp_name,
         ["layer", layer],
         ["uuid", uid],
         ["at", str(x), str(y)],
         ["property", "Reference", ref,
          ["at", str(x), str(y - 2), "0"],
          ["layer", silk],
+         ["hide", "yes"],
          ["effects", ["font", ["size", "1", "1"], ["thickness", "0.15"]]]],
         ["property", "Value", label or f"TP_{net_name}",
          ["at", str(x), str(y + 2), "0"],
@@ -54,6 +57,29 @@ def add_testpoint_footprint(
          ["net", str(net_id), net_name]],
     ]
     board.raw.append(fp_node)
+    model_fp = Footprint(
+        ref=ref,
+        value=label or f"TP_{net_name}",
+        lib_id=fp_name,
+        x=x,
+        y=y,
+        layer=layer,
+        uuid=uid,
+        pads=[Pad(
+            number="1",
+            pad_type="smd",
+            shape="circle",
+            x=x,
+            y=y,
+            width=pad_diameter,
+            height=pad_diameter,
+            net_name=net_name,
+            net_id=net_id,
+            layers=[layer, mask],
+        )],
+    )
+    board.footprints.append(model_fp)
+    return model_fp
 
 
 def add_protection_footprint(
@@ -66,7 +92,8 @@ def add_protection_footprint(
     *,
     ref: str = "R?",
     side: str = "top",
-) -> None:
+    rotation: float = 0.0,
+) -> Footprint:
     """Place a series resistor or ferrite bead footprint.
 
     Pad 1 connects to src_net_name (MCU side).
@@ -93,22 +120,23 @@ def add_protection_footprint(
     uid = str(_uuid.uuid4())
     fp_name = protection.footprint_name
 
-    # Pad spacing depends on package size (center-to-center)
-    pad_spacing = {"0402": 0.625, "0603": 0.9, "0805": 1.1}
-    half_span = pad_spacing.get(protection.package, 0.625)
-    pad_w = {"0402": 0.6, "0603": 0.8, "0805": 1.0}
-    pad_h = {"0402": 0.5, "0603": 0.75, "0805": 0.9}
-    pw = pad_w.get(protection.package, 0.6)
-    ph = pad_h.get(protection.package, 0.5)
+    # half_span, width, height in mm for practical KiCad-style SMD pads.
+    pad_specs = {
+        "0402": (0.48, 0.56, 0.62),
+        "0603": (0.75, 0.80, 0.95),
+        "0805": (0.95, 1.00, 1.20),
+    }
+    half_span, pw, ph = pad_specs.get(protection.package, pad_specs["0402"])
 
     fp_node = [
         "footprint", fp_name,
         ["layer", layer],
         ["uuid", uid],
-        ["at", str(x), str(y)],
+        ["at", str(x), str(y), str(rotation)],
         ["property", "Reference", ref,
          ["at", "0", str(-1.5), "0"],
          ["layer", silk],
+         ["hide", "yes"],
          ["effects", ["font", ["size", "0.8", "0.8"], ["thickness", "0.12"]]]],
         ["property", "Value", QuotedStr(protection.value),
          ["at", "0", str(1.5), "0"],
@@ -128,6 +156,79 @@ def add_protection_footprint(
          ["net", str(probe_net_id), probe_net_name]],
     ]
     board.raw.append(fp_node)
+    p1x, p1y = _rotate_local(-half_span, 0.0, rotation, x, y)
+    p2x, p2y = _rotate_local(half_span, 0.0, rotation, x, y)
+    model_fp = Footprint(
+        ref=ref,
+        value=protection.value,
+        lib_id=fp_name,
+        x=x,
+        y=y,
+        rotation=rotation,
+        layer=layer,
+        uuid=uid,
+        pads=[
+            Pad(
+                number="1",
+                pad_type="smd",
+                shape="roundrect",
+                x=p1x,
+                y=p1y,
+                width=pw,
+                height=ph,
+                net_name=src_net_name,
+                net_id=src_net_id,
+                layers=[layer, mask],
+                local_x=-half_span,
+                rotation=rotation,
+            ),
+            Pad(
+                number="2",
+                pad_type="smd",
+                shape="roundrect",
+                x=p2x,
+                y=p2y,
+                width=pw,
+                height=ph,
+                net_name=probe_net_name,
+                net_id=probe_net_id,
+                layers=[layer, mask],
+                local_x=half_span,
+                rotation=rotation,
+            ),
+        ],
+    )
+    board.footprints.append(model_fp)
+    return model_fp
+
+
+def add_track_segment(
+    board: Board,
+    net_name: str,
+    x1: float,
+    y1: float,
+    x2: float,
+    y2: float,
+    *,
+    width: float = 0.15,
+    side: str = "top",
+) -> None:
+    net_id = board.nets.get(net_name)
+    if net_id is None:
+        net_id = board.next_net_id()
+        board.nets[net_name] = net_id
+        board.raw.append(["net", str(net_id), net_name])
+
+    layer = "F.Cu" if side == "top" else "B.Cu"
+    board.raw.append([
+        "segment",
+        ["start", str(x1), str(y1)],
+        ["end", str(x2), str(y2)],
+        ["width", str(width)],
+        ["layer", layer],
+        ["net", str(net_id)],
+        ["uuid", str(_uuid.uuid4())],
+    ])
 
 
 def add_connector_footprint(
@@ -150,7 +251,11 @@ def add_connector_footprint(
     uid = str(_uuid.uuid4())
     total = rows * pins_per_row
 
-    lib_name = f"Connector_PinHeader_2.54mm:PinHeader_{rows}x{pins_per_row}_P2.54mm_Vertical"
+    pitch_name = _format_pitch_for_library(pitch)
+    lib_name = (
+        f"Connector_PinHeader_{pitch_name}mm:"
+        f"PinHeader_{rows}x{pins_per_row}_P{pitch_name}mm_Vertical"
+    )
 
     fp_node: list = [
         "footprint", lib_name,
@@ -210,6 +315,40 @@ def add_connector_footprint(
         fp_node.append(pad_node)
 
     board.raw.append(fp_node)
+    model_pads: list[Pad] = []
+    for i in range(total):
+        row = i // pins_per_row
+        col = i % pins_per_row
+        px = col * pitch
+        py = row * pitch
+        assignment = next((a for a in assignments if a.pin_index == i), None)
+        net_name = assignment.net_name if assignment else ""
+        net_id = board.nets.get(net_name, 0) if net_name else 0
+        model_pads.append(Pad(
+            number=str(i + 1),
+            pad_type="thru_hole",
+            shape="circle",
+            x=x + px,
+            y=y + py,
+            width=1.7,
+            height=1.7,
+            drill=1.0,
+            net_name=net_name,
+            net_id=net_id,
+            layers=["*.Cu", mask],
+            local_x=px,
+            local_y=py,
+        ))
+    board.footprints.append(Footprint(
+        ref=ref,
+        value=f"CONN_{ref}",
+        lib_id=lib_name,
+        x=x,
+        y=y,
+        layer=layer,
+        uuid=uid,
+        pads=model_pads,
+    ))
 
 
 def add_keepout_zone(
@@ -220,6 +359,11 @@ def add_keepout_zone(
     height: float,
     *,
     layers: list[str] | None = None,
+    tracks_allowed: bool = True,
+    vias_allowed: bool = True,
+    pads_allowed: bool = True,
+    copperpour_allowed: bool = False,
+    footprints_allowed: bool = True,
 ) -> None:
     """Add a rectangular keepout zone around a probe pad or connector.
 
@@ -230,6 +374,9 @@ def add_keepout_zone(
     half_w = width / 2
     half_h = height / 2
     uid = str(_uuid.uuid4())
+    def _permission(allowed: bool) -> str:
+        return "allowed" if allowed else "not_allowed"
+
     zone_node = [
         "zone",
         ["net", "0"],
@@ -240,11 +387,11 @@ def add_keepout_zone(
         ["connect_pads", "no"],
         ["min_thickness", "0.25"],
         ["keepout",
-         ["tracks", "not_allowed"],
-         ["vias", "not_allowed"],
-         ["pads", "not_allowed"],
-         ["copperpour", "not_allowed"],
-         ["footprints", "not_allowed"]],
+         ["tracks", _permission(tracks_allowed)],
+         ["vias", _permission(vias_allowed)],
+         ["pads", _permission(pads_allowed)],
+         ["copperpour", _permission(copperpour_allowed)],
+         ["footprints", _permission(footprints_allowed)]],
         ["fill", "yes"],
         ["polygon",
          ["pts",
@@ -290,6 +437,25 @@ def add_fiducial_footprint(
          ["solder_mask_margin", str((mask_diameter_mm - diameter_mm) / 2)]],
     ]
     board.raw.append(fp_node)
+    board.footprints.append(Footprint(
+        ref=ref,
+        value=f"FID_{ref}",
+        lib_id=fp_name,
+        x=x,
+        y=y,
+        layer="F.Cu",
+        uuid=uid,
+        pads=[Pad(
+            number="",
+            pad_type="smd",
+            shape="circle",
+            x=x,
+            y=y,
+            width=diameter_mm,
+            height=diameter_mm,
+            layers=["F.Cu", "F.Mask"],
+        )],
+    ))
 
 
 def add_tooling_hole_footprint(
@@ -323,6 +489,26 @@ def add_tooling_hole_footprint(
          ["layers", "*.Cu", "*.Mask"]],
     ]
     board.raw.append(fp_node)
+    board.footprints.append(Footprint(
+        ref=ref,
+        value=f"MOUNT_{ref}",
+        lib_id=f"MountingHole:MountingHole_{drill_mm}mm",
+        x=x,
+        y=y,
+        layer="Edge.Cuts",
+        uuid=uid,
+        pads=[Pad(
+            number="",
+            pad_type="np_thru_hole",
+            shape="circle",
+            x=x,
+            y=y,
+            width=size_mm,
+            height=size_mm,
+            drill=drill_mm,
+            layers=["*.Cu", "*.Mask"],
+        )],
+    ))
 
 
 def add_net_class(
@@ -368,6 +554,27 @@ def add_net_class(
         ):
             insert_at = i + 1
     board.raw.insert(insert_at, class_node)
+
+
+def _rotate_local(
+    local_x: float,
+    local_y: float,
+    rotation: float,
+    origin_x: float,
+    origin_y: float,
+) -> tuple[float, float]:
+    rad = math.radians(rotation)
+    cos_r = math.cos(rad)
+    sin_r = math.sin(rad)
+    return (
+        origin_x + local_x * cos_r + local_y * sin_r,
+        origin_y - local_x * sin_r + local_y * cos_r,
+    )
+
+
+def _format_pitch_for_library(pitch: float) -> str:
+    return f"{pitch:.2f}".rstrip("0").rstrip(".")
+
 
 def write_pcb(board: Board, path: str | Path) -> None:
     text = serialize(board.raw) + "\n"

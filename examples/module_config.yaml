@@ -1,0 +1,104 @@
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+design_goals:
+  optimize_for:
+    - manufacturability
+    - low_bom_cost
+    - routing_simplicity
+  max_added_area_mm2: 1200
+  preferred_side: top
+  human_review_required_for:
+    - high_speed
+    - rf
+    - isolated_power
+    - high_current
+
+hardware_platform:
+  target_voltage_domains:
+    - name: VDD_3V3
+      voltage: 3.3
+      max_current_ma: 800
+    - name: VBUS_5V
+      voltage: 5.0
+      max_current_ma: 1500
+
+functional_modules:
+  - name: debug_access
+    type: debug_swd
+    required: true
+    target_nets: [SWDIO, SWCLK, NRST, GND, 3V3]
+    allowed_implementations:
+      - direct_testpads
+      - protected_pogo
+      - connectorized_swd
+
+  - name: scalable_gpio
+    type: gpio_expansion
+    required: true
+    depends_on: [debug_access]
+    channels: 16
+    budget_area_mm2: 250
+    preferred_region: center
+    version: "1.0"
+    ai_hints:
+      - type: keep_near
+        target: debug_access
+    voltage_domains: [VDD_3V3]
+    allowed_interfaces: [i2c, spi]
+    require_level_shift: true
+    require_esd: true
+
+  - name: power_observation
+    type: current_voltage_monitor
+    required: true
+    preferred_region: power_input
+    rails: [VDD_3V3, VBUS_5V]
+    telemetry_bus: i2c
+
+  - name: analog_probe_bank
+    type: analog_measurement
+    required: false
+    depends_on: [power_observation]
+    channels: 8
+    preferred_region: top
+    ai_hints:
+      - type: sensitive_route
+    telemetry_bus: i2c
+    require_input_protection: true
+    require_mux: true
+
+probe_interface:
+  type: pogo_pad_array
+  side: bottom
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_fiducials: true
+  require_tooling_holes: true
+
+module_placement:
+  group_by_module: true
+  keep_power_modules_near_input: true
+  keep_analog_modules_away_from_switching_power: true
+  keep_debug_near_board_edge: true
+  max_module_to_probe_distance_mm: 25
+
+routing_rules:
+  default_trace_width_mm: 0.15
+  power_trace_width_mm: 0.5
+  min_clearance_mm: 0.15
+  max_vias_per_signal: 2
+  avoid_under_components: true
+
+routing_strategy:
+  coarse_grid_mm: 5
+  max_corridor_layers: 2
+  congestion_weight: 10
+  via_weight: 8
+  length_weight: 1
+  sensitive_net_spacing_mm: 5

@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ..models.constraints import Constraints
-from ..models.net import NetRole
+from ..models.net import NetRole, NetSubRole
 from ..models.probe import ProbeRequirement
 
 
@@ -68,19 +68,23 @@ def generate_rules(
     net_roles: dict[str, NetRole],
     requirements: list[ProbeRequirement] | None = None,
     base_constraints: Constraints | None = None,
+    net_sub_roles: dict[str, set[NetSubRole]] | None = None,
 ) -> GeneratedRules:
     """Produce a *GeneratedRules* object from classified nets.
 
     *requirements* supplies per-net user overrides (current, duplicate count,
     pair relationships).  *base_constraints* seeds the global rule set.
+    *net_sub_roles* provides fine-grained sub-role tags per net.
     """
     req_map = {r.net_name: r for r in (requirements or [])}
+    sub_map = net_sub_roles or {}
     result = GeneratedRules()
     result.global_constraints = base_constraints or Constraints()
 
     for net_name, role in net_roles.items():
         req = req_map.get(net_name)
-        rule = _rule_for_role(net_name, role, req)
+        subs = sub_map.get(net_name, set())
+        rule = _rule_for_role(net_name, role, req, subs)
         result.net_rules.append(rule)
         if rule.require_human_review:
             result.review_gates.append(f"{net_name}: {rule.review_reason}")
@@ -102,9 +106,11 @@ def _rule_for_role(
     net_name: str,
     role: NetRole,
     req: ProbeRequirement | None,
+    sub_roles: set[NetSubRole] | None = None,
 ) -> NetRule:
     """Map a net role to default geometric/electrical rules."""
     rule = NetRule(net_name=net_name, role=role)
+    subs = sub_roles or set()
 
     # Defaults per role
     if role == NetRole.POWER:
@@ -151,6 +157,30 @@ def _rule_for_role(
     elif role == NetRole.GPIO:
         rule.trace_width_mm = 0.15
         rule.clearance_mm = 0.15
+
+    # Sub-role refinements
+    if NetSubRole.STRAPPING_PIN in subs:
+        rule.require_human_review = True
+        rule.review_reason = (
+            "strapping pin — probe capacitance may affect boot behavior"
+        )
+    if NetSubRole.ADC_INPUT in subs:
+        rule.clearance_mm = max(rule.clearance_mm, 0.25)
+        rule.avoid_near_clocks = True
+        rule.guard_ring_optional = True
+    if NetSubRole.SD_DATA in subs:
+        if not rule.require_human_review:
+            rule.require_human_review = True
+            rule.review_reason = "SD data line — verify pull-up resistors present"
+    if NetSubRole.BATTERY in subs:
+        if not rule.require_human_review:
+            rule.require_human_review = True
+            rule.review_reason = "battery net — verify protection circuit present"
+    if NetSubRole.AUDIO_ANALOG in subs:
+        rule.avoid_near_clocks = True
+        rule.clearance_mm = max(rule.clearance_mm, 0.25)
+    if NetSubRole.I2S_CLOCK in subs:
+        rule.clearance_mm = max(rule.clearance_mm, 0.20)
 
     # Apply user overrides from requirements
     if req:

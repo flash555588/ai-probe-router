@@ -3,6 +3,7 @@
 from ai_probe_router.models.board import Board, EdgeSegment, Footprint, Pad
 from ai_probe_router.models.constraints import Constraints
 from ai_probe_router.models.probe import ProbeConfig, ProbeRequirement
+from ai_probe_router.solvers.constraint_checker import check_placement
 from ai_probe_router.solvers.placement_solver import find_placement, place_pogo_array
 
 
@@ -40,12 +41,7 @@ def test_placement_away_from_component():
     req = ProbeRequirement(net_name="SWDIO", role="debug")
     probe = ProbeConfig(preferred_grid_mm=2.54, pad_diameter_mm=1.5)
     x, y = find_placement(board, req, probe, Constraints(), [])
-    fp_bounds = board.footprint_bounds(board.footprints[0])
-    outside = (
-        x < fp_bounds.min_x or x > fp_bounds.max_x
-        or y < fp_bounds.min_y or y > fp_bounds.max_y
-    )
-    assert outside
+    assert check_placement(x, y, board, Constraints(), probe).ok
 
 
 def test_placement_respects_spacing():
@@ -83,8 +79,7 @@ def test_placement_with_no_pads():
         ],
     )
     req = ProbeRequirement(net_name="MYSTERY", role="digital")
-    x, y = find_placement(board, req, ProbeConfig(), Constraints(), [])
-    assert isinstance(x, float) and isinstance(y, float)
+    assert find_placement(board, req, ProbeConfig(), Constraints(), []) is None
 
 
 def test_multiple_placements_spread():

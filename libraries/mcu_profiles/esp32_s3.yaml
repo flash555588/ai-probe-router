@@ -1,0 +1,56 @@
+mcu:
+  name: esp32-s3
+  family: espressif
+  strapping_pins:
+    - gpio: GPIO0
+      function: Boot mode select
+      default_state: pull-up
+      notes: "Low = download boot mode"
+    - gpio: GPIO3
+      function: JTAG signal source
+      default_state: floating
+      notes: "Controls JTAG vs USB-JTAG"
+    - gpio: GPIO45
+      function: VDD_SPI voltage select
+      default_state: pull-down
+      notes: "Low = 3.3V, High = 1.8V"
+    - gpio: GPIO46
+      function: Boot mode / ROM log
+      default_state: pull-down
+      notes: "Affects boot log output"
+  adc_channels:
+    # ADC1: GPIO1-10
+    - { gpio: GPIO1,  adc_unit: 1, channel: 0 }
+    - { gpio: GPIO2,  adc_unit: 1, channel: 1 }
+    - { gpio: GPIO3,  adc_unit: 1, channel: 2 }
+    - { gpio: GPIO4,  adc_unit: 1, channel: 3 }
+    - { gpio: GPIO5,  adc_unit: 1, channel: 4 }
+    - { gpio: GPIO6,  adc_unit: 1, channel: 5 }
+    - { gpio: GPIO7,  adc_unit: 1, channel: 6 }
+    - { gpio: GPIO8,  adc_unit: 1, channel: 7 }
+    - { gpio: GPIO9,  adc_unit: 1, channel: 8 }
+    - { gpio: GPIO10, adc_unit: 1, channel: 9 }
+    # ADC2: GPIO11-20
+    - { gpio: GPIO11, adc_unit: 2, channel: 0 }
+    - { gpio: GPIO12, adc_unit: 2, channel: 1 }
+    - { gpio: GPIO13, adc_unit: 2, channel: 2 }
+    - { gpio: GPIO14, adc_unit: 2, channel: 3 }
+    - { gpio: GPIO15, adc_unit: 2, channel: 4 }
+    - { gpio: GPIO16, adc_unit: 2, channel: 5 }
+    - { gpio: GPIO17, adc_unit: 2, channel: 6 }
+    - { gpio: GPIO18, adc_unit: 2, channel: 7 }
+    - { gpio: GPIO19, adc_unit: 2, channel: 8 }
+    - { gpio: GPIO20, adc_unit: 2, channel: 9 }
+  reserved_gpios:
+    - GPIO26
+    - GPIO27
+    - GPIO28
+    - GPIO29
+    - GPIO30
+    - GPIO31
+    - GPIO32
+  notes:
+    - "GPIO26-32 used for SPI flash and PSRAM, not available for general use"
+    - "WiFi/BT active may disable ADC2 channels"
+    - "GPIO33-37 on ESP32-S3R8/R8V are for octal SPI PSRAM"
+    - "GPIO19/20 can be used for USB D-/D+"

@@ -86,12 +86,15 @@ def _extract_pads(
         shape = str(child[3])
         at = _find_list(child, "at")
         local_x, local_y = 0.0, 0.0
+        local_rot = 0.0
         if at and len(at) >= 3:
             local_x, local_y = float(at[1]), float(at[2])
+            if len(at) >= 4:
+                local_rot = float(at[3])
         rad = math.radians(fp_rot)
         cos_r, sin_r = math.cos(rad), math.sin(rad)
-        abs_x = fp_x + local_x * cos_r - local_y * sin_r
-        abs_y = fp_y + local_x * sin_r + local_y * cos_r
+        abs_x = fp_x + local_x * cos_r + local_y * sin_r
+        abs_y = fp_y - local_x * sin_r + local_y * cos_r
         size = _find_list(child, "size")
         w, h = 1.0, 1.0
         if size and len(size) >= 3:
@@ -119,6 +122,7 @@ def _extract_pads(
             drill=drill_size, net_name=net_name, net_id=net_id,
             layers=layers,
             local_x=local_x, local_y=local_y,
+            rotation=fp_rot + local_rot,
         ))
     return results
 

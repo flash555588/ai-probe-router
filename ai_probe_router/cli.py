@@ -194,5 +194,66 @@ def validate(pcb_file: str):
             console.print(f"  [{style}]{v.rule}[/]: {v.message}")
 
 
+@main.command()
+@click.argument("sch_file", type=click.Path(exists=True))
+@click.option("--pcb", type=click.Path(exists=True), default=None,
+              help="Optional PCB file for spatial analysis")
+@click.option("--mcu", type=str, default=None,
+              help="MCU profile name (e.g., esp32-s3) or path to YAML")
+def review(sch_file: str, pcb: str | None, mcu: str | None):
+    """Run design review checks on a schematic."""
+    from .ai.design_review import run_design_review
+    from .eda_adapters.kicad.sch_parser import parse_schematic
+    from .models.mcu_profile import McuProfile, load_mcu_profile
+
+    sch = parse_schematic(sch_file)
+    board = None
+    if pcb:
+        board = parse_pcb(pcb)
+
+    mcu_profile: McuProfile | None = None
+    if mcu:
+        mcu_path = Path(mcu)
+        if mcu_path.exists():
+            mcu_profile = load_mcu_profile(mcu_path)
+        else:
+            builtin = Path(__file__).parent.parent / "libraries" / "mcu_profiles" / f"{mcu.replace('-', '_')}.yaml"
+            if builtin.exists():
+                mcu_profile = load_mcu_profile(builtin)
+            else:
+                console.print(f"[red]MCU profile not found:[/] {mcu}")
+                return
+
+    report = run_design_review(sch, board, mcu_profile)
+
+    if not report.findings:
+        console.print("[green]No design issues found.[/]")
+        return
+
+    table = Table(title="Design Review Findings")
+    table.add_column("Severity", style="bold")
+    table.add_column("ID")
+    table.add_column("Category", style="cyan")
+    table.add_column("Component", style="green")
+    table.add_column("Message")
+    table.add_column("Suggestion", style="dim")
+
+    for f in report.findings:
+        sev_style = {"error": "red", "warning": "yellow", "info": "blue"}.get(f.severity, "white")
+        table.add_row(
+            f"[{sev_style}]{f.severity.upper()}[/{sev_style}]",
+            f.check_id, f.category, f.component_ref,
+            f.message, f.suggestion,
+        )
+
+    console.print(table)
+    console.print()
+    console.print(
+        f"Summary: [red]{report.error_count} errors[/], "
+        f"[yellow]{report.warning_count} warnings[/], "
+        f"{len(report.findings) - report.error_count - report.warning_count} info"
+    )
+
+
 if __name__ == "__main__":
     main()

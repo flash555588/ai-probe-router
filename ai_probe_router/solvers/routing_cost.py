@@ -72,12 +72,59 @@ def _segment_intersects_box(
     x1: float, y1: float, x2: float, y2: float,
     box: "BoundingBox",
 ) -> bool:
-    mid_x = (x1 + x2) / 2
-    mid_y = (y1 + y2) / 2
-    if box.contains(mid_x, mid_y):
+    if box.contains(x1, y1) or box.contains(x2, y2):
         return True
-    quarter_pts = [
-        (x1 + (x2 - x1) * 0.25, y1 + (y2 - y1) * 0.25),
-        (x1 + (x2 - x1) * 0.75, y1 + (y2 - y1) * 0.75),
+
+    corners = [
+        (box.min_x, box.min_y),
+        (box.max_x, box.min_y),
+        (box.max_x, box.max_y),
+        (box.min_x, box.max_y),
     ]
-    return any(box.contains(px, py) for px, py in quarter_pts)
+    edges = list(zip(corners, corners[1:] + corners[:1]))
+    return any(
+        _segments_intersect((x1, y1), (x2, y2), start, end)
+        for start, end in edges
+    )
+
+
+def _segments_intersect(
+    a1: tuple[float, float],
+    a2: tuple[float, float],
+    b1: tuple[float, float],
+    b2: tuple[float, float],
+) -> bool:
+    def orient(
+        p: tuple[float, float],
+        q: tuple[float, float],
+        r: tuple[float, float],
+    ) -> float:
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+
+    def on_segment(
+        p: tuple[float, float],
+        q: tuple[float, float],
+        r: tuple[float, float],
+    ) -> bool:
+        return (
+            min(p[0], r[0]) <= q[0] <= max(p[0], r[0])
+            and min(p[1], r[1]) <= q[1] <= max(p[1], r[1])
+        )
+
+    o1 = orient(a1, a2, b1)
+    o2 = orient(a1, a2, b2)
+    o3 = orient(b1, b2, a1)
+    o4 = orient(b1, b2, a2)
+    eps = 1e-9
+
+    if o1 * o2 < 0 and o3 * o4 < 0:
+        return True
+    if abs(o1) <= eps and on_segment(a1, b1, a2):
+        return True
+    if abs(o2) <= eps and on_segment(a1, b2, a2):
+        return True
+    if abs(o3) <= eps and on_segment(b1, a1, b2):
+        return True
+    if abs(o4) <= eps and on_segment(b1, a2, b2):
+        return True
+    return False

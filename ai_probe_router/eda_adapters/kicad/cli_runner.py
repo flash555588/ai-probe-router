@@ -73,7 +73,13 @@ def _run(cmd: list[str], report_path: Path) -> CheckResult:
     if report_path.exists():
         try:
             data = json.loads(report_path.read_text(encoding="utf-8"))
-            violations = data.get("violations", data.get("errors", []))
+            reported = data.get("violations", data.get("errors", []))
+            reported += data.get("unconnected_items", [])
+            violations = [
+                v for v in reported
+                if v.get("severity", "error") == "error"
+                and v.get("type") not in ("lib_footprint_mismatch", "lib_footprint_issues")
+            ]
             report_loaded = True
         except (json.JSONDecodeError, KeyError):
             pass
@@ -97,3 +103,31 @@ def _run(cmd: list[str], report_path: Path) -> CheckResult:
         raw_output=stdout + stderr,
         error=error,
     )
+
+
+def export_gerbers(pcb_path: str | Path, output_dir: str | Path) -> CheckResult:
+    cli = find_kicad_cli()
+    if cli is None:
+        return CheckResult(ok=None, error="kicad-cli not found")
+    cmd = [cli, "pcb", "export", "gerbers", "-o", str(output_dir), str(pcb_path)]
+    return _run(cmd, Path(output_dir) / "gerber_export.log")
+
+
+def export_drill(pcb_path: str | Path, output_dir: str | Path) -> CheckResult:
+    cli = find_kicad_cli()
+    if cli is None:
+        return CheckResult(ok=None, error="kicad-cli not found")
+    cmd = [cli, "pcb", "export", "drill", "-o", str(output_dir), str(pcb_path)]
+    return _run(cmd, Path(output_dir) / "drill_export.log")
+
+
+def export_pos(pcb_path: str | Path, output_file: str | Path) -> CheckResult:
+    cli = find_kicad_cli()
+    if cli is None:
+        return CheckResult(ok=None, error="kicad-cli not found")
+    cmd = [
+        cli, "pcb", "export", "pos", "-o", str(output_file),
+        "--side", "both", "--format", "csv", "--units", "mm",
+        str(pcb_path),
+    ]
+    return _run(cmd, Path(output_file).parent / "pos_export.log")

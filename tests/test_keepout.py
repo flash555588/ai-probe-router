@@ -16,6 +16,28 @@ def test_keepout_zone_structure():
     zone = zones[0]
     assert ["net", "0"] in zone
     assert ["keepout",
+            ["tracks", "allowed"],
+            ["vias", "allowed"],
+            ["pads", "allowed"],
+            ["copperpour", "not_allowed"],
+            ["footprints", "allowed"]] in zone
+
+
+def test_keepout_can_disallow_items_explicitly():
+    board = _make_board()
+    add_keepout_zone(
+        board,
+        10.0,
+        20.0,
+        3.0,
+        4.0,
+        tracks_allowed=False,
+        vias_allowed=False,
+        pads_allowed=False,
+        footprints_allowed=False,
+    )
+    zone = [n for n in board.raw if isinstance(n, list) and n[0] == "zone"][0]
+    assert ["keepout",
             ["tracks", "not_allowed"],
             ["vias", "not_allowed"],
             ["pads", "not_allowed"],

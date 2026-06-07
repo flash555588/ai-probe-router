@@ -46,6 +46,16 @@ def test_generate_success(tmp_path: Path):
     (44 "Edge.Cuts" user))
   (net 0 "")
   (net 1 "GND")
+  (footprint "Test:Pad"
+    (layer "F.Cu")
+    (at 25 25 0)
+    (property "Reference" "J1")
+    (property "Value" "PAD")
+    (pad "1" smd circle
+      (at 0 0)
+      (size 1.0 1.0)
+      (layers "F.Cu" "F.Mask")
+      (net 1 "GND")))
   (gr_rect
     (start 0 0)
     (end 50 50)
@@ -99,6 +109,16 @@ def test_generate_with_schematic(tmp_path: Path):
   (layers (0 "F.Cu" signal) (44 "Edge.Cuts" user))
   (net 0 "")
   (net 1 "SIG")
+  (footprint "Test:Pad"
+    (layer "F.Cu")
+    (at 25 25 0)
+    (property "Reference" "J1")
+    (property "Value" "PAD")
+    (pad "1" smd circle
+      (at 0 0)
+      (size 1.0 1.0)
+      (layers "F.Cu" "F.Mask")
+      (net 1 "SIG")))
   (gr_rect (start 0 0) (end 50 50)
     (stroke (width 0.1) (type default))
     (fill none) (layer "Edge.Cuts") (uuid "e"))

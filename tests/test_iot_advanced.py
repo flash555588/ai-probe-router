@@ -133,6 +133,19 @@ def test_advanced_iot_full_coverage(tmp_path):
     assert any(e.review_required for e in report.entries if e.net_name == "USB_DM")
     assert any(e.review_required for e in report.entries if e.net_name == "ADC_IN0")
 
+    # All 19 nets mapped (0 unmapped)
+    assert pin_report is not None
+    assert len(pin_report.result.unmapped) == 0
+
+    # Diff pairs assigned to adjacent pins
+    usb_dp_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "USB_DP")
+    usb_dm_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "USB_DM")
+    assert abs(usb_dp_idx - usb_dm_idx) == 1, f"USB diff pair not adjacent: {usb_dp_idx}, {usb_dm_idx}"
+
+    can_h_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "CAN_H")
+    can_l_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "CAN_L")
+    assert abs(can_h_idx - can_l_idx) == 1, f"CAN diff pair not adjacent: {can_h_idx}, {can_l_idx}"
+
 
 def test_advanced_iot_diff_pair_pin_mapper():
     from ai_probe_router.solvers.pin_mapper import solve_mapping

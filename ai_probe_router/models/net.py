@@ -17,6 +17,19 @@ class NetRole(Enum):
     GPIO = auto()
 
 
+class NetSubRole(Enum):
+    STRAPPING_PIN = auto()
+    ADC_INPUT = auto()
+    I2S_DATA = auto()
+    I2S_CLOCK = auto()
+    SD_DATA = auto()
+    SD_CLK = auto()
+    BATTERY = auto()
+    AUDIO_ANALOG = auto()
+    USB_DATA = auto()
+    ANALOG_GROUND = auto()
+
+
 @dataclass
 class NetNode:
     ref: str
@@ -30,4 +43,5 @@ class Net:
     nodes: list[NetNode] = field(default_factory=list)
     net_class: str = "Default"
     role: NetRole = NetRole.UNKNOWN
+    sub_roles: set[NetSubRole] = field(default_factory=set)
     has_testpoint: bool = False
