@@ -22,7 +22,19 @@ web = [
     "python-multipart>=0.0.9",
     "uvicorn>=0.30",
 ]
+ui = [
+    "streamlit>=1.38",
+    "matplotlib>=3.8",
+]
 solver = [
+    "ortools>=9.9",
+]
+all = [
+    "fastapi>=0.111",
+    "python-multipart>=0.0.9",
+    "uvicorn>=0.30",
+    "streamlit>=1.38",
+    "matplotlib>=3.8",
     "ortools>=9.9",
 ]
 
