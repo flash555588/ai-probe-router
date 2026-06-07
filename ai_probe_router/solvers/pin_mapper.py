@@ -44,6 +44,7 @@ def load_dev_board(path: str | Path) -> DevelopmentBoard:
         name=b.get("name", "unknown"),
         connector_type=conn.get("type", "dual_row_header"),
         pitch_mm=conn.get("pitch_mm", 2.54),
+        rows=conn.get("rows", 2),
         pins_per_row=conn.get("pins_per_row", 20),
     )
     for p in b.get("pins", []):
@@ -85,8 +86,7 @@ def solve_mapping(
                 processed.add(pair_req.net_name)
                 continue
             # Fallback to individual assignment if pair assignment fails
-
-        needed_caps = _role_to_capabilities(req.role, req.net_name)
+        needed_caps = _role_to_capabilities(req.role, req.net_name, req.pair_net_name)
         candidates = _find_candidates(board, needed_caps, req, used_pins)
 
         preferred = [c for c in candidates if c.pin.name in req.preferred_devboard_pins]
@@ -155,9 +155,8 @@ def _assign_differential_pair(
 
     Returns True if successful.
     """
-    caps_a = _role_to_capabilities(req_a.role, req_a.net_name)
-    caps_b = _role_to_capabilities(req_b.role, req_b.net_name)
-
+    caps_a = _role_to_capabilities(req_a.role, req_a.net_name, req_a.pair_net_name)
+    caps_b = _role_to_capabilities(req_b.role, req_b.net_name, req_b.pair_net_name)
     cands_a = _find_candidates(board, caps_a, req_a, used_pins)
     if not cands_a:
         return False
@@ -224,8 +223,7 @@ def _sort_requirements(reqs: list[ProbeRequirement]) -> list[ProbeRequirement]:
         r.net_name,
     ))
 
-
-def _role_to_capabilities(role: str, net_name: str) -> set[str]:
+def _role_to_capabilities(role: str, net_name: str, pair_net_name: str = "") -> set[str]:
     caps: set[str] = set()
     role_lc = role.lower()
     net_lc = net_name.lower()
@@ -287,6 +285,10 @@ def _role_to_capabilities(role: str, net_name: str) -> set[str]:
             caps.add("USB_DM")
         if "eth" in net_lc:
             caps.add("ETH")
+        # Only fall back to GPIO when this is part of a differential pair
+        # and the board lacks dedicated USB/Eth pins.
+        if pair_net_name:
+            caps.add("GPIO")
     if role_lc in ("gpio",):
         caps.add("GPIO")
 
@@ -341,7 +343,7 @@ def _find_next_ground_or_duplicate(
     used_pins: set[int],
     req: ProbeRequirement,
 ) -> _Candidate | None:
-    needed = _role_to_capabilities(req.role, req.net_name)
+    needed = _role_to_capabilities(req.role, req.net_name, req.pair_net_name)
     for idx, pin in enumerate(board.pins):
         if idx in used_pins:
             continue

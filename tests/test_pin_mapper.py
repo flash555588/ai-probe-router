@@ -133,6 +133,8 @@ def test_load_dev_board():
         return
     board = load_dev_board(yaml_path)
     assert board.name == "stm32_nucleo_64"
+    assert board.rows == 2
+    assert board.pin_count == 40
     assert len(board.pins) == 31
     assert any(p.name == "PA13" and p.fixed for p in board.pins)
 
@@ -177,7 +179,15 @@ def test_differential_pair_mapping():
 
 
 def test_differential_pair_fallback_when_no_adjacent():
-    board = _make_dev_board()
+    # Create a board with only one GPIO pin — impossible to place a pair
+    board = DevelopmentBoard(
+        name="tiny_board",
+        connector_type="single_row",
+        pitch_mm=2.54,
+        pins=[
+            DevBoardPin(name="PA0", capabilities=["GPIO"]),
+        ],
+    )
     reqs = [
         ProbeRequirement(
             net_name="USB_DP", role="high_speed", required=True,
@@ -189,7 +199,7 @@ def test_differential_pair_fallback_when_no_adjacent():
         ),
     ]
     result = solve_mapping(reqs, board)
-    # Board has no USB pins, so both should fail as required
+    # Only one pin available, so differential pair must fail
     assert not result.ok
 
 
