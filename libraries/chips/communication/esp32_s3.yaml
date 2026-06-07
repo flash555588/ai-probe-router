@@ -1,0 +1,55 @@
+chip:
+  mpn: esp32_s3
+  category: communication
+  description: Wi-Fi 4 and Bluetooth 5 (LE) SoC with AI acceleration
+  symbol: RF_Module:ESP32-S3-WROOM-1
+
+package_options:
+  - name: QFN-56
+    footprint: Package_DFN_QFN:QFN-56-1EP_7x7mm_P0.4mm_EP3.7x3.7mm
+    area_mm2: 64
+
+power:
+  domains:
+    - name: VDD_3V3
+      voltage_min: 3.0
+      voltage_max: 3.6
+      current_typ_ma: 500
+      current_max_ma: 1000
+
+interfaces:
+  - type: uart
+    pins: [TXD0, RXD0]
+  - type: spi
+    pins: [SPICLK, SPID, SPIQ, SPICS0]
+  - type: i2c
+    pins: [SDA, SCL]
+  - type: usb
+    pins: [USB_DM, USB_DP]
+  - type: wifi
+    pins: [ANT]
+
+pins:
+  - name: TXD0
+    direction: output
+    capabilities: [UART_TX]
+    voltage_domain: VDD_3V3
+  - name: RXD0
+    direction: input
+    capabilities: [UART_RX]
+    voltage_domain: VDD_3V3
+  - name: USB_DM
+    direction: bidirectional
+    capabilities: [USB_DM]
+    voltage_domain: VDD_3V3
+  - name: USB_DP
+    direction: bidirectional
+    capabilities: [USB_DP]
+    voltage_domain: VDD_3V3
+  - name: ANT
+    direction: bidirectional
+    capabilities: [RF_ANTENNA]
+
+constraints:
+  require_40mhz_crystal: true
+  review_required: false

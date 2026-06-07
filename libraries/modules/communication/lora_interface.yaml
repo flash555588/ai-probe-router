@@ -1,0 +1,37 @@
+module:
+  name: lora_interface_sx1262
+  type: lora_interface
+  version: "1.0.0"
+
+provides:
+  - LORA_868_915_MHZ
+  - FSK_MODULATION
+
+implementations:
+  - name: sx1262_transceiver_module
+    version: "1.0.0"
+    interfaces: [spi]
+    features:
+      - PA_BOOST
+      - EXTERNAL_ANTENNA_PAD
+    components:
+      - type: lora_transceiver
+        count: 1
+        chip: sx1262
+        chip_version: "1.0.0"
+        package_options: ["VQFN-24"]
+        footprint_version: "kicad-8"
+      - type: crystal
+        count: 1
+        value: "32MHz"
+        footprint_version: "kicad-8"
+      - type: matching_network
+        count: 1
+        footprint_version: "0402"
+      - type: u_fl_connector
+        count: 1
+        footprint_version: "kicad-8"
+    area_mm2: 180
+    bom_cost: 4.20
+    constraints:
+      human_review_required: false

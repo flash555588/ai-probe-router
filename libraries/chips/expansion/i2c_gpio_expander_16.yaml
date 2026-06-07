@@ -1,0 +1,56 @@
+chip:
+  mpn: generic_i2c_gpio_expander_16
+  category: gpio_expander
+  description: 16-channel I2C GPIO expansion device
+  symbol: Interface_Expansion:MCP23017_SO
+
+package_options:
+  - name: TSSOP-24
+    footprint: Package_SO:TSSOP-24_4.4x7.8mm_P0.65mm
+    area_mm2: 50
+  - name: QFN-24
+    footprint: Package_DFN_QFN:QFN-24-1EP_4x4mm_P0.5mm_EP2.7x2.7mm
+    area_mm2: 25
+
+power:
+  domains:
+    - name: VDD
+      voltage_min: 1.8
+      voltage_max: 5.5
+      current_typ_ma: 2
+
+interfaces:
+  - type: i2c
+    pins: [SCL, SDA]
+    address_configurable: true
+    max_bus_speed: fast_mode_plus
+
+pins:
+  - name: SDA
+    direction: bidirectional
+    capabilities: [I2C_SDA]
+    voltage_domain: VDD
+  - name: SCL
+    direction: input
+    capabilities: [I2C_SCL]
+    voltage_domain: VDD
+  - name: IO0
+    direction: bidirectional
+    capabilities: [GPIO]
+    voltage_domain: VDD
+  - name: INT
+    direction: output
+    capabilities: [INTERRUPT]
+    voltage_domain: VDD
+
+required_passives:
+  - type: decoupling_capacitor
+    value: 100nF
+    package: 0402
+    near_pin: VDD
+
+constraints:
+  require_pullups_for: [SDA, SCL]
+  keep_decoupling_distance_mm_max: 2.0
+  review_required: false
+

@@ -1,0 +1,37 @@
+module:
+  name: wifi_interface_esp32s3
+  type: wifi_interface
+  version: "1.0.0"
+
+provides:
+  - WIFI_802_11_BGN
+  - BLUETOOTH_LE
+
+implementations:
+  - name: esp32s3_wifi_bt_combo
+    version: "1.0.0"
+    interfaces: [spi, uart]
+    features:
+      - ONBOARD_ANTENNA
+      - EXTERNAL_ANTENNA_PAD
+    components:
+      - type: wifi_mcu
+        count: 1
+        chip: esp32_s3
+        chip_version: "1.0.0"
+        package_options: ["QFN-56"]
+        footprint_version: "kicad-8"
+      - type: crystal
+        count: 1
+        value: "40MHz"
+        footprint_version: "kicad-8"
+      - type: matching_network
+        count: 1
+        footprint_version: "0402"
+      - type: pcb_antenna
+        count: 1
+        alternate: external_u_fl
+    area_mm2: 250
+    bom_cost: 3.50
+    constraints:
+      human_review_required: false

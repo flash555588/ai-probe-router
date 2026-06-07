@@ -1,0 +1,36 @@
+module:
+  name: gnss_neo_m9n
+  type: gnss_module
+  version: "1.0.0"
+
+provides:
+  - GPS_GALILEO_GLONASS_BEIDOU
+  - RTK_READY
+
+implementations:
+  - name: neo_m9n_gnss_receiver
+    version: "1.0.0"
+    interfaces: [uart, i2c]
+    features:
+      - MULTI_BAND
+      - EXTERNAL_ANTENNA_PAD
+    components:
+      - type: gnss_receiver
+        count: 1
+        chip: neo_m9n
+        chip_version: "1.0.0"
+        package_options: ["LCC-35"]
+        footprint_version: "kicad-8"
+      - type: lna
+        count: 1
+        footprint_version: "SOT-23-5"
+      - type: saw_filter
+        count: 1
+        footprint_version: "0805"
+      - type: u_fl_connector
+        count: 1
+        footprint_version: "kicad-8"
+    area_mm2: 200
+    bom_cost: 15.00
+    constraints:
+      human_review_required: false

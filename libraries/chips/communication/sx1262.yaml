@@ -1,0 +1,49 @@
+chip:
+  mpn: sx1262
+  category: communication
+  description: Sub-GHz LoRa transceiver
+  symbol: RF_Module:SX1262
+
+package_options:
+  - name: VQFN-24
+    footprint: Package_DFN_QFN:VQFN-24-1EP_4x4mm_P0.5mm_EP2.6x2.6mm
+    area_mm2: 16
+
+power:
+  domains:
+    - name: VDD
+      voltage_min: 1.8
+      voltage_max: 3.7
+      current_typ_ma: 15
+
+interfaces:
+  - type: spi
+    pins: [SCK, MOSI, MISO, NSS]
+  - type: gpio
+    pins: [DIO1, DIO2, DIO3, BUSY]
+  - type: rf
+    pins: [RFI_P, RFI_N, RFO]
+
+pins:
+  - name: SCK
+    direction: input
+    capabilities: [SPI_SCK]
+  - name: MOSI
+    direction: input
+    capabilities: [SPI_MOSI]
+  - name: MISO
+    direction: output
+    capabilities: [SPI_MISO]
+  - name: NSS
+    direction: input
+    capabilities: [SPI_CS]
+  - name: DIO1
+    direction: output
+    capabilities: [GPIO]
+  - name: BUSY
+    direction: output
+    capabilities: [GPIO]
+
+constraints:
+  require_32mhz_crystal: true
+  review_required: false

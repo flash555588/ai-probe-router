@@ -1,0 +1,41 @@
+chip:
+  mpn: generic_i2c_adc_12bit
+  category: adc
+  description: 12-bit I2C analog-to-digital converter
+  symbol: Analog_ADC:ADC_Generic
+
+package_options:
+  - name: TSSOP-10
+    footprint: Package_SO:TSSOP-10_3x3mm_P0.5mm
+    area_mm2: 18
+
+power:
+  domains:
+    - name: VDD
+      voltage_min: 2.7
+      voltage_max: 5.5
+      current_typ_ma: 1
+
+interfaces:
+  - type: i2c
+    pins: [SCL, SDA]
+    address_configurable: true
+    max_bus_speed: fast_mode
+
+pins:
+  - name: SDA
+    direction: bidirectional
+    capabilities: [I2C_SDA]
+    voltage_domain: VDD
+  - name: SCL
+    direction: input
+    capabilities: [I2C_SCL]
+    voltage_domain: VDD
+  - name: AIN0
+    direction: input
+    capabilities: [ADC_INPUT]
+
+constraints:
+  require_pullups_for: [SDA, SCL]
+  review_required: false
+

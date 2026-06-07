@@ -1,0 +1,43 @@
+module:
+  name: motor_driver_drv8833
+  type: motor_driver
+  version: "1.0.0"
+
+provides:
+  - DUAL_H_BRIDGE
+  - DC_MOTOR_CONTROL
+  - STEPPER_MOTOR_CONTROL
+
+implementations:
+  - name: drv8833_dual_h_bridge
+    version: "1.0.0"
+    interfaces: [pwm, gpio]
+    features:
+      - CURRENT_LIMIT
+      - OVERCURRENT_PROTECTION
+      - THERMAL_SHUTDOWN
+    channels: 2
+    components:
+      - type: motor_driver_ic
+        count: 1
+        chip: drv8833
+        chip_version: "1.0.0"
+        package_options: ["HTSSOP-16", "WSON-16"]
+        footprint_version: "kicad-8"
+      - type: charge_pump_capacitor
+        count: 1
+        value: "10uF"
+        footprint_version: "0603"
+      - type: bypass_capacitor
+        count: 2
+        value: "100nF"
+        footprint_version: "0402"
+      - type: current_sense_resistor
+        count: 2
+        value: "0.2"
+        footprint_version: "0805"
+    area_mm2: 120
+    bom_cost: 1.80
+    constraints:
+      max_current_per_channel_ma: 1500
+      human_review_required: false

@@ -1,0 +1,48 @@
+chip:
+  mpn: neo_m9n
+  category: communication
+  description: Multi-band GNSS receiver module
+  symbol: RF_Module:NEO-M9N
+
+package_options:
+  - name: LCC-35
+    footprint: RF_Module:u-blox_NEO
+    area_mm2: 196
+
+power:
+  domains:
+    - name: VCC
+      voltage_min: 2.7
+      voltage_max: 3.6
+      current_typ_ma: 35
+
+interfaces:
+  - type: uart
+    pins: [TXD, RXD]
+  - type: i2c
+    pins: [SDA, SCL]
+  - type: spi
+    pins: [CS, MISO, MOSI, SCK]
+  - type: rf
+    pins: [RF_IN]
+
+pins:
+  - name: TXD
+    direction: output
+    capabilities: [UART_TX]
+  - name: RXD
+    direction: input
+    capabilities: [UART_RX]
+  - name: SDA
+    direction: bidirectional
+    capabilities: [I2C_SDA]
+  - name: SCL
+    direction: input
+    capabilities: [I2C_SCL]
+  - name: RF_IN
+    direction: input
+    capabilities: [RF_ANTENNA]
+
+constraints:
+  require_backup_battery: true
+  review_required: false

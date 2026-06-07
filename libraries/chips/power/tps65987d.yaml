@@ -1,0 +1,44 @@
+chip:
+  mpn: tps65987d
+  category: power
+  description: USB Type-C and USB PD controller
+  symbol: Power_Management:TPS65987D
+
+package_options:
+  - name: BGA-96
+    footprint: Package_BGA:BGA-96_9.1x9.1mm_Layout10x10_P0.8mm_Ball0.4mm_Pad0.35mm_NSMD
+    area_mm2: 83
+
+power:
+  domains:
+    - name: VBUS
+      voltage_min: 5.0
+      voltage_max: 20.0
+      current_max_ma: 5000
+    - name: VDD_3V3
+      voltage_min: 3.0
+      voltage_max: 3.6
+
+interfaces:
+  - type: i2c
+    pins: [SDA, SCL]
+  - type: usb_c
+    pins: [CC1, CC2, SBU1, SBU2, Dp1, Dn1, Dp2, Dn2]
+
+pins:
+  - name: CC1
+    direction: bidirectional
+    capabilities: [USB_CC]
+  - name: CC2
+    direction: bidirectional
+    capabilities: [USB_CC]
+  - name: SDA
+    direction: bidirectional
+    capabilities: [I2C_SDA]
+  - name: SCL
+    direction: input
+    capabilities: [I2C_SCL]
+
+constraints:
+  require_dual_cc_pull_down: true
+  review_required: true

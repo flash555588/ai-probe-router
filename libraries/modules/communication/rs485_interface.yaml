@@ -1,0 +1,42 @@
+module:
+  name: protected_rs485_interface
+  type: rs485_interface
+  version: "1.0.0"
+
+provides:
+  - DIFFERENTIAL_COMMUNICATION
+  - PROTECTED_FIELD_BUS
+
+implementations:
+  - name: protected_rs485_transceiver
+    version: "1.0.0"
+    interfaces: [uart]
+    features:
+      - ESD_PROTECTION
+      - INPUT_PROTECTION
+    components:
+      - type: rs485_transceiver
+        count: 1
+        chip: generic_rs485_transceiver
+        chip_version: "1.0.0"
+        package_options: ["SOIC-8"]
+        footprint_version: "kicad-8"
+        alternate_chips: ["generic_rs485_transceiver_alt"]
+        alternate_footprints: ["MSOP-8"]
+      - type: tvs_diode
+        count: 2
+        footprint_version: "SOD-323"
+        alternate_footprints: ["SOD-523"]
+      - type: common_mode_choke
+        count: 1
+        footprint_version: "0805"
+        alternate_footprints: ["0603"]
+      - type: connector
+        count: 1
+        package_options: ["1x03_3.5mm"]
+        footprint_version: "kicad-8"
+        alternate_footprints: ["1x03_2.54mm"]
+    area_mm2: 180
+    bom_cost: 2.10
+    constraints:
+      human_review_required: false

@@ -1,0 +1,49 @@
+module:
+  name: i2c_adc_analog_measurement
+  type: analog_measurement
+  version: "1.0.0"
+
+provides:
+  - ANALOG_MEASUREMENT
+  - I2C_TELEMETRY
+
+implementations:
+  - name: i2c_adc_with_mux_and_protection
+    version: "1.0.0"
+    interfaces: [i2c]
+    features:
+      - INPUT_PROTECTION
+    channels: 8
+    components:
+      - type: adc
+        count: 1
+        chip: generic_i2c_adc_12bit
+        chip_version: "1.0.0"
+        package_options: ["TSSOP-10"]
+        footprint_version: "kicad-8"
+        alternate_chips: ["generic_i2c_adc_12bit_alt"]
+        alternate_footprints: ["MSOP-10"]
+      - type: analog_mux
+        count: 1
+        version: "fixture-1"
+      - type: rc_filter
+        count: 8
+        footprint_version: "0402"
+        alternate_footprints: ["0603"]
+      - type: esd_array
+        count: 2
+        chip: generic_gpio_esd_array
+        chip_version: "1.0.0"
+        package_options: ["SOT-23-6"]
+        footprint_version: "kicad-8"
+        alternate_chips: ["generic_gpio_esd_array_alt"]
+        alternate_footprints: ["DFN-6"]
+      - type: pullup_resistor
+        count: 2
+        footprint_version: "0402"
+        alternate_footprints: ["0603"]
+    area_mm2: 140
+    bom_cost: 1.80
+    constraints:
+      i2c_address: "0x48"
+      human_review_required: false

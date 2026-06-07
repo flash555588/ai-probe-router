@@ -1,0 +1,44 @@
+module:
+  name: usb_c_power_delivery
+  type: usb_c_pd
+  version: "1.0.0"
+
+provides:
+  - USB_C_CONNECTOR
+  - USB_PD_3_0
+  - POWER_DELIVERY_5V_20V
+
+implementations:
+  - name: usb_c_pd_sink_controller
+    version: "1.0.0"
+    interfaces: [i2c]
+    features:
+      - PD_NEGOTIATION
+      - VBUS_SWITCH
+      - ESD_PROTECTION
+    components:
+      - type: pd_controller
+        count: 1
+        chip: tps65987d
+        chip_version: "1.0.0"
+        package_options: ["BGA-96"]
+        footprint_version: "kicad-8"
+      - type: usb_c_receptacle
+        count: 1
+        package_options: ["USB_C_24P"]
+        footprint_version: "kicad-8"
+      - type: esd_diode
+        count: 2
+        footprint_version: "SOD-323"
+      - type: vbus_mosfet
+        count: 2
+        footprint_version: "DFN-8"
+      - type: cc_pull_down
+        count: 2
+        value: "5.1k"
+        footprint_version: "0402"
+    area_mm2: 300
+    bom_cost: 5.50
+    constraints:
+      max_power_w: 100
+      human_review_required: true

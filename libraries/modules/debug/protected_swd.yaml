@@ -1,0 +1,75 @@
+module:
+  name: protected_swd_debug
+  type: debug_swd
+
+provides:
+  - DEBUG_SWD
+  - RESET_ACCESS
+  - TARGET_POWER_SENSE
+  - GND_REFERENCE
+
+requires:
+  target_nets:
+    - SWDIO
+    - SWCLK
+    - NRST
+    - GND
+    - VREF
+
+implementations:
+  - name: direct_testpads
+    features:
+      - DIRECT_TESTPAD
+    components:
+      - type: series_resistor
+        count: 3
+        value_options: ["22", "33", "47", "100"]
+        package_options: ["0402", "0603"]
+      - type: testpad
+        count: 5
+    area_mm2: 35
+    bom_cost: 0.03
+    constraints:
+      max_stub_length_mm: 15
+      keep_near_target_mcu: true
+      human_review_required: false
+
+  - name: protected_pogo
+    features:
+      - ESD_PROTECTION
+    components:
+      - type: series_resistor
+        count: 3
+        value_options: ["22", "33", "47", "100"]
+        package_options: ["0402", "0603"]
+      - type: esd_array
+        count: 1
+        chip: generic_gpio_esd_array
+      - type: testpad
+        count: 5
+    area_mm2: 55
+    bom_cost: 0.12
+    constraints:
+      max_stub_length_mm: 20
+      keep_near_target_mcu: true
+      human_review_required: false
+
+  - name: connectorized_swd
+    features:
+      - ESD_PROTECTION
+    components:
+      - type: connector
+        count: 1
+        package_options: ["1x05_2.54mm", "2x05_1.27mm"]
+      - type: series_resistor
+        count: 3
+      - type: esd_array
+        count: 1
+        chip: generic_gpio_esd_array
+    area_mm2: 110
+    bom_cost: 0.25
+    constraints:
+      place_near_board_edge: true
+      require_silkscreen_pin1: true
+      human_review_required: false
+

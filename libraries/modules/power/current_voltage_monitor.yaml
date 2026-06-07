@@ -1,0 +1,58 @@
+module:
+  name: i2c_current_voltage_monitor
+  type: current_voltage_monitor
+
+provides:
+  - POWER_TELEMETRY
+  - CURRENT_MONITORING
+  - VOLTAGE_MONITORING
+
+implementations:
+  - name: i2c_current_monitor_with_sense_resistor
+    interfaces: [i2c]
+    features:
+      - CURRENT_SENSE
+      - INPUT_PROTECTION
+    channels: 2
+    components:
+      - type: current_monitor
+        count: 1
+        chip: generic_i2c_current_monitor
+      - type: sense_resistor
+        count: 2
+        package_options: ["0805", "1206"]
+      - type: rc_filter
+        count: 2
+      - type: decoupling_capacitor
+        count: 1
+    area_mm2: 95
+    bom_cost: 1.10
+    constraints:
+      kelvin_route_sense_resistor: true
+      human_review_required: false
+
+  - name: protected_power_monitor_with_efuse
+    interfaces: [i2c]
+    features:
+      - CURRENT_SENSE
+      - INPUT_PROTECTION
+    channels: 2
+    components:
+      - type: current_monitor
+        count: 1
+        chip: generic_i2c_current_monitor
+      - type: sense_resistor
+        count: 2
+      - type: efuse
+        count: 1
+      - type: tvs_diode
+        count: 1
+      - type: decoupling_capacitor
+        count: 2
+    area_mm2: 150
+    bom_cost: 1.95
+    constraints:
+      kelvin_route_sense_resistor: true
+      keep_near_power_input: true
+      human_review_required: false
+

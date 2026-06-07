@@ -1,0 +1,35 @@
+chip:
+  mpn: generic_gpio_esd_array
+  category: protection
+  description: Low-capacitance ESD diode array for GPIO and debug pins
+  symbol: Diode:ESD_Protection
+
+package_options:
+  - name: SOT-23-6
+    footprint: Package_TO_SOT_SMD:SOT-23-6
+    area_mm2: 9
+  - name: DFN-6
+    footprint: Package_DFN_QFN:DFN-6-1EP_1.6x1.6mm_P0.5mm_EP0.6x1.0mm
+    area_mm2: 4
+
+power:
+  domains:
+    - name: VCLAMP
+      voltage_min: 0
+      voltage_max: 5.5
+
+pins:
+  - name: IO1
+    direction: passive
+    capabilities: [ESD_PROTECTED_IO]
+  - name: IO2
+    direction: passive
+    capabilities: [ESD_PROTECTED_IO]
+  - name: GND
+    direction: passive
+    capabilities: [GND]
+
+constraints:
+  keep_near_connector_or_probe_mm_max: 5.0
+  review_required: false
+

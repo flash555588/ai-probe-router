@@ -1,0 +1,42 @@
+chip:
+  mpn: generic_rs485_transceiver
+  category: communication
+  description: Half-duplex RS-485 transceiver
+  symbol: Interface_UART:RS485_Generic
+
+package_options:
+  - name: SOIC-8
+    footprint: Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
+    area_mm2: 40
+
+power:
+  domains:
+    - name: VCC
+      voltage_min: 3.0
+      voltage_max: 5.5
+      current_typ_ma: 2
+
+interfaces:
+  - type: uart
+    pins: [TXD, RXD, DE, RE]
+
+pins:
+  - name: TXD
+    direction: input
+    capabilities: [UART_TX]
+    voltage_domain: VCC
+  - name: RXD
+    direction: output
+    capabilities: [UART_RX]
+    voltage_domain: VCC
+  - name: A
+    direction: bidirectional
+    capabilities: [RS485_A]
+  - name: B
+    direction: bidirectional
+    capabilities: [RS485_B]
+
+constraints:
+  require_esd: true
+  review_required: false
+

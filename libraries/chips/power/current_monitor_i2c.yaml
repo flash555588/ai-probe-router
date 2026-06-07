@@ -1,0 +1,55 @@
+chip:
+  mpn: generic_i2c_current_monitor
+  category: current_monitor
+  description: I2C current and bus-voltage monitor
+  symbol: Sensor_Current:INA219AxDCN
+
+package_options:
+  - name: SOT-23-8
+    footprint: Package_TO_SOT_SMD:SOT-23-8
+    area_mm2: 18
+  - name: SOIC-8
+    footprint: Package_SO:SOIC-8_3.9x4.9mm_P1.27mm
+    area_mm2: 40
+
+power:
+  domains:
+    - name: VCC
+      voltage_min: 2.7
+      voltage_max: 5.5
+      current_typ_ma: 1
+
+interfaces:
+  - type: i2c
+    pins: [SCL, SDA]
+    address_configurable: true
+    max_bus_speed: fast_mode
+
+pins:
+  - name: SDA
+    direction: bidirectional
+    capabilities: [I2C_SDA]
+    voltage_domain: VCC
+  - name: SCL
+    direction: input
+    capabilities: [I2C_SCL]
+    voltage_domain: VCC
+  - name: VIN+
+    direction: input
+    capabilities: [CURRENT_SENSE_POS]
+  - name: VIN-
+    direction: input
+    capabilities: [CURRENT_SENSE_NEG]
+
+required_passives:
+  - type: decoupling_capacitor
+    value: 100nF
+    package: 0402
+    near_pin: VCC
+  - type: sense_resistor
+    value: application_defined
+
+constraints:
+  kelvin_route_sense_resistor: true
+  review_required: false
+

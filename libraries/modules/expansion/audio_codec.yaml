@@ -1,0 +1,44 @@
+module:
+  name: i2s_audio_codec
+  type: audio_codec
+  version: "1.0.0"
+
+provides:
+  - STEREO_AUDIO_DAC
+  - STEREO_AUDIO_ADC
+  - HEADPHONE_AMPLIFIER
+  - LINE_INPUT
+
+implementations:
+  - name: pcm5102a_i2s_dac
+    version: "1.0.0"
+    interfaces: [i2s]
+    features:
+      - PLL_FREE_OPERATION
+      - DIRECT_LINE_OUTPUT
+      - POP_NOISE_SUPPRESSION
+    channels: 2
+    components:
+      - type: audio_dac
+        count: 1
+        chip: pcm5102a
+        chip_version: "1.0.0"
+        package_options: ["TSSOP-20", "VQFN-32"]
+        footprint_version: "kicad-8"
+      - type: output_coupling_capacitor
+        count: 2
+        value: "10uF"
+        footprint_version: "0603"
+      - type: bypass_capacitor
+        count: 4
+        value: "100nF"
+        footprint_version: "0402"
+      - type: headphone_jack
+        count: 1
+        package_options: ["PJ-307"]
+        footprint_version: "kicad-8"
+    area_mm2: 160
+    bom_cost: 2.80
+    constraints:
+      sample_rate_khz: 48
+      human_review_required: false

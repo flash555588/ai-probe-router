@@ -1,0 +1,71 @@
+module:
+  name: mixed_voltage_gpio_expansion
+  type: gpio_expansion
+
+provides:
+  - GPIO_EXPANSION
+  - LEVEL_SHIFTED_GPIO
+  - ESD_PROTECTED_IO
+
+implementations:
+  - name: i2c_gpio_expander_16_level_shifted
+    interfaces: [i2c]
+    features:
+      - LEVEL_SHIFT
+      - ESD_PROTECTION
+    channels: 16
+    components:
+      - type: gpio_expander
+        count: 1
+        chip: generic_i2c_gpio_expander_16
+      - type: level_shifter
+        count: 2
+      - type: esd_array
+        count: 2
+        chip: generic_gpio_esd_array
+      - type: pullup_resistor
+        count: 2
+    area_mm2: 125
+    bom_cost: 1.35
+    constraints:
+      require_pullups: true
+      human_review_required: false
+
+  - name: spi_gpio_expander_16_protected
+    interfaces: [spi]
+    features:
+      - ESD_PROTECTION
+    channels: 16
+    components:
+      - type: gpio_expander
+        count: 1
+        chip: generic_spi_gpio_expander_16
+      - type: resistor_array
+        count: 2
+      - type: esd_array
+        count: 2
+        chip: generic_gpio_esd_array
+    area_mm2: 115
+    bom_cost: 1.15
+    constraints:
+      human_review_required: false
+
+  - name: native_mcu_gpio_level_shifted
+    features:
+      - LEVEL_SHIFT
+      - ESD_PROTECTION
+    channels: 8
+    components:
+      - type: mcu_gpio
+        count: 8
+      - type: level_shifter
+        count: 1
+      - type: esd_array
+        count: 1
+        chip: generic_gpio_esd_array
+    area_mm2: 65
+    bom_cost: 0.75
+    constraints:
+      consumes_native_mcu_pins: true
+      human_review_required: false
+

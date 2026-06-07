@@ -1,0 +1,47 @@
+chip:
+  mpn: pcm5102a
+  category: expansion
+  description: Stereo audio DAC with 32-bit, 384kHz PCM interface
+  symbol: Audio_IC:PCM5102A
+
+package_options:
+  - name: TSSOP-20
+    footprint: Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm
+    area_mm2: 29
+  - name: VQFN-32
+    footprint: Package_DFN_QFN:VQFN-32-1EP_5x5mm_P0.5mm_EP3.5x3.5mm
+    area_mm2: 25
+
+power:
+  domains:
+    - name: VDD
+      voltage_min: 1.65
+      voltage_max: 3.6
+      current_typ_ma: 20
+
+interfaces:
+  - type: i2s
+    pins: [BCK, DIN, LRCK]
+  - type: gpio
+    pins: [FMT, XSMT]
+
+pins:
+  - name: BCK
+    direction: input
+    capabilities: [I2S_SCK]
+  - name: DIN
+    direction: input
+    capabilities: [I2S_DATA]
+  - name: LRCK
+    direction: input
+    capabilities: [I2S_WS]
+  - name: FMT
+    direction: input
+    capabilities: [GPIO]
+  - name: XSMT
+    direction: input
+    capabilities: [GPIO]
+
+constraints:
+  require_output_coupling: true
+  review_required: false
