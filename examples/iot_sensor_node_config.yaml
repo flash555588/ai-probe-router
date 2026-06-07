@@ -1,0 +1,127 @@
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+design_goals:
+  optimize_for:
+    - manufacturability
+    - test_coverage
+    - routing_simplicity
+  max_added_area_mm2: 800
+  preferred_side: top
+  human_review_required_for:
+    - high_speed
+    - high_current
+    - analog
+
+hardware_platform:
+  target_voltage_domains:
+    - name: VDD_3V3
+      voltage: 3.3
+      max_current_ma: 500
+
+functional_modules:
+  - name: debug_access
+    type: debug_swd
+    required: true
+    target_nets: [SWDIO, SWCLK, NRST, GND, 3V3]
+    allowed_implementations:
+      - direct_testpads
+      - protected_pogo
+      - connectorized_swd
+
+  - name: power_observation
+    type: current_voltage_monitor
+    required: true
+    preferred_region: power_input
+    rails: [VDD_3V3]
+    telemetry_bus: i2c
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.27
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+  require_fiducials: true
+  require_tooling_holes: true
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA13]
+  - net: SWCLK
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA14]
+  - net: UART_TX
+    role: communication
+    required: true
+    preferred_devboard_pins: [D8_PA9, D1_PA2]
+  - net: UART_RX
+    role: communication
+    required: true
+    preferred_devboard_pins: [D2_PA10]
+  - net: NRST
+    role: reset
+    required: true
+    preferred_devboard_pins: [NRST]
+  - net: GND
+    role: ground
+    required: true
+    duplicate_probe_count: 4
+  - net: 3V3
+    role: power
+    required: true
+    current_ma: 300
+
+routing_rules:
+  default_trace_width_mm: 0.15
+  power_trace_width_mm: 0.5
+  min_clearance_mm: 0.15
+  max_vias_per_signal: 2
+  avoid_under_components: true
+
+placement_rules:
+  keep_probe_pads_on_grid: true
+  avoid_tall_components: true
+  min_distance_from_board_edge_mm: 2.0
+  group_by_function: true
+
+module_placement:
+  group_by_module: true
+  keep_power_modules_near_input: true
+  keep_debug_near_board_edge: true
+  max_module_to_probe_distance_mm: 20
+
+routing_strategy:
+  coarse_grid_mm: 5
+  max_corridor_layers: 2
+  congestion_weight: 10
+  via_weight: 8
+  length_weight: 1
+  sensitive_net_spacing_mm: 5
+
+development_board:
+  pin_database: ../libraries/dev_boards/stm32_nucleo_64.yaml
+
+protection:
+  enabled: true
+  debug:
+    type: series_resistor
+    value: "33"
+    package: "0402"
+  reset:
+    type: series_resistor
+    value: "100"
+    package: "0402"
+  power:
+    type: ferrite_bead
+    value: "600R@100MHz"
+    package: "0603"
+    ref_prefix: FB
