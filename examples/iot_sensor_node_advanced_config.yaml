@@ -1,0 +1,261 @@
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+  mcu_profile: ../libraries/mcu_profiles/esp32_s3.yaml
+
+design_goals:
+  optimize_for:
+    - manufacturability
+    - test_coverage
+    - routing_simplicity
+    - signal_integrity
+  max_added_area_mm2: 600
+  preferred_side: top
+  human_review_required_for:
+    - high_speed
+    - high_current
+    - analog
+
+hardware_platform:
+  target_voltage_domains:
+    - name: VDD_3V3
+      voltage: 3.3
+      max_current_ma: 500
+    - name: VDD_5V
+      voltage: 5.0
+      max_current_ma: 200
+
+functional_modules:
+  - name: debug_access
+    type: debug_swd
+    required: true
+    target_nets: [SWDIO, SWCLK, NRST, GND, 3V3]
+    allowed_implementations:
+      - direct_testpads
+      - protected_pogo
+      - connectorized_swd
+
+  - name: power_observation
+    type: current_voltage_monitor
+    required: true
+    preferred_region: power_input
+    rails: [VDD_3V3]
+    telemetry_bus: i2c
+
+  - name: analog_frontend
+    type: analog_measurement
+    required: true
+    channels: 8
+    voltage_domains: [VDD_3V3]
+    telemetry_bus: i2c
+    allowed_implementations:
+      - i2c_adc_with_mux_and_protection
+    constraints:
+      i2c_address: "0x48"
+
+  - name: field_bus
+    type: rs485_interface
+    required: false
+    allowed_implementations:
+      - protected_rs485_transceiver
+    constraints:
+      human_review_required: false
+
+  - name: io_expansion
+    type: gpio_expansion
+    required: false
+    channels: 16
+    allowed_implementations:
+      - i2c_gpio_expander_16_level_shifted
+      - spi_gpio_expander_16_protected
+    constraints:
+      require_pullups: true
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.0
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+  require_fiducials: true
+  require_tooling_holes: true
+
+nets_to_expose:
+  # Debug
+  - net: SWDIO
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA13]
+  - net: SWCLK
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA14]
+  - net: NRST
+    role: reset
+    required: true
+    preferred_devboard_pins: [NRST]
+
+  # UART
+  - net: UART_TX
+    role: communication
+    required: true
+    preferred_devboard_pins: [D8_PA9, D1_PA2]
+  - net: UART_RX
+    role: communication
+    required: true
+    preferred_devboard_pins: [D2_PA10]
+
+  # I2C (for analog + power + gpio expansion)
+  - net: I2C_SCL
+    role: communication
+    required: true
+    preferred_devboard_pins: [D15_PB8]
+  - net: I2C_SDA
+    role: communication
+    required: true
+    preferred_devboard_pins: [D14_PB9]
+
+  # SPI (for external flash / expansion)
+  - net: SPI_SCK
+    role: communication
+    required: true
+    preferred_devboard_pins: [D13_PA5]
+  - net: SPI_MISO
+    role: communication
+    required: true
+    preferred_devboard_pins: [D12_PA6]
+  - net: SPI_MOSI
+    role: communication
+    required: true
+    preferred_devboard_pins: [D11_PA7]
+  - net: SPI_CS
+    role: communication
+    required: true
+    preferred_devboard_pins: [D10_PB6]
+
+  # CAN differential pair
+  - net: CAN_H
+    role: communication
+    required: false
+    pair_with: CAN_L
+    preferred_devboard_pins: [D3_PB3]
+  - net: CAN_L
+    role: communication
+    required: false
+    pair_with: CAN_H
+    preferred_devboard_pins: [D5_PB4]
+
+  # USB differential pair
+  - net: USB_DP
+    role: high_speed
+    required: false
+    pair_with: USB_DM
+    preferred_devboard_pins: [D4_PB5]
+  - net: USB_DM
+    role: high_speed
+    required: false
+    pair_with: USB_DP
+    preferred_devboard_pins: [D6_PB10]
+
+  # Power / Ground
+  - net: GND
+    role: ground
+    required: true
+    duplicate_probe_count: 4
+  - net: 3V3
+    role: power
+    required: true
+    current_ma: 300
+  - net: 5V
+    role: power
+    required: false
+    current_ma: 100
+
+  # Analog
+  - net: ADC_IN0
+    role: analog
+    required: false
+    preferred_devboard_pins: [A0_PA0]
+
+impedance_control:
+  usb:
+    target_impedance_ohm: 90
+    tolerance_percent: 10
+    diff_pair_width_mm: 0.15
+    diff_pair_gap_mm: 0.15
+  can:
+    target_impedance_ohm: 120
+    tolerance_percent: 15
+    diff_pair_width_mm: 0.2
+    diff_pair_gap_mm: 0.2
+
+routing_rules:
+  default_trace_width_mm: 0.1
+  power_trace_width_mm: 0.4
+  min_clearance_mm: 0.1
+  max_vias_per_signal: 1
+  avoid_under_components: true
+
+placement_rules:
+  keep_probe_pads_on_grid: true
+  avoid_tall_components: true
+  min_distance_from_board_edge_mm: 1.5
+  group_by_function: true
+
+module_placement:
+  group_by_module: true
+  keep_power_modules_near_input: true
+  keep_analog_modules_away_from_switching_power: true
+  keep_debug_near_board_edge: true
+  max_module_to_probe_distance_mm: 15
+
+routing_strategy:
+  coarse_grid_mm: 2.5
+  max_corridor_layers: 2
+  congestion_weight: 15
+  via_weight: 12
+  length_weight: 2
+  sensitive_net_spacing_mm: 3
+
+development_board:
+  pin_database: ../libraries/dev_boards/stm32_nucleo_64.yaml
+
+protection:
+  enabled: true
+  debug:
+    type: series_resistor
+    value: "33"
+    package: "0402"
+  reset:
+    type: series_resistor
+    value: "100"
+    package: "0402"
+  power:
+    type: ferrite_bead
+    value: "600R@100MHz"
+    package: "0603"
+    ref_prefix: FB
+  communication:
+    type: series_resistor
+    value: "22"
+    package: "0402"
+  high_speed:
+    type: esd_array
+    value: "5V"
+    package: "SOT-23-6"
+    ref_prefix: D
+  analog:
+    type: rc_filter
+    value: "1k/100pF"
+    package: "0402"
+    ref_prefix: RF
+
+thermal_analysis:
+  enabled: true
+  max_junction_temp_c: 125
+  ambient_temp_c: 25
+  output_format: "csv"

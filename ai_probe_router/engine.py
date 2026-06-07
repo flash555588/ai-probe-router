@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
-from .ai.net_classifier import classify_net
+from .ai.design_review import run_design_review
+from .ai.net_classifier import classify_net, classify_net_detailed
 from .ai.rule_generator import generate_rules
 from .config import ProjectConfig
 from .eda_adapters.kicad.cli_runner import run_drc, run_erc
@@ -17,6 +19,7 @@ from .eda_adapters.kicad.pcb_writer import (
     add_protection_footprint,
     add_testpoint_footprint,
     add_tooling_hole_footprint,
+    add_track_segment,
     write_pcb,
 )
 from .eda_adapters.kicad.sch_parser import parse_schematic
@@ -32,12 +35,30 @@ from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
 from .routing.dsn_export import export_dsn
 from .routing.freerouting_bridge import route_board as run_freerouting_route
+from .routing.module_corridor import analyze_routing_feasibility
 from .solvers.constraint_checker import validate_all_probes
+from .solvers.grid_router import RouteResult, route_grid
+from .solvers.module_graph import build_module_graph
+from .solvers.module_placement import plan_module_placement
+from .solvers.module_selector import select_modules
 from .solvers.pin_mapper import solve_mapping
 from .solvers.placement_solver import find_placement, place_pogo_array
+from .synthesis.module_instantiator import instantiate_module_sheets
+from .verification.bom_report import BomReport
+from .verification.bus_report import BusReport
 from .verification.manufacturing_report import generate_manufacturing_report
+from .verification.module_compatibility_report import (
+    ModuleCompatibilityReport,
+    analyze_module_compatibility,
+)
+from .verification.module_graph_report import ModuleGraphReport
+from .verification.module_instantiation_report import ModuleInstantiationReport
+from .verification.module_placement_report import ModulePlacementReport
+from .verification.module_report import ModuleReport
 from .verification.pin_report import PinMapReport
+from .verification.power_report import PowerReport
 from .verification.report import CoverageReport, NetCoverage
+from .verification.routing_feasibility_report import RoutingFeasibilityReport
 
 
 def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, PinMapReport | None]:
@@ -53,6 +74,21 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     if cfg.schematic_file and sch_path.is_file():
         sch = parse_schematic(sch_path)
 
+    module_selection = None
+    module_graph_result = None
+    module_placement_result = None
+    routing_feasibility = None
+    module_instantiation_result = None
+    module_compatibility_result = None
+    if cfg.functional_modules:
+        module_selection = select_modules(cfg.functional_modules)
+        module_graph_result = build_module_graph(cfg, module_selection, board)
+        module_compatibility_result = analyze_module_compatibility(module_graph_result)
+        module_placement_result = plan_module_placement(module_graph_result.graph, board)
+        routing_feasibility = analyze_routing_feasibility(
+            board, module_graph_result.graph, cfg.routing_strategy,
+        )
+
     pin_report: PinMapReport | None = None
     if cfg.development_board is not None and cfg.nets_to_expose:
         pin_report = _run_phase2(cfg, board, sch, cfg.development_board)
@@ -62,11 +98,19 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     out_dir = base / "output"
     out_dir.mkdir(exist_ok=True)
 
+    if module_graph_result is not None:
+        module_instantiation_result = instantiate_module_sheets(
+            sch,
+            module_graph_result.graph,
+            out_dir,
+        )
+
     if board is not None:
         # Run constraint validation on placed probes
         probe_data = [
-            (e.probe_x, e.probe_y, e.net_name)
-            for e in coverage.entries if e.has_testpoint
+            (fp.pads[0].x, fp.pads[0].y, fp.pads[0].net_name)
+            for fp in board.footprints
+            if fp.ref.startswith("TP") and fp.pads
         ]
         if probe_data:
             validation = validate_all_probes(
@@ -79,16 +123,30 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         # Write net classes from generated rules
         net_names = [e.net_name for e in coverage.entries]
         roles = {n: classify_net(n) for n in net_names}
-        rules = generate_rules(roles, cfg.nets_to_expose)
+        sub_roles_map = {
+            n: classify_net_detailed(n, cfg.mcu_profile)[1]
+            for n in net_names
+        }
+        rules = generate_rules(roles, cfg.nets_to_expose, net_sub_roles=sub_roles_map)
         for r in rules.net_rules:
+            dp_width = r.trace_width_mm if r.differential_pair else None
+            dp_gap = 0.15 if r.differential_pair else None
+            # Apply impedance control if configured for this net's differential pair
+            if r.differential_pair and cfg.impedance_control.has_rules():
+                # Match by net name prefix or role
+                for rule_name, rule in cfg.impedance_control.rules.items():
+                    if rule_name.lower() in r.net_name.lower():
+                        dp_width = rule.diff_pair_width_mm
+                        dp_gap = rule.diff_pair_gap_mm
+                        break
             add_net_class(
                 board,
                 name=f"NET_{r.net_name}",
                 description=r.role.name.lower(),
                 clearance=r.clearance_mm,
                 trace_width=r.trace_width_mm,
-                diff_pair_width=r.trace_width_mm if r.differential_pair else None,
-                diff_pair_gap=0.15 if r.differential_pair else None,
+                diff_pair_width=dp_width,
+                diff_pair_gap=dp_gap,
             )
 
         out_pcb = out_dir / pcb_path.name
@@ -110,16 +168,49 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
 
     report_path = out_dir / "testpoint_report.txt"
     coverage.write(report_path)
+    if module_selection is not None:
+        ModuleReport(module_selection).write(out_dir / "module_report.txt")
+    if module_graph_result is not None:
+        ModuleGraphReport(module_graph_result).write(out_dir / "module_graph_report.txt")
+        BusReport(module_graph_result).write(out_dir / "bus_report.txt")
+        PowerReport(module_graph_result).write(out_dir / "power_report.txt")
+        BomReport(module_graph_result).write(out_dir / "bom_report.csv")
+    if module_compatibility_result is not None:
+        ModuleCompatibilityReport(module_compatibility_result).write(
+            out_dir / "module_compatibility_report.txt",
+        )
+    if module_placement_result is not None:
+        ModulePlacementReport(module_placement_result).write(
+            out_dir / "module_placement_report.txt",
+        )
+    if module_instantiation_result is not None:
+        ModuleInstantiationReport(module_instantiation_result).write(
+            out_dir / "module_instantiation_report.txt",
+        )
+    if routing_feasibility is not None:
+        RoutingFeasibilityReport(routing_feasibility).write(
+            out_dir / "routing_feasibility_report.txt",
+        )
     if pin_report is not None:
         pin_report.write(out_dir / "pin_mapping_report.txt")
 
     mfg_report = generate_manufacturing_report(board, coverage)
     mfg_report.write(out_dir / "manufacturing_report.txt")
 
+    # Run design review if schematic is available
+    if sch is not None:
+        review = run_design_review(sch, board, cfg.mcu_profile)
+        if review.findings:
+            review_path = out_dir / "design_review_report.txt"
+            review_path.write_text(review.summary(), encoding="utf-8")
+            coverage.notes.append(
+                f"Design review: {review.error_count} errors, "
+                f"{review.warning_count} warnings"
+            )
+
     if board is not None:
         dsn_path = out_dir / "routing.dsn"
         export_dsn(board, dsn_path)
-        # Attempt auto-routing via FreeRouting (best-effort)
         route_result = run_freerouting_route(board, dsn_path, out_dir, timeout_sec=60)
         if route_result.ok:
             coverage.notes.append(
@@ -130,6 +221,26 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
                 f"Auto-route skipped: {route_result.error}"
             )
 
+    # Thermal analysis export (placeholder)
+    if cfg.thermal_analysis.enabled and board is not None:
+        thermal_path = out_dir / f"thermal_simulation.{cfg.thermal_analysis.output_format}"
+        lines = ["ref,x,y,net_name,role,current_ma"]
+        for fp in board.footprints:
+            if not fp.pads:
+                continue
+            pad = fp.pads[0]
+            current = 0.0
+            role_str = ""
+            for req in cfg.nets_to_expose:
+                if req.net_name == pad.net_name:
+                    current = req.current_ma
+                    role_str = req.role
+                    break
+            lines.append(f'{fp.ref},{pad.x:.2f},{pad.y:.2f},{pad.net_name},{role_str},{current}')
+        thermal_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        coverage.notes.append(
+            f"Thermal simulation export: {thermal_path.name}"
+        )
     return coverage, pin_report
 
 
@@ -153,11 +264,15 @@ def _run_phase1(
 
     pos_index = 0
     for req in cfg.nets_to_expose:
-        role = classify_net(req.net_name)
+        role, sub_roles = classify_net_detailed(req.net_name, cfg.mcu_profile)
         count = max(req.duplicate_probe_count, 1)
         placed = False
         px, py = 0.0, 0.0
         protection = cfg.protection.get_protection(req.role)
+        route_width, route_clearance = _net_class_for_role(role, req.current_ma)
+        route_width = _effective_trace_width(route_width, cfg)
+        route_clearance = _effective_clearance(route_clearance, cfg)
+        route_results: list[RouteResult] = []
 
         for i in range(count):
             tp_ref = f"TP{tp_counter}"
@@ -168,9 +283,15 @@ def _run_phase1(
                     x, y = pogo_positions[pos_index]
                     pos_index += 1
                 else:
+                    min_target_distance = (
+                        _protected_probe_distance_mm(protection)
+                        if protection is not None else 0.0
+                    )
                     placement = find_placement(
                         board, req, cfg.probe, cfg.constraints,
                         placed_probes, index=i,
+                        min_target_distance_mm=min_target_distance,
+                        role=role, sub_roles=sub_roles,
                     )
                     if placement is None:
                         continue
@@ -182,23 +303,49 @@ def _run_phase1(
                     probe_net = f"PROBE_{req.net_name}"
                     prot_ref = f"{protection.ref_prefix}{prot_counter}"
                     prot_counter += 1
-                    add_protection_footprint(
+                    source_pos = _nearest_pad_position(board, req.net_name, x, y)
+                    prot_x, prot_y, prot_rot = _find_protection_placement(
+                        board, req.net_name, x, y,
+                    )
+                    prot_fp = add_protection_footprint(
                         board, req.net_name, probe_net,
-                        x - 2.0, y,
+                        prot_x, prot_y,
                         protection,
                         ref=prot_ref, side=cfg.probe.side,
+                        rotation=prot_rot,
                     )
                     add_testpoint_footprint(
                         board, probe_net, x, y,
                         ref=tp_ref, pad_diameter=cfg.probe.pad_diameter_mm,
                         side=cfg.probe.side,
                     )
+                    if source_pos is not None and len(prot_fp.pads) >= 2:
+                        route_results.append(_add_route_if_clear(
+                            board, req.net_name, source_pos,
+                            (prot_fp.pads[0].x, prot_fp.pads[0].y),
+                            route_width, route_clearance, cfg.probe.side,
+                        ))
+                        route_results.append(_add_route_if_clear(
+                            board, probe_net,
+                            (prot_fp.pads[1].x, prot_fp.pads[1].y),
+                            (x, y), route_width, route_clearance, cfg.probe.side,
+                        ))
+                    else:
+                        route_results.append(RouteResult(False, [], "no_source_pad"))
                 else:
+                    source_pos = _nearest_pad_position(board, req.net_name, x, y)
                     add_testpoint_footprint(
                         board, req.net_name, x, y,
                         ref=tp_ref, pad_diameter=cfg.probe.pad_diameter_mm,
                         side=cfg.probe.side,
                     )
+                    if source_pos is not None:
+                        route_results.append(_add_route_if_clear(
+                            board, req.net_name, source_pos,
+                            (x, y), route_width, route_clearance, cfg.probe.side,
+                        ))
+                    else:
+                        route_results.append(RouteResult(False, [], "no_source_pad"))
 
                 placed_probes.append((x, y))
                 placed = True
@@ -239,6 +386,23 @@ def _run_phase1(
         } or req.current_ma > 500
 
         trace_w, clearance = _net_class_for_role(role, req.current_ma)
+        trace_w = _effective_trace_width(trace_w, cfg)
+        routed = sum(1 for result in route_results if result.ok)
+        total_routes = len(route_results)
+        if not placed:
+            route_status = "not_placed"
+        elif total_routes == 0:
+            route_status = "not_attempted"
+        elif routed == total_routes:
+            route_status = "routed"
+        elif routed == 0:
+            route_status = "unrouted"
+        else:
+            route_status = "partial"
+        route_notes = [
+            result.reason for result in route_results
+            if not result.ok and result.reason
+        ]
 
         report.entries.append(NetCoverage(
             net_name=req.net_name, role=role, required=req.required,
@@ -246,7 +410,16 @@ def _run_phase1(
             review_required=review_needed,
             trace_width_mm=trace_w,
             clearance_mm=clearance,
+            route_status=route_status,
+            routed_connections=routed,
+            total_connections=total_routes,
+            routing_notes=route_notes,
         ))
+        report.routed_connections += routed
+        report.unrouted_connections += max(total_routes - routed, 0)
+        report.routing_messages.extend(
+            f"{req.net_name}: {reason}" for reason in route_notes
+        )
         if placed:
             report.covered += 1
         else:
@@ -254,6 +427,8 @@ def _run_phase1(
 
     if board is not None:
         _place_fiducials_and_tooling(board, cfg)
+        total_routes = report.routed_connections + report.unrouted_connections
+        report.routing_ok = report.unrouted_connections == 0 if total_routes else None
 
     return report
 
@@ -302,34 +477,39 @@ def _run_phase2(
         result=result,
     )
 
+    if cfg.probe.style != ProbeStyle.CONNECTOR:
+        return pin_report
+
     if result.assignments:
+        rows = dev_board.rows
+        pins_per_row = dev_board.pins_per_row
         if sch is not None:
             add_connector_symbol(
                 sch, result.assignments,
                 ref="J1",
                 x=80.0, y=50.0,
-                rows=2,
-                pins_per_row=20,
+                rows=rows,
+                pins_per_row=pins_per_row,
             )
         if board is not None:
             bounds = board.board_bounds()
             if bounds:
                 # Place connector to the right of the board, aligned vertically
-                conn_w = 20 * dev_board.pitch_mm
-                conn_h = 2 * dev_board.pitch_mm
+                conn_w = pins_per_row * dev_board.pitch_mm
+                conn_h = rows * dev_board.pitch_mm
                 margin = 5.0
                 cx = bounds.max_x + margin
                 cy = (bounds.min_y + bounds.max_y) / 2 - conn_h / 2
             else:
-                conn_w = 20 * dev_board.pitch_mm
-                conn_h = 2 * dev_board.pitch_mm
+                conn_w = pins_per_row * dev_board.pitch_mm
+                conn_h = rows * dev_board.pitch_mm
                 cx, cy = 150.0, 100.0
             add_connector_footprint(
                 board, result.assignments,
                 ref="J1",
                 x=cx, y=cy,
-                rows=2,
-                pins_per_row=20,
+                rows=rows,
+                pins_per_row=pins_per_row,
                 pitch=dev_board.pitch_mm,
                 side=cfg.probe.side,
             )
@@ -356,6 +536,94 @@ def _net_class_for_role(role: NetRole, current_ma: float) -> tuple[float, float]
     if role == NetRole.CLOCK:
         return 0.15, 0.2
     return 0.15, 0.15
+
+
+def _protected_probe_distance_mm(protection) -> float:
+    package_room = {
+        "0402": 4.0,
+        "0603": 4.5,
+        "0805": 5.0,
+    }
+    return package_room.get(protection.package, 4.0)
+
+
+def _effective_trace_width(width: float, cfg: ProjectConfig) -> float:
+    return max(width, cfg.constraints.manufacturing.min_trace_width_mm, 0.20)
+
+
+def _effective_clearance(clearance: float, cfg: ProjectConfig) -> float:
+    return max(
+        clearance,
+        cfg.constraints.manufacturing.min_clearance_mm,
+        cfg.constraints.routing.min_clearance_mm,
+        0.20,
+    )
+
+
+def _find_protection_placement(
+    board: Board,
+    net_name: str,
+    probe_x: float,
+    probe_y: float,
+) -> tuple[float, float, float]:
+    target = _nearest_pad_position(board, net_name, probe_x, probe_y)
+    if target is None:
+        return probe_x - 2.0, probe_y, 0.0
+
+    tx, ty = target
+    dx = probe_x - tx
+    dy = probe_y - ty
+    if math.hypot(dx, dy) < 1e-9:
+        return probe_x - 2.0, probe_y, 0.0
+
+    return (
+        (tx + probe_x) / 2,
+        (ty + probe_y) / 2,
+        math.degrees(math.atan2(dy, dx)),
+    )
+
+
+def _nearest_pad_position(
+    board: Board,
+    net_name: str,
+    x: float,
+    y: float,
+) -> tuple[float, float] | None:
+    pads = board.find_pads_by_net(net_name)
+    if not pads:
+        return None
+    _fp, pad = min(
+        pads,
+        key=lambda item: math.hypot(x - item[1].x, y - item[1].y),
+    )
+    return pad.x, pad.y
+
+
+def _add_route_if_clear(
+    board: Board,
+    net_name: str,
+    start: tuple[float, float],
+    end: tuple[float, float],
+    width: float,
+    clearance: float,
+    side: str,
+) -> RouteResult:
+    if start == end:
+        return RouteResult(True, [start, end])
+    result = route_grid(
+        board, net_name, start, end,
+        width=width, clearance=clearance, side=side,
+    )
+    if not result.ok:
+        return result
+    for a, b in zip(result.points, result.points[1:]):
+        add_track_segment(
+            board, net_name,
+            a[0], a[1], b[0], b[1],
+            width=width,
+            side=side,
+        )
+    return result
 
 
 def _expand_reqs(reqs: list[ProbeRequirement]) -> list[ProbeRequirement]:

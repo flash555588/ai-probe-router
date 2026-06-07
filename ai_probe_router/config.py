@@ -8,27 +8,47 @@ from pathlib import Path
 import yaml
 
 from .models.constraints import Constraints, PlacementRules, RoutingRules
+from .models.design_graph import (
+    DesignGoals,
+    HardwarePlatform,
+    ModulePlacementRules,
+    RoutingStrategy,
+)
 from .models.dev_board import DevelopmentBoard
+from .models.impedance_control import DiffPairImpedance, ImpedanceControl
+from .models.mcu_profile import McuProfile, load_mcu_profile
+from .models.module import FunctionalModule, parse_functional_module
+from .models.power_domain import PowerDomain
 from .models.probe import ProbeConfig, ProbeRequirement, ProbeStyle
 from .models.protection import (
     ProtectionComponent,
     ProtectionRules,
     ProtectionType,
+    protection_type_from_string,
 )
+from .models.thermal_analysis import ThermalAnalysis
 from .solvers.pin_mapper import load_dev_board
 
 
 @dataclass
 class ProjectConfig:
+    schema_version: int = 1
     eda_tool: str = "kicad"
     board_file: str = ""
     schematic_file: str = ""
+    design_goals: DesignGoals = field(default_factory=DesignGoals)
+    hardware_platform: HardwarePlatform = field(default_factory=HardwarePlatform)
+    functional_modules: list[FunctionalModule] = field(default_factory=list)
+    module_placement: ModulePlacementRules = field(default_factory=ModulePlacementRules)
+    routing_strategy: RoutingStrategy = field(default_factory=RoutingStrategy)
     probe: ProbeConfig = field(default_factory=ProbeConfig)
     nets_to_expose: list[ProbeRequirement] = field(default_factory=list)
     constraints: Constraints = field(default_factory=Constraints)
     development_board: DevelopmentBoard | None = None
-    dev_board_pin_db: str = ""
-    protection: ProtectionRules = field(default_factory=ProtectionRules.with_defaults)
+    protection: ProtectionRules = field(default_factory=ProtectionRules)
+    mcu_profile: McuProfile | None = None
+    impedance_control: ImpedanceControl = field(default_factory=ImpedanceControl)
+    thermal_analysis: ThermalAnalysis = field(default_factory=ThermalAnalysis)
 
 
 def load_config(path: str | Path) -> ProjectConfig:
@@ -38,9 +58,59 @@ def load_config(path: str | Path) -> ProjectConfig:
         raise ValueError("Config must be a YAML mapping")
     proj = raw.get("project", {})
     cfg = ProjectConfig(
+        schema_version=int(raw.get("schema_version", 1) or 1),
         eda_tool=proj.get("eda_tool", "kicad"),
         board_file=proj.get("board_file", ""),
         schematic_file=proj.get("schematic_file", ""),
+    )
+    dg = raw.get("design_goals", {})
+    cfg.design_goals = DesignGoals(
+        optimize_for=[str(v) for v in dg.get("optimize_for", [])],
+        max_added_area_mm2=float(dg.get("max_added_area_mm2", 0.0) or 0.0),
+        preferred_side=str(dg.get("preferred_side", "")),
+        human_review_required_for=[
+            str(v) for v in dg.get("human_review_required_for", [])
+        ],
+    )
+    hp = raw.get("hardware_platform", {})
+    cfg.hardware_platform = HardwarePlatform(
+        target_voltage_domains=[
+            PowerDomain(
+                name=str(domain.get("name", "")),
+                voltage=float(domain.get("voltage", 0.0) or 0.0),
+                max_current_ma=float(domain.get("max_current_ma", 0.0) or 0.0),
+            )
+            for domain in hp.get("target_voltage_domains", [])
+            if isinstance(domain, dict)
+        ]
+    )
+    cfg.functional_modules = [
+        parse_functional_module(module)
+        for module in raw.get("functional_modules", [])
+        if isinstance(module, dict)
+    ]
+    mp = raw.get("module_placement", {})
+    cfg.module_placement = ModulePlacementRules(
+        group_by_module=mp.get("group_by_module", True),
+        keep_power_modules_near_input=mp.get("keep_power_modules_near_input", True),
+        keep_analog_modules_away_from_switching_power=mp.get(
+            "keep_analog_modules_away_from_switching_power", True,
+        ),
+        keep_debug_near_board_edge=mp.get("keep_debug_near_board_edge", True),
+        max_module_to_probe_distance_mm=float(
+            mp.get("max_module_to_probe_distance_mm", 0.0) or 0.0,
+        ),
+    )
+    rs = raw.get("routing_strategy", {})
+    cfg.routing_strategy = RoutingStrategy(
+        coarse_grid_mm=float(rs.get("coarse_grid_mm", 5.0) or 5.0),
+        max_corridor_layers=int(rs.get("max_corridor_layers", 2) or 2),
+        congestion_weight=float(rs.get("congestion_weight", 10.0) or 10.0),
+        via_weight=float(rs.get("via_weight", 8.0) or 8.0),
+        length_weight=float(rs.get("length_weight", 1.0) or 1.0),
+        sensitive_net_spacing_mm=float(
+            rs.get("sensitive_net_spacing_mm", 5.0) or 5.0,
+        ),
     )
     pi = raw.get("probe_interface", {})
     style_map = {"test_pad": ProbeStyle.TEST_PAD, "pogo_pad_array": ProbeStyle.POGO_PAD,
@@ -56,8 +126,11 @@ def load_config(path: str | Path) -> ProjectConfig:
         require_tooling_holes=pi.get("require_tooling_holes", False),
     )
     nets_to_expose = raw.get("nets_to_expose", [])
-    if not nets_to_expose:
-        raise ValueError("Configuration must specify at least one net in 'nets_to_expose'")
+    if not nets_to_expose and not cfg.functional_modules:
+        raise ValueError(
+            "Configuration must specify at least one net in 'nets_to_expose' "
+            "or one entry in 'functional_modules'"
+        )
     for net_entry in nets_to_expose:
         cfg.nets_to_expose.append(ProbeRequirement(
             net_name=net_entry.get("net", ""),
@@ -99,17 +172,19 @@ def load_config(path: str | Path) -> ProjectConfig:
     if prot:
         enabled = prot.get("enabled", True)
         rules: dict[str, ProtectionComponent] = {}
-        type_map = {
-            "series_resistor": ProtectionType.SERIES_RESISTOR,
-            "ferrite_bead": ProtectionType.FERRITE_BEAD,
-        }
         for role, spec in prot.items():
             if role == "enabled" or not isinstance(spec, dict):
                 continue
-            ptype = type_map.get(spec.get("type", "series_resistor"),
-                                ProtectionType.SERIES_RESISTOR)
-            is_resistor = ptype == ProtectionType.SERIES_RESISTOR
-            default_prefix = "R" if is_resistor else "FB"
+            ptype = protection_type_from_string(spec.get("type", "series_resistor"))
+            default_prefix = {
+                ProtectionType.FERRITE_BEAD: "FB",
+                ProtectionType.ESD_ARRAY: "D",
+                ProtectionType.TVS_DIODE: "D",
+                ProtectionType.LEVEL_SHIFTER: "U",
+                ProtectionType.CURRENT_LIMITER: "U",
+                ProtectionType.EFUSE: "U",
+                ProtectionType.JUMPER: "JP",
+            }.get(ptype, "R")
             rules[role] = ProtectionComponent(
                 protection_type=ptype,
                 value=str(spec.get("value", "33")),
@@ -117,5 +192,35 @@ def load_config(path: str | Path) -> ProjectConfig:
                 ref_prefix=spec.get("ref_prefix", default_prefix),
             )
         cfg.protection = ProtectionRules(rules=rules, enabled=enabled)
+
+    mcu_path = proj.get("mcu_profile", "")
+    if mcu_path:
+        resolved = Path(path).parent / mcu_path
+        if resolved.exists():
+            cfg.mcu_profile = load_mcu_profile(resolved)
+        else:
+            raise ValueError(f"MCU profile not found: {resolved}")
+
+    ic = raw.get("impedance_control", {})
+    if ic:
+        rules: dict[str, DiffPairImpedance] = {}
+        for name, spec in ic.items():
+            if isinstance(spec, dict):
+                rules[name] = DiffPairImpedance(
+                    target_impedance_ohm=float(spec.get("target_impedance_ohm", 90.0) or 90.0),
+                    tolerance_percent=float(spec.get("tolerance_percent", 10.0) or 10.0),
+                    diff_pair_width_mm=float(spec.get("diff_pair_width_mm", 0.15) or 0.15),
+                    diff_pair_gap_mm=float(spec.get("diff_pair_gap_mm", 0.15) or 0.15),
+                )
+        cfg.impedance_control = ImpedanceControl(rules=rules)
+
+    th = raw.get("thermal_analysis", {})
+    if th:
+        cfg.thermal_analysis = ThermalAnalysis(
+            enabled=bool(th.get("enabled", False)),
+            max_junction_temp_c=float(th.get("max_junction_temp_c", 125.0) or 125.0),
+            ambient_temp_c=float(th.get("ambient_temp_c", 25.0) or 25.0),
+            output_format=str(th.get("output_format", "csv")),
+        )
 
     return cfg
