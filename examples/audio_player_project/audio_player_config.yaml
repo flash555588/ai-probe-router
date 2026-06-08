@@ -1,0 +1,425 @@
+# ai-probe-router configuration for High-Fidelity Audio Player / Handheld Console
+# Board: 7.5 cm x 4.5 cm, 6-layer JLCPCB, ENIG, via-in-pad
+# Architecture: Digital/Analog split, single-ended 50 ohm impedance control
+
+schema_version: 2
+
+project:
+  name: "Audio_Player_v0.1"
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+  output_dir: output
+  description: "STM32F405 + ES9018K2M + MAX98357A x2 audio player"
+
+design_goals:
+  optimize_for:
+    - signal_integrity
+    - audio_fidelity
+    - low_noise
+  constraints:
+    max_board_area_mm2: 337500  # 75 x 45 mm
+    max_layer_count: 6
+    min_trace_width_mm: 0.1
+    preferred_via_size_mm: 0.3
+
+# ------------------------------------------------------------------
+# Hardware Platform
+# ------------------------------------------------------------------
+hardware_platform:
+  mcu_profile: stm32f405rg
+  target_voltage_domains:
+    - name: VDD_3V3_D
+      voltage: 3.3
+      max_current_ma: 500.0
+    - name: VDD_3V3_A
+      voltage: 3.3
+      max_current_ma: 200.0
+    - name: VDD_1V8
+      voltage: 1.8
+      max_current_ma: 100.0
+    - name: VBUS_5V0
+      voltage: 5.0
+      max_current_ma: 1500.0
+    - name: VBAT
+      voltage: 3.7
+      max_current_ma: 3000.0
+
+crystal:
+  frequency_mhz: 38.4
+  type: tcxo
+  package: "SMD_3225"
+  tolerance_ppm: 2.0
+  notes: "EPSON SG-210STF, dedicated for ES9018K2M MCLK"
+
+# ------------------------------------------------------------------
+# Functional Modules
+# ------------------------------------------------------------------
+functional_modules:
+  - name: mcu_core
+    type: mcu
+    required: true
+    priority: 100
+    target_nets: [SWDIO, SWCLK, NRST, WKUP]
+    allowed_interfaces: [swd, usb_fs, sdio, spi, i2s, i2c]
+    rails: [VDD_3V3_D]
+    telemetry_bus: i2c
+    budget_area_mm2: 64.0
+    preferred_region: digital_center
+    params:
+      core_voltage: 1.2
+      max_core_freq_mhz: 168
+
+  - name: flash_storage
+    type: memory
+    required: true
+    priority: 90
+    allowed_interfaces: [spi]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 27.4
+    preferred_region: digital_near_mcu
+    params:
+      capacity_mb: 16
+      interface: spi_qaud
+      chip: W25Q128JVSIM
+
+  - name: tf_card
+    type: storage
+    required: true
+    priority: 80
+    allowed_interfaces: [sdio]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 50.0
+    preferred_region: board_edge_top
+    params:
+      mode: sd_4bit
+      max_freq_mhz: 50
+
+  - name: usb_c_port
+    type: connector
+    required: true
+    priority: 85
+    target_nets: [USB_DP, USB_DM, VBUS, CC1]
+    allowed_interfaces: [usb_fs]
+    rails: [VBUS_5V0, VDD_3V3_D]
+    budget_area_mm2: 30.0
+    preferred_region: board_edge_top
+    require_esd: true
+    params:
+      type: usb2.0_type_c
+      pin_count: 16
+      current_rating_a: 3.0
+
+  - name: dac_ess
+    type: audio_dac
+    required: true
+    priority: 95
+    target_nets: [I2S_MCK, I2S_SCK, I2S_SD, I2S_WS]
+    allowed_interfaces: [i2s, i2c]
+    rails: [VDD_3V3_A, VDD_1V8]
+    budget_area_mm2: 25.0
+    preferred_region: analog_center
+    require_level_shift: false
+    params:
+      chip: ES9018K2M
+      resolution_bits: 32
+      sample_rate_khz: 384
+      thd_n_db: -120
+      snr_db: 129
+
+  - name: hp_amp
+    type: audio_amp
+    required: true
+    priority: 92
+    allowed_interfaces: [analog_diff]
+    rails: [VDD_3V3_A]
+    budget_area_mm2: 16.0
+    preferred_region: analog_near_dac
+    params:
+      chip: ES9601K
+      output_type: headphone
+      output_impedance_ohm: 0.5
+      max_output_power_mw: 200
+
+  - name: speaker_amp_l
+    type: audio_amp
+    required: true
+    priority: 88
+    allowed_interfaces: [i2s]
+    rails: [VBAT]
+    budget_area_mm2: 9.0
+    preferred_region: power_region_left
+    params:
+      chip: MAX98357A
+      output_type: class_d
+      max_output_power_w: 3.2
+      thd_n_percent: 0.1
+
+  - name: speaker_amp_r
+    type: audio_amp
+    required: true
+    priority: 88
+    allowed_interfaces: [i2s]
+    rails: [VBAT]
+    budget_area_mm2: 9.0
+    preferred_region: power_region_right
+    params:
+      chip: MAX98357A
+      output_type: class_d
+      max_output_power_w: 3.2
+      thd_n_percent: 0.1
+
+  - name: lcd_screen
+    type: display
+    required: true
+    priority: 70
+    allowed_interfaces: [rgb_parallel, i2c]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 40.0
+    preferred_region: board_edge_right
+    params:
+      type: lcd_tft
+      resolution: "480x272"
+      interface: fpc_12p
+      backlight: led_boost
+
+  - name: joystick_l
+    type: input
+    required: false
+    priority: 50
+    allowed_interfaces: [adc, gpio]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 10.0
+    preferred_region: board_edge_left
+    params:
+      type: analog_joystick
+      interface: fpc_5p
+      axis_count: 2
+
+  - name: joystick_r
+    type: input
+    required: false
+    priority: 50
+    allowed_interfaces: [adc, gpio]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 10.0
+    preferred_region: board_edge_left
+    params:
+      type: analog_joystick
+      interface: fpc_5p
+      axis_count: 2
+
+  - name: battery_conn
+    type: power
+    required: true
+    priority: 100
+    rails: [VBAT]
+    budget_area_mm2: 15.0
+    preferred_region: board_edge_bottom
+    params:
+      connector: PH2.0_3P
+      chemistry: li_ion
+      nominal_voltage: 3.7
+      capacity_mah: 2000
+
+  - name: debug_stlink
+    type: debug
+    required: false
+    priority: 30
+    target_nets: [SWDIO, SWCLK, NRST]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 10.0
+    preferred_region: board_edge_bottom
+    params:
+      connector: PH2.0_3P
+      protocol: swd
+
+  - name: headphone_jack
+    type: connector
+    required: true
+    priority: 85
+    rails: [VDD_3V3_A]
+    budget_area_mm2: 25.0
+    preferred_region: board_edge_bottom
+    require_esd: true
+    params:
+      type: trrs_3.5mm
+      pin_count: 5
+
+  - name: power_switch
+    type: switch
+    required: true
+    priority: 95
+    rails: [VBAT]
+    budget_area_mm2: 10.0
+    preferred_region: board_edge_top
+    params:
+      type: slide_switch
+      current_rating_a: 3.0
+
+  - name: reset_button
+    type: switch
+    required: true
+    priority: 60
+    target_nets: [NRST]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 5.0
+    preferred_region: board_edge_top
+    params:
+      type: tactile_button
+
+  - name: wakeup_button
+    type: switch
+    required: true
+    priority: 60
+    target_nets: [WKUP]
+    rails: [VDD_3V3_D]
+    budget_area_mm2: 5.0
+    preferred_region: board_edge_top
+    params:
+      type: tactile_button
+
+# ------------------------------------------------------------------
+# Routing Rules
+# ------------------------------------------------------------------
+routing_rules:
+  default_trace_width_mm: 0.15
+  power_trace_width_mm: 0.5
+  analog_trace_width_mm: 0.2
+  min_clearance_mm: 0.15
+  max_vias_per_signal: 2
+  avoid_under_components: true
+  diff_pair_routing:
+    usb_dp_dm:
+      trace_width_mm: 0.15
+      gap_mm: 0.15
+      impedance_ohm: 90
+    i2s_signals:
+      trace_width_mm: 0.15
+      min_gap_mm: 0.2
+      max_skew_ps: 50
+
+# ------------------------------------------------------------------
+# Impedance Control
+# ------------------------------------------------------------------
+impedance_control:
+  usb_dp_dm:
+    target_impedance_ohm: 90.0
+    tolerance_percent: 10.0
+    diff_pair_width_mm: 0.15
+    diff_pair_gap_mm: 0.15
+  i2s_mclk:
+    target_impedance_ohm: 50.0
+    tolerance_percent: 10.0
+    diff_pair_width_mm: 0.15
+    diff_pair_gap_mm: 0.2
+  i2s_data:
+    target_impedance_ohm: 50.0
+    tolerance_percent: 10.0
+    diff_pair_width_mm: 0.15
+    diff_pair_gap_mm: 0.2
+  analog_audio:
+    target_impedance_ohm: 50.0
+    tolerance_percent: 10.0
+    diff_pair_width_mm: 0.2
+    diff_pair_gap_mm: 0.3
+  mclk_clock:
+    target_impedance_ohm: 50.0
+    tolerance_percent: 10.0
+    diff_pair_width_mm: 0.15
+    diff_pair_gap_mm: 0.2
+
+# ------------------------------------------------------------------
+# Placement Rules
+# ------------------------------------------------------------------
+placement_rules:
+  keep_probe_pads_on_grid: true
+  avoid_tall_components: true
+  min_distance_from_board_edge_mm: 2.0
+  group_by_function: true
+  digital_analog_separation:
+    enabled: true
+    split_direction: horizontal
+    digital_region: top_half
+    analog_region: bottom_half
+    isolation_gap_mm: 3.0
+    ground_stitch_via_spacing_mm: 2.54
+
+# ------------------------------------------------------------------
+# Power / Resource Allocator
+# ------------------------------------------------------------------
+resource_allocator:
+  enable: true
+  bus_allocation_strategy: first_fit
+  power_allocation_strategy: max_headroom
+  allow_partial_allocation: false
+  near_limit_threshold: 0.8
+  overload_block: true
+
+# ------------------------------------------------------------------
+# Protection
+# ------------------------------------------------------------------
+protection:
+  enabled: true
+  usb_port:
+    type: tvs_array
+    part: TPD4E02B04
+    notes: "USB-C D+/D-/VBUS/CC TVS protection"
+  headphone:
+    type: tvs
+    part: TPD1E05U06
+    notes: "3.5mm jack line-level TVS"
+  tf_card:
+    type: tvs_array
+    part: TPD2E007
+    notes: "SDIO signal line protection"
+  fpc_interfaces:
+    type: tvs_array
+    part: "3.3V_unidirectional_per_line"
+    notes: "Screen and joystick FPC signal protection"
+  buttons:
+    type: rc_filter_tvs
+    part: "10nF + 5.1V TVS"
+    notes: "ESD protection on all user-facing buttons"
+  battery:
+    type: multi_stage
+    stages:
+      - ptc_fuse: "1206_2A_hold"
+      - tvs: "SMBJ5.0A"
+      - schottky: "SS34"
+    notes: "Overcurrent, overvoltage, reverse polarity"
+
+# ------------------------------------------------------------------
+# Thermal Analysis
+# ------------------------------------------------------------------
+thermal_analysis:
+  enabled: true
+  max_junction_temp_c: 105
+  ambient_temp_c: 35
+  output_format: csv
+
+# ------------------------------------------------------------------
+# Module Footprint Preview
+# ------------------------------------------------------------------
+module_footprint_preview:
+  enabled: true
+  write_candidate_pcb: true
+  block_on_collision: true
+  block_on_keepout_violation: true
+  candidate_suffix: ".audio-player-preview"
+
+# ------------------------------------------------------------------
+# Process Controls
+# ------------------------------------------------------------------
+process_controls:
+  waivers: []
+  strict_signoff: true
+  require_autorouter_feedback: false
+
+# ------------------------------------------------------------------
+# Plugin Shell (3D Preview)
+# ------------------------------------------------------------------
+plugin_shell:
+  step_file: ""
+  enable_3d: true
+  fallback_to_2d_board: true
