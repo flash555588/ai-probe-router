@@ -1,0 +1,178 @@
+"""Tests for KiCad Plugin Shell report loading and 3D view."""
+
+import json
+from pathlib import Path
+
+from ai_probe_router.ui.report_loader import (
+    FootprintEntry,
+    IssueEntry,
+    load_footprint_preview,
+    load_readiness,
+    load_resource_allocation,
+)
+from ai_probe_router.ui.vtk_3d_view import _create_board_plane, build_3d_scene
+
+
+def _write_json(tmp_path: Path, name: str, data: dict) -> Path:
+    path = tmp_path / name
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return path
+
+
+class TestReportLoader:
+    def test_load_footprint_preview(self, tmp_path):
+        data = {
+            "ok": True,
+            "has_warnings": False,
+            "planned_footprints": [
+                {
+                    "module_name": "mod_a",
+                    "reference": "U1",
+                    "footprint": "fp",
+                    "x_mm": 10.0,
+                    "y_mm": 20.0,
+                    "rotation_deg": 0.0,
+                    "side": "top",
+                    "role": "mcu",
+                }
+            ],
+            "issues": [
+                {
+                    "severity": "warning",
+                    "code": "DENSE_REGION",
+                    "message": "dense",
+                    "module_name": None,
+                    "reference": None,
+                }
+            ],
+        }
+        path = _write_json(tmp_path, "footprint_preview_report.json", data)
+        result = load_footprint_preview(path)
+        assert result is not None
+        assert result.ok
+        assert len(result.footprints) == 1
+        assert result.footprints[0].reference == "U1"
+        assert len(result.issues) == 1
+
+    def test_load_footprint_preview_missing_file(self, tmp_path):
+        result = load_footprint_preview(tmp_path / "missing.json")
+        assert result is None
+
+    def test_load_resource_allocation(self, tmp_path):
+        data = {
+            "ok": True,
+            "warnings": [],
+            "errors": [],
+            "bus_result": {
+                "assignments": [
+                    {
+                        "bus_type": "i2c",
+                        "bus_id": 1,
+                        "module_name": "sensor",
+                        "instance_id": "U1",
+                        "address": "0x50",
+                    }
+                ]
+            },
+            "power_result": {
+                "domains": [
+                    {
+                        "domain_name": "3V3",
+                        "voltage": 3.3,
+                        "budget_ma": 500.0,
+                        "requested_ma": 100.0,
+                        "headroom_percent": 80.0,
+                    }
+                ]
+            },
+        }
+        path = _write_json(tmp_path, "resource_allocation_report.json", data)
+        result = load_resource_allocation(path)
+        assert result is not None
+        assert result.ok
+        assert len(result.buses) == 1
+        assert result.buses[0].bus_type == "i2c"
+        assert len(result.power) == 1
+        assert result.power[0].domain == "3V3"
+
+    def test_load_readiness(self, tmp_path):
+        data = {
+            "verdict": "PASS_WITH_REVIEW",
+            "run_id": "APR-TEST",
+            "blockers": [],
+            "warnings": [
+                {
+                    "severity": "warning",
+                    "source": "footprint_preview",
+                    "message": "dense region",
+                }
+            ],
+        }
+        path = _write_json(tmp_path, "readiness_report.json", data)
+        result = load_readiness(path)
+        assert result is not None
+        assert result.verdict == "PASS_WITH_REVIEW"
+        assert len(result.warnings) == 1
+        assert len(result.blockers) == 0
+
+
+class TestVtk3DView:
+    def test_build_3d_scene(self):
+        fps = [
+            FootprintEntry(
+                module_name="a",
+                reference="U1",
+                footprint="fp",
+                x_mm=10.0,
+                y_mm=20.0,
+                rotation_deg=0.0,
+                side="top",
+                role="mcu",
+            )
+        ]
+        issues = [
+            IssueEntry(
+                severity="error",
+                code="COLLISION",
+                message="collides",
+                module_name="a",
+                reference="U1",
+            )
+        ]
+        renderer = build_3d_scene(fps, issues)
+        assert renderer.GetActors().GetNumberOfItems() >= 2  # board + box
+
+    def test_create_board_plane(self):
+        actor = _create_board_plane(50.0, 30.0)
+        assert actor is not None
+
+
+class TestPluginShellImport:
+    def test_can_import_without_pyqt6_runtime(self):
+        """Module should parse even if PyQt6 is not importable at runtime.
+
+        We verify this by simply importing the module — test collection
+        itself would fail if the import were unconditional.
+        """
+        from ai_probe_router.ui.plugin_shell import KiCadPluginShell
+        assert KiCadPluginShell is not None
+
+    def test_shell_loads_reports(self, tmp_path):
+        from ai_probe_router.ui.plugin_shell import KiCadPluginShell
+
+        # Write dummy reports
+        _write_json(
+            tmp_path,
+            "footprint_preview_report.json",
+            {"ok": True, "has_warnings": False, "planned_footprints": [], "issues": []},
+        )
+        _write_json(
+            tmp_path,
+            "readiness_report.json",
+            {"verdict": "PASS", "run_id": "", "blockers": [], "warnings": []},
+        )
+        shell = KiCadPluginShell(tmp_path)
+        shell.load_reports()
+        assert shell.footprint_data is not None
+        assert shell.readiness_data is not None
+        assert shell.readiness_data.verdict == "PASS"

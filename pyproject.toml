@@ -26,6 +26,10 @@ ui = [
     "streamlit>=1.38",
     "matplotlib>=3.8",
 ]
+plugin = [
+    "PyQt6>=6.7",
+    "vtk>=9.3",
+]
 solver = [
     "ortools>=9.9",
 ]
@@ -35,6 +39,8 @@ all = [
     "uvicorn>=0.30",
     "streamlit>=1.38",
     "matplotlib>=3.8",
+    "PyQt6>=6.7",
+    "vtk>=9.3",
     "ortools>=9.9",
 ]
 
