@@ -23,6 +23,7 @@ class NetCoverage:
     route_status: str = "not_attempted"
     routed_connections: int = 0
     total_connections: int = 0
+    trace_length_mm: float = 0.0
     routing_notes: list[str] = field(default_factory=list)
     placement_warnings: list[str] = field(default_factory=list)
 

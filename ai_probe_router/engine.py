@@ -65,6 +65,7 @@ from .verification.pin_report import PinMapReport
 from .verification.power_report import PowerReport
 from .verification.report import CoverageReport, NetCoverage
 from .verification.routing_feasibility_report import RoutingFeasibilityReport
+from .verification.diff_pair_skew_report import generate_diff_pair_skew_report
 
 
 def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, PinMapReport | None]:
@@ -202,6 +203,13 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
 
     mfg_report = generate_manufacturing_report(board, coverage)
     mfg_report.write(out_dir / "manufacturing_report.txt")
+    # Diff pair skew report
+    dp_report = generate_diff_pair_skew_report(coverage, cfg.nets_to_expose)
+    dp_report.write(out_dir / "diff_pair_skew_report.txt")
+    if not dp_report.ok() and dp_report.pairs:
+        coverage.notes.append(
+            f"Diff pair skew: {sum(1 for p in dp_report.pairs if not p.ok)} pair(s) exceed threshold"
+        )
 
     # Run design review if schematic is available
     if sch is not None:
@@ -412,6 +420,11 @@ def _run_phase1(
         trace_w = _effective_trace_width(trace_w, cfg)
         routed = sum(1 for result in route_results if result.ok)
         total_routes = len(route_results)
+        # Sum trace lengths from all successful routes
+        total_trace_length = sum(
+            _trace_length(result.points)
+            for result in route_results if result.ok
+        )
         if not placed:
             route_status = "not_placed"
         elif total_routes == 0:
@@ -436,6 +449,7 @@ def _run_phase1(
             route_status=route_status,
             routed_connections=routed,
             total_connections=total_routes,
+            trace_length_mm=round(total_trace_length, 3),
             routing_notes=route_notes,
         ))
         report.routed_connections += routed
@@ -580,6 +594,15 @@ def _effective_clearance(clearance: float, cfg: ProjectConfig) -> float:
         cfg.constraints.manufacturing.min_clearance_mm,
         cfg.constraints.routing.min_clearance_mm,
         0.20,
+    )
+
+def _trace_length(points: list[tuple[float, float]]) -> float:
+    """Compute total Euclidean length of a polyline."""
+    if len(points) < 2:
+        return 0.0
+    return sum(
+        math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1])
+        for i in range(1, len(points))
     )
 
 
