@@ -109,6 +109,45 @@ def _render_pcb_preview(pcb_path: Path):
     st.pyplot(fig)
 
 
+def _render_thermal_heatmap(thermal_csv: Path):
+    """Render a thermal heatmap from the thermal simulation CSV."""
+    import csv
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    rows = []
+    with thermal_csv.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            try:
+                rows.append({
+                    "x": float(row["x"]),
+                    "y": float(row["y"]),
+                    "current": float(row["current_ma"]),
+                    "ref": row.get("ref", ""),
+                })
+            except (ValueError, KeyError):
+                continue
+
+    if not rows:
+        st.info("No thermal data available.")
+        return
+
+    xs = [r["x"] for r in rows]
+    ys = [r["y"] for r in rows]
+    currents = [r["current"] for r in rows]
+
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
+    sc = ax.scatter(xs, ys, c=currents, cmap="hot", s=200, edgecolors="black", alpha=0.8)
+    plt.colorbar(sc, ax=ax, label="Current (mA)")
+    ax.set_aspect("equal")
+    ax.set_title("Thermal Load Map (Current Density)")
+    ax.set_xlabel("X (mm)")
+    ax.set_ylabel("Y (mm)")
+    ax.grid(True, alpha=0.3)
+    st.pyplot(fig)
+
+
 def main():
     st.set_page_config(page_title="AI Probe Router", layout="wide")
     st.title("AI Probe Router — Interactive Design")
@@ -150,11 +189,26 @@ def main():
     with col_mid:
         st.header("PCB Preview")
         if "out_dir" in st.session_state:
-            pcb_file = st.session_state["out_dir"] / "main.kicad_pcb"
-            if pcb_file.exists():
-                _render_pcb_preview(pcb_file)
-            else:
-                st.info("No PCB output yet. Click Generate.")
+            out_dir = st.session_state["out_dir"]
+            pcb_file = out_dir / "main.kicad_pcb"
+            thermal_csv = out_dir / "thermal_simulation.csv"
+            skew_file = out_dir / "diff_pair_skew_report.txt"
+
+            tab1, tab2 = st.tabs(["Layout", "Thermal"])
+            with tab1:
+                if pcb_file.exists():
+                    _render_pcb_preview(pcb_file)
+                else:
+                    st.info("No PCB output yet.")
+            with tab2:
+                if thermal_csv.exists():
+                    _render_thermal_heatmap(thermal_csv)
+                else:
+                    st.info("No thermal data available.")
+
+            if skew_file.exists():
+                with st.expander("Diff Pair Skew"):
+                    st.text(skew_file.read_text(encoding="utf-8"))
         else:
             st.info("No PCB output yet. Click Generate.")
 
