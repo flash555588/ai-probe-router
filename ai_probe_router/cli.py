@@ -217,7 +217,12 @@ def review(sch_file: str, pcb: str | None, mcu: str | None):
         if mcu_path.exists():
             mcu_profile = load_mcu_profile(mcu_path)
         else:
-            builtin = Path(__file__).parent.parent / "libraries" / "mcu_profiles" / f"{mcu.replace('-', '_')}.yaml"
+            builtin = (
+                Path(__file__).parent.parent
+                / "libraries"
+                / "mcu_profiles"
+                / f"{mcu.replace('-', '_')}.yaml"
+            )
             if builtin.exists():
                 mcu_profile = load_mcu_profile(builtin)
             else:

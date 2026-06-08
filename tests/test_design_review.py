@@ -1,6 +1,5 @@
 """Tests for design review checks."""
 
-import pytest
 
 from ai_probe_router.ai.design_review import (
     DesignReviewReport,
@@ -14,7 +13,7 @@ from ai_probe_router.ai.design_review import (
     run_design_review,
 )
 from ai_probe_router.models.board import Schematic
-from ai_probe_router.models.mcu_profile import McuProfile, StrappingPin, AdcChannel
+from ai_probe_router.models.mcu_profile import AdcChannel, McuProfile, StrappingPin
 
 
 def _make_schematic(components=None, labels=None, wires=None):

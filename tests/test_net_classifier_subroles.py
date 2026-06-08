@@ -1,9 +1,8 @@
 """Tests for net sub-role classification."""
 
-import pytest
 
 from ai_probe_router.ai.net_classifier import classify_net_detailed
-from ai_probe_router.models.mcu_profile import McuProfile, StrappingPin, AdcChannel
+from ai_probe_router.models.mcu_profile import McuProfile, StrappingPin
 from ai_probe_router.models.net import NetRole, NetSubRole
 
 

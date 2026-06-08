@@ -1,8 +1,7 @@
 """Tests for signal-aware placement scoring."""
 
-import pytest
 
-from ai_probe_router.models.board import Board, BoundingBox, Footprint, Pad
+from ai_probe_router.models.board import Board, Footprint, Pad
 from ai_probe_router.models.net import NetRole, NetSubRole
 from ai_probe_router.solvers.signal_aware_scoring import signal_score
 

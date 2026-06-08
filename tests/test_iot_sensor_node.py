@@ -9,7 +9,10 @@ from ai_probe_router.engine import run
 
 def _fix_dev_board_path(config_path: Path, dev_board_path: Path) -> None:
     text = config_path.read_text(encoding="utf-8")
-    text = text.replace("../libraries/dev_boards/stm32_nucleo_64.yaml", str(dev_board_path).replace("\\", "/"))
+    text = text.replace(
+        "../libraries/dev_boards/stm32_nucleo_64.yaml",
+        str(dev_board_path).replace("\\", "/"),
+    )
     config_path.write_text(text, encoding="utf-8")
 
 def test_iot_sensor_node_full_pipeline(tmp_path):

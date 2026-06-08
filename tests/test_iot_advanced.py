@@ -140,7 +140,9 @@ def test_advanced_iot_full_coverage(tmp_path):
     # Diff pairs assigned to adjacent pins
     usb_dp_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "USB_DP")
     usb_dm_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "USB_DM")
-    assert abs(usb_dp_idx - usb_dm_idx) == 1, f"USB diff pair not adjacent: {usb_dp_idx}, {usb_dm_idx}"
+    assert abs(usb_dp_idx - usb_dm_idx) == 1, (
+        f"USB diff pair not adjacent: {usb_dp_idx}, {usb_dm_idx}"
+    )
 
     can_h_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "CAN_H")
     can_l_idx = next(a.pin_index for a in pin_report.result.assignments if a.net_name == "CAN_L")
@@ -148,9 +150,9 @@ def test_advanced_iot_full_coverage(tmp_path):
 
 
 def test_advanced_iot_diff_pair_pin_mapper():
-    from ai_probe_router.solvers.pin_mapper import solve_mapping
+    from ai_probe_router.models.dev_board import DevBoardPin, DevelopmentBoard
     from ai_probe_router.models.probe import ProbeRequirement
-    from ai_probe_router.models.dev_board import DevelopmentBoard, DevBoardPin
+    from ai_probe_router.solvers.pin_mapper import solve_mapping
 
     board = DevelopmentBoard(
         name="test_board",
@@ -165,8 +167,14 @@ def test_advanced_iot_diff_pair_pin_mapper():
     )
 
     reqs = [
-        ProbeRequirement(net_name="CAN_H", role="communication", pair_net_name="CAN_L", preferred_devboard_pins=["P1"]),
-        ProbeRequirement(net_name="CAN_L", role="communication", pair_net_name="CAN_H", preferred_devboard_pins=["P2"]),
+        ProbeRequirement(
+            net_name="CAN_H", role="communication",
+            pair_net_name="CAN_L", preferred_devboard_pins=["P1"],
+        ),
+        ProbeRequirement(
+            net_name="CAN_L", role="communication",
+            pair_net_name="CAN_H", preferred_devboard_pins=["P2"],
+        ),
     ]
 
     result = solve_mapping(reqs, board)

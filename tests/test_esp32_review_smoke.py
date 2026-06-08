@@ -22,7 +22,8 @@ def _esp32_schematic():
     return Schematic(
         components=[
             # ESP32-S3 MCU
-            {"ref": "U1", "lib_id": "ESP32-S3", "value": "ESP32-S3-WROOM-1", "x": 100.0, "y": 100.0},
+            {"ref": "U1", "lib_id": "ESP32-S3", "value": "ESP32-S3-WROOM-1",
+             "x": 100.0, "y": 100.0},
             # TP4056 charger — no protection IC present
             {"ref": "U2", "lib_id": "TP4056", "value": "TP4056", "x": 30.0, "y": 30.0},
             # PCM5102 DAC
@@ -75,7 +76,7 @@ def test_design_review_catches_review_log_issues():
 
     report = run_design_review(sch, mcu_profile=profile)
 
-    check_ids = {f.check_id for f in report.findings}
+    {f.check_id for f in report.findings}  # used by categories below
     categories = {f.category for f in report.findings}
 
     # Issue 1: GPIO39 is not ADC-capable on ESP32-S3
@@ -166,7 +167,10 @@ def test_rule_generation_with_subroles():
     # GPIO0 should require review (strapping pin)
     gpio0_rule = next(r for r in rules.net_rules if r.net_name == "GPIO0")
     assert gpio0_rule.require_human_review
-    assert "strapping" in gpio0_rule.review_reason.lower() or "boot" in gpio0_rule.review_reason.lower()
+    assert (
+        "strapping" in gpio0_rule.review_reason.lower()
+        or "boot" in gpio0_rule.review_reason.lower()
+    )
 
     # ADC should have increased clearance
     adc_rule = next(r for r in rules.net_rules if r.net_name == "ADC_CH1")
