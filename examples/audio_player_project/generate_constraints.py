@@ -8,18 +8,18 @@ This script creates a KiCad .kicad_pcb constraint file with:
 - Power net classes
 
 Usage:
-    python generate_constraints.py > constraints.kicad_pcb
-    # Then copy the relevant sections into your main.kicad_pcb
+    python generate_constraints.py --output-dir .
+    # Then open main.kicad_pcb in KiCad
 
-Or import as a plugin module:
-    from generate_constraints import generate_pcb_constraints
-    pcb = generate_pcb_constraints()
+Or import as a module:
+    from generate_constraints import generate_full_pcb_skeleton
+    pcb = generate_full_pcb_skeleton()
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -29,40 +29,16 @@ from typing import Any
 # ------------------------------------------------------------------
 @dataclass
 class LayerStack:
-    """6-layer stack-up: L1-Signal, L2-GND, L3-Signal, L4-PWR, L5-GND, L6-Signal."""
+    """6-layer stack-up."""
 
     total_thickness_mm: float = 1.6
     layers: list[dict[str, Any]] = field(default_factory=lambda: [
-        {
-            "name": "F.Cu", "type": "signal",
-            "thickness_mm": 0.035,
-            "purpose": "High-speed digital + components",
-        },
-        {
-            "name": "In1.Cu", "type": "signal",
-            "thickness_mm": 0.0175,
-            "purpose": "I2S / SDIO / internal routing",
-        },
-        {
-            "name": "In2.Cu", "type": "power",
-            "thickness_mm": 0.0175,
-            "purpose": "3V3_D / 3V3_A / 1V8 / VBAT planes",
-        },
-        {
-            "name": "In3.Cu", "type": "power",
-            "thickness_mm": 0.0175,
-            "purpose": "GND plane (digital)",
-        },
-        {
-            "name": "In4.Cu", "type": "power",
-            "thickness_mm": 0.0175,
-            "purpose": "GND plane (analog)",
-        },
-        {
-            "name": "B.Cu", "type": "signal",
-            "thickness_mm": 0.035,
-            "purpose": "Analog audio + bottom components",
-        },
+        {"name": "F.Cu", "type": "signal", "thickness_mm": 0.035},
+        {"name": "In1.Cu", "type": "signal", "thickness_mm": 0.0175},
+        {"name": "In2.Cu", "type": "power", "thickness_mm": 0.0175},
+        {"name": "In3.Cu", "type": "power", "thickness_mm": 0.0175},
+        {"name": "In4.Cu", "type": "power", "thickness_mm": 0.0175},
+        {"name": "B.Cu", "type": "signal", "thickness_mm": 0.035},
     ])
 
 
@@ -79,16 +55,10 @@ class DesignRules:
     min_via_size_mm: float = 0.4
     min_microvia_drill_mm: float = 0.1
     min_microvia_size_mm: float = 0.25
-    min_hole_to_hole_mm: float = 0.25
-    min_annular_ring_mm: float = 0.1
     max_board_width_mm: float = 75.0
     max_board_height_mm: float = 45.0
-    edge_keepout_mm: float = 2.0
-    solder_mask_color: str = "black"
-    silkscreen_color: str = "white"
     surface_finish: str = "ENIG"
     via_in_pad: bool = True
-    impedance_controlled: bool = True
 
 
 # ------------------------------------------------------------------
@@ -136,7 +106,7 @@ NET_CLASSES: list[NetClass] = [
         via_size_mm=0.4,
         via_drill_mm=0.2,
         impedance_ohm=50.0,
-        notes="38.4MHz MCLK from TCXO to DAC, length < 10mm",
+        notes="38.4MHz MCLK from TCXO to DAC, length under 10mm",
         nets=["I2S_MCK", "MCLK_38M4"],
     ),
     NetClass(
@@ -146,7 +116,7 @@ NET_CLASSES: list[NetClass] = [
         via_size_mm=0.4,
         via_drill_mm=0.2,
         impedance_ohm=50.0,
-        notes="I2S BCLK/SD/WS, match lengths ±2mm",
+        notes="I2S BCLK/SD/WS, match lengths +-2mm",
         nets=["I2S_SCK", "I2S_SD", "I2S_WS"],
     ),
     NetClass(
@@ -156,7 +126,7 @@ NET_CLASSES: list[NetClass] = [
         via_size_mm=0.4,
         via_drill_mm=0.2,
         impedance_ohm=50.0,
-        notes="DAC LPOUT/RPOUT → HP amp, L6 only,远离数字",
+        notes="DAC LPOUT/RPOUT to HP amp, L6 only, away from digital",
         nets=["DAC_L+", "DAC_L-", "DAC_R+", "DAC_R-", "HP_OUT_L", "HP_OUT_R"],
     ),
     NetClass(
@@ -210,7 +180,7 @@ NET_CLASSES: list[NetClass] = [
         clearance_mm=0.2,
         via_size_mm=0.5,
         via_drill_mm=0.25,
-        notes="Digital ground (L2, L4)" ,
+        notes="Digital ground (L2, L4)",
         nets=["GND", "DGND", "VSS"],
     ),
     NetClass(
@@ -228,7 +198,7 @@ NET_CLASSES: list[NetClass] = [
         clearance_mm=0.15,
         via_size_mm=0.4,
         via_drill_mm=0.2,
-        notes="SDIO CMD/CLK/D0-D3, match lengths ±1mm",
+        notes="SDIO CMD/CLK/D0-D3, match lengths +-1mm",
         nets=["SDIO_CMD", "SDIO_CLK", "SDIO_D0", "SDIO_D1", "SDIO_D2", "SDIO_D3"],
     ),
     NetClass(
@@ -271,88 +241,51 @@ NET_CLASSES: list[NetClass] = [
 
 
 # ------------------------------------------------------------------
-# Placement Zones (Digital / Analog separation)
+# Placement Zones
 # ------------------------------------------------------------------
 @dataclass
 class KeepoutZone:
-    """A PCB keepout or placement zone."""
-
     name: str
     layer: str
-    purpose: str
-    polygon_mm: list[tuple[float, float]]  # Clockwise from bottom-left
-    allowed_nets: list[str] = field(default_factory=list)
-    forbidden_nets: list[str] = field(default_factory=list)
+    polygon_mm: list[tuple[float, float]]
 
 
 PLACEMENT_ZONES: list[KeepoutZone] = [
     KeepoutZone(
         name="Digital_Region",
         layer="*.Cu",
-        purpose="High-speed digital: MCU, Flash, USB, TF, Screen FPC",
         polygon_mm=[
-            (0.0, 22.5),
-            (75.0, 22.5),
-            (75.0, 45.0),
-            (0.0, 45.0),
+            (0.0, 22.5), (75.0, 22.5), (75.0, 45.0), (0.0, 45.0),
         ],
-        allowed_nets=["3V3", "GND", "VBUS", "USB_DP", "USB_DM", "SDIO_*", "SPI_*", "I2C_*"],
-        forbidden_nets=["DAC_L+", "DAC_L-", "DAC_R+", "DAC_R-", "AGND", "3V3A"],
     ),
     KeepoutZone(
         name="Analog_Region",
         layer="*.Cu",
-        purpose="Audio analog: DAC, HP amp, TCXO",
         polygon_mm=[
-            (0.0, 0.0),
-            (75.0, 0.0),
-            (75.0, 22.5),
-            (0.0, 22.5),
+            (0.0, 0.0), (75.0, 0.0), (75.0, 22.5), (0.0, 22.5),
         ],
-        allowed_nets=["3V3A", "1V8", "AGND", "DAC_L+", "DAC_L-", "DAC_R+", "DAC_R-", "MCLK_38M4"],
-        forbidden_nets=["USB_DP", "USB_DM", "SDIO_CLK", "SPI_SCK"],
     ),
     KeepoutZone(
         name="Isolation_Gap",
         layer="F.Cu",
-        purpose="3mm gap between digital and analog, no traces crossing",
         polygon_mm=[
-            (0.0, 21.0),
-            (75.0, 21.0),
-            (75.0, 24.0),
-            (0.0, 24.0),
+            (0.0, 21.0), (75.0, 21.0), (75.0, 24.0), (0.0, 24.0),
         ],
-        forbidden_nets=["*"],  # No traces allowed in isolation gap on top layer
     ),
 ]
 
 
 # ------------------------------------------------------------------
-# Constraint summary
+# KiCad generators
 # ------------------------------------------------------------------
-@dataclass
-class ConstraintSummary:
-    project_name: str = "Audio_Player_v0.1"
-    board_size_mm: tuple[float, float] = (75.0, 45.0)
-    layer_count: int = 6
-    min_trace_mm: float = 0.1
-    min_spacing_mm: float = 0.1
-    via_in_pad: bool = True
-    impedance_control: bool = True
-    digital_analog_split: bool = True
-    net_class_count: int = 0
-    placement_zone_count: int = 0
-
-
-# ------------------------------------------------------------------
-# KiCad S-expression generators
-# ------------------------------------------------------------------
-def _indent(level: int) -> str:
-    return "  " * level
+def _all_nets() -> list[str]:
+    nets: set[str] = set()
+    for nc in NET_CLASSES:
+        nets.update(nc.nets)
+    return sorted(nets)
 
 
 def _netclass_to_kicad(nc: NetClass) -> str:
-    """Generate KiCad net class S-expression."""
     lines: list[str] = [
         f'  (net_class "{nc.name}" "{nc.notes}"',
         f'    (clearance {nc.clearance_mm})',
@@ -373,7 +306,6 @@ def _netclass_to_kicad(nc: NetClass) -> str:
 
 
 def _zone_to_kicad(z: KeepoutZone) -> str:
-    """Generate KiCad zone S-expression (keepout)."""
     pts = " ".join(f"(xy {x} {y})" for x, y in z.polygon_mm)
     keepout = (
         "    (keepout (tracks not_allowed) (vias not_allowed) "
@@ -398,79 +330,17 @@ def _zone_to_kicad(z: KeepoutZone) -> str:
     )
 
 
-def generate_kicad_netclasses() -> str:
-    """Return a string of KiCad net class definitions."""
-    header = "  ;; === Auto-generated net classes (Audio Player) ==="
-    body = "\n".join(_netclass_to_kicad(nc) for nc in NET_CLASSES)
-    return f"{header}\n{body}"
-
-
-def generate_kicad_zones() -> str:
-    """Return a string of KiCad zone definitions."""
-    header = "  ;; === Auto-generated placement zones (Digital/Analog split) ==="
-    body = "\n".join(_zone_to_kicad(z) for z in PLACEMENT_ZONES)
-    return f"{header}\n{body}"
-
-
-def generate_design_rules_block() -> str:
-    """Generate the KiCad design rules block."""
-    dr = DesignRules()
-    return f"""  (setup
-    (pad_to_mask_clearance 0.05)
-    (allow_soldermask_bridges_in_footprints no)
-    (pcbplotparams
-      (layerselection 0x00010fc_ffffffff)
-      (plot_on_all_layers_selection 0x0000000_00000000)
-      (disableapertmacros no)
-      (usegerberextensions no)
-      (usegerberattributes yes)
-      (usegerberadvancedattributes yes)
-      (creategerberjobfile yes)
-      (dashed_line_dash_ratio 12.000000)
-      (dashed_line_gap_ratio 3.000000)
-      (svgprecision 4)
-      (plotframeref no)
-      (viasonmask no)
-      (mode 1)
-      (useauxorigin no)
-      (hpglpennumber 1)
-      (hpglpenspeed 20)
-      (hpglpendiameter 15.000000)
-      (pdf_front_fp_property_popups yes)
-      (pdf_back_fp_property_popups yes)
-      (dxfpolygonmode yes)
-      (dxfimperialunits yes)
-      (dxfusepcbnewfont yes)
-      (psnegative no)
-      (psa4output no)
-      (plotreference yes)
-      (plotvalue yes)
-      (plotfptext yes)
-      (plotinvisibletext no)
-      (sketchpadsonfab no)
-      (subtractmaskfromsilk no)
-      (outputformat 1)
-      (mirror no)
-      (drillshape 1)
-      (scaleselection 1)
-      (outputdirectory "")
-    )
-  )
-  ;; === Design Rules ===
-  ;; Min trace: {dr.min_trace_width_mm} mm
-  ;; Min spacing: {dr.min_trace_spacing_mm} mm
-  ;; Min via: {dr.min_via_size_mm} mm / {dr.min_via_drill_mm} mm drill
-  ;; Board: {dr.max_board_width_mm} x {dr.max_board_height_mm} mm
-  ;; Surface finish: {dr.surface_finish}
-  ;; Via-in-pad: {dr.via_in_pad}
-"""
+def _nets_block() -> str:
+    lines = ['  (net 0 "")']
+    for idx, net in enumerate(_all_nets(), start=1):
+        lines.append(f'  (net {idx} "{net}")')
+    return "\n".join(lines)
 
 
 def generate_full_pcb_skeleton() -> str:
-    """Generate a complete minimal .kicad_pcb skeleton with constraints."""
-    netclasses = generate_kicad_netclasses()
-    zones = generate_kicad_zones()
-    setup = generate_design_rules_block()
+    nets = _nets_block()
+    netclasses = "\n".join(_netclass_to_kicad(nc) for nc in NET_CLASSES)
+    zones = "\n".join(_zone_to_kicad(z) for z in PLACEMENT_ZONES)
     return f"""(kicad_pcb
   (version 20240108)
   (generator "pcbnew")
@@ -486,7 +356,10 @@ def generate_full_pcb_skeleton() -> str:
     (rev "v0.1")
     (company "DIY Audio Project")
   )
-{setup}
+  (setup
+    (pad_to_mask_clearance 0.05)
+    (allow_soldermask_bridges_in_footprints no)
+  )
   (layers
     (0 "F.Cu" signal)
     (1 "In1.Cu" signal)
@@ -513,97 +386,48 @@ def generate_full_pcb_skeleton() -> str:
     (48 "B.Fab" user)
     (49 "F.Fab" user)
   )
+{nets}
 {netclasses}
 {zones}
-  ;; === Board Edge ===
   (gr_line (start 0 0) (end 75 0) (layer "Edge.Cuts") (width 0.1))
   (gr_line (start 75 0) (end 75 45) (layer "Edge.Cuts") (width 0.1))
   (gr_line (start 75 45) (end 0 45) (layer "Edge.Cuts") (width 0.1))
   (gr_line (start 0 45) (end 0 0) (layer "Edge.Cuts") (width 0.1))
-
-  ;; === Digital/Analog split marker ===
-  (dimension
-    (type aligned)
-    (layer "Dwgs.User")
-    (pts (xy 2 22.5) (xy 73 22.5))
-    (height -3)
-    (gr_text "DIGITAL / ANALOG SPLIT" (at 37.5 18) (layer "Dwgs.User")
-      (effects (font (size 2 2)))
-    )
-    (style (thickness 0.15) (arrow_length 1) (text_position_mode 0))
-  )
 )
 """
 
 
 def generate_constraint_report() -> dict[str, Any]:
-    """Generate a JSON-serializable constraint summary."""
-    summary = ConstraintSummary(
-        net_class_count=len(NET_CLASSES),
-        placement_zone_count=len(PLACEMENT_ZONES),
-    )
     return {
-        "project": asdict(summary),
-        "layer_stack": asdict(LayerStack()),
-        "design_rules": asdict(DesignRules()),
         "net_classes": [
-            {
-                "name": nc.name,
-                "trace_width_mm": nc.trace_width_mm,
-                "clearance_mm": nc.clearance_mm,
-                "impedance_ohm": nc.impedance_ohm,
-                "nets": nc.nets,
-                "notes": nc.notes,
-            }
+            {"name": nc.name, "trace_width_mm": nc.trace_width_mm,
+             "clearance_mm": nc.clearance_mm, "impedance_ohm": nc.impedance_ohm,
+             "nets": nc.nets, "notes": nc.notes}
             for nc in NET_CLASSES
         ],
         "placement_zones": [
-            {
-                "name": z.name,
-                "layer": z.layer,
-                "purpose": z.purpose,
-                "polygon_mm": z.polygon_mm,
-            }
+            {"name": z.name, "layer": z.layer, "polygon_mm": z.polygon_mm}
             for z in PLACEMENT_ZONES
         ],
     }
 
 
 def main() -> int:
-    """CLI entry point."""
     import argparse
-
     parser = argparse.ArgumentParser(
-        description="Generate KiCad PCB constraints for Audio Player project"
+        description="Generate KiCad PCB constraints for Audio Player"
     )
     parser.add_argument(
-        "--format",
-        choices=["kicad", "json", "both"],
-        default="both",
-        help="Output format (default: both)",
+        "--format", choices=["kicad", "json", "both"], default="both"
     )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=Path("."),
-        help="Directory to write output files",
-    )
+    parser.add_argument("--output-dir", type=Path, default=Path("."))
     args = parser.parse_args()
-
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     if args.format in ("kicad", "both"):
         pcb_path = args.output_dir / "main.kicad_pcb"
         pcb_path.write_text(generate_full_pcb_skeleton(), encoding="utf-8")
         print(f"Generated: {pcb_path}")
-
-        netclass_path = args.output_dir / "netclasses.kicad_pcb"
-        netclass_path.write_text(generate_kicad_netclasses(), encoding="utf-8")
-        print(f"Generated: {netclass_path}")
-
-        zones_path = args.output_dir / "zones.kicad_pcb"
-        zones_path.write_text(generate_kicad_zones(), encoding="utf-8")
-        print(f"Generated: {zones_path}")
 
     if args.format in ("json", "both"):
         json_path = args.output_dir / "constraints.json"
