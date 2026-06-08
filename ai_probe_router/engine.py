@@ -108,6 +108,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     module_instantiation_result = None
     module_compatibility_result = None
     module_library_preflight_result = None
+    resource_allocation_result = None
     autoroute_result = None
     if cfg.functional_modules:
         module_library_preflight_result = validate_module_library(cfg.functional_modules)
@@ -116,8 +117,14 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             module_selection,
             module_graph_result,
             module_compatibility_result,
+            resource_allocation_result,
         ):
             module_selection = select_modules(cfg.functional_modules)
+            if cfg.resource_allocator.enable and module_selection is not None:
+                from .solvers.resource_allocator import allocate_resources
+                resource_allocation_result = allocate_resources(
+                    module_selection.selected, cfg,
+                )
             module_graph_result = build_module_graph(cfg, module_selection, board)
             module_compatibility_result = analyze_module_compatibility(module_graph_result)
             if not _module_plan_blocked(
@@ -125,6 +132,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
                 module_selection,
                 module_graph_result,
                 module_compatibility_result,
+                resource_allocation_result,
             ):
                 module_placement_result = plan_module_placement(
                     module_graph_result.graph,
@@ -139,6 +147,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         module_selection,
         module_graph_result,
         module_compatibility_result,
+        resource_allocation_result,
     ):
         coverage = CoverageReport(
             run_id=run_id,
@@ -189,6 +198,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             routing_feasibility=routing_feasibility,
             manufacturing_report=mfg_report,
             process_report=process_report,
+            resource_allocation_result=resource_allocation_result,
         )
         readiness.write(out_dir / "readiness_report.txt")
         coverage.write(out_dir / "testpoint_report.txt")
@@ -389,6 +399,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         manufacturing_report=mfg_report,
         diff_pair_report=dp_report,
         process_report=process_report,
+        resource_allocation_result=resource_allocation_result,
     )
     readiness.write(out_dir / "readiness_report.txt")
     artifacts = collect_artifact_manifest(out_dir)
@@ -672,14 +683,12 @@ def _json_safe(value: object) -> object:
         json.dumps(value, sort_keys=True)
     except TypeError:
         return repr(value)
-    return value
-
-
 def _module_plan_blocked(
     module_library_preflight_result,
     module_selection,
     module_graph_result,
     module_compatibility_result,
+    resource_allocation_result=None,
 ) -> bool:
     return any(
         result is not None and not result.ok
@@ -688,6 +697,7 @@ def _module_plan_blocked(
             module_selection,
             module_graph_result,
             module_compatibility_result,
+            resource_allocation_result,
         )
     )
 

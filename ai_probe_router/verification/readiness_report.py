@@ -89,6 +89,7 @@ def generate_readiness_report(
     manufacturing_report: ManufacturingReport | None = None,
     diff_pair_report: DiffPairSkewReport | None = None,
     process_report: DesignProcessReport | None = None,
+    resource_allocation_result=None,
 ) -> ReadinessReport:
     report = ReadinessReport(run_id=run_id or coverage.run_id)
 
@@ -100,6 +101,7 @@ def generate_readiness_report(
     _add_module_instantiation(report, module_instantiation_result)
     _add_routing_feasibility(report, routing_feasibility)
     _add_pin_mapping(report, pin_mapping_result)
+    _add_resource_allocation(report, resource_allocation_result)
     _add_coverage(report, coverage)
     _add_manufacturing(report, manufacturing_report)
     _add_diff_pair_skew(report, diff_pair_report)
@@ -242,6 +244,12 @@ def _add_pin_mapping(
             f"unmapped net {req.net_name} (role={req.role})",
         )
 
+
+def _add_resource_allocation(report: ReadinessReport, result) -> None:
+    if result is None:
+        return
+    _add_many(report, "error", "resource_allocation", result.errors)
+    _add_many(report, "warning", "resource_allocation", result.warnings)
 
 def _add_coverage(report: ReadinessReport, coverage: CoverageReport) -> None:
     if coverage.total_nets_requested and not coverage.entries and coverage.missing:
