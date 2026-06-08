@@ -303,6 +303,7 @@ def _add_pin_mapping(
     if result is None:
         return
     _add_many(report, "error", "pin_mapping", result.errors)
+    _add_many(report, "warning", "pin_mapping", result.warnings)
     for req in result.unmapped:
         severity = "error" if req.required else "warning"
         _add_issue(

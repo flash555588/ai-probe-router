@@ -31,6 +31,11 @@ class PinMapReport:
             for e in self.result.errors:
                 lines.append(f"    - {e}")
             lines.append("")
+        if self.result.warnings:
+            lines.append("  Warnings:")
+            for warning in self.result.warnings:
+                lines.append(f"    - {warning}")
+            lines.append("")
         lines.append("  Pin Assignments:")
         lines.append("  " + "-" * 68)
         lines.append(f"  {'Net':<20} {'Pin':<15} {'Index':>5}  {'Score':>6}")

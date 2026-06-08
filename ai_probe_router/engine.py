@@ -50,7 +50,9 @@ from .solvers.grid_router import RouteResult, route_grid
 from .solvers.module_graph import build_module_graph
 from .solvers.module_placement import plan_module_placement
 from .solvers.module_selector import select_modules
-from .solvers.pin_mapper import solve_mapping
+from .solvers.pin_mapper import MappingResult, solve_mapping
+from .solvers.pin_mapper_compare import PinMapperCompareReport, compare_pin_mappers
+from .solvers.pin_mapper_cp_sat import map_pins_cp_sat, ortools_available
 from .solvers.placement_solver import find_placement, place_pogo_array
 from .synthesis.module_instantiator import instantiate_module_sheets
 from .verification.bom_report import BomReport
@@ -217,7 +219,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
 
     pin_report: PinMapReport | None = None
     if cfg.development_board is not None and cfg.nets_to_expose:
-        pin_report = _run_phase2(cfg, board, sch, cfg.development_board)
+        pin_report = _run_phase2(cfg, board, sch, cfg.development_board, out_dir)
 
     coverage = _run_phase1(cfg, board, sch)
     coverage.run_id = run_id
@@ -563,6 +565,13 @@ def _build_run_id(cfg: ProjectConfig, base: Path) -> str:
             "require_silkscreen_labels": cfg.probe.require_silkscreen_labels,
             "require_fiducials": cfg.probe.require_fiducials,
             "require_tooling_holes": cfg.probe.require_tooling_holes,
+        },
+        "pin_mapper": {
+            "mode": cfg.pin_mapper.mode,
+            "fallback_to_greedy": cfg.pin_mapper.fallback_to_greedy,
+            "require_ortools": cfg.pin_mapper.require_ortools,
+            "selected_output": cfg.pin_mapper.selected_output,
+            "objective_weights": cfg.pin_mapper.objective_weights.__dict__,
         },
         "constraints": {
             "routing": {
@@ -976,8 +985,14 @@ def _run_phase2(
     board: Board | None,
     sch: Schematic | None,
     dev_board: DevelopmentBoard,
+    out_dir: Path | None = None,
 ) -> PinMapReport:
-    result = solve_mapping(cfg.nets_to_expose, dev_board)
+    result, compare_report = _select_pin_mapping(cfg, dev_board)
+    if compare_report is not None and out_dir is not None:
+        compare_report.write(
+            out_dir / "pin_mapper_compare_report.txt",
+            out_dir / "pin_mapper_compare_report.json",
+        )
     pin_report = PinMapReport(
         board_name=dev_board.name,
         result=result,
@@ -1026,6 +1041,50 @@ def _run_phase2(
             )
 
     return pin_report
+
+
+def _select_pin_mapping(
+    cfg: ProjectConfig,
+    dev_board: DevelopmentBoard,
+) -> tuple[MappingResult, PinMapperCompareReport | None]:
+    mode = cfg.pin_mapper.mode
+    if mode == "greedy":
+        return solve_mapping(cfg.nets_to_expose, dev_board), None
+
+    if mode == "compare":
+        report = compare_pin_mappers(
+            cfg.nets_to_expose,
+            dev_board,
+            weights=cfg.pin_mapper.objective_weights,
+            selected_output=cfg.pin_mapper.selected_output,
+        )
+        selected = report.selected_result
+        selected.warnings.extend(report.warnings)
+        return selected, report
+
+    if mode == "cp_sat":
+        if not ortools_available():
+            if cfg.pin_mapper.require_ortools or not cfg.pin_mapper.fallback_to_greedy:
+                return MappingResult(
+                    errors=["CP_SAT_REQUIRED_BUT_ORTOOLS_MISSING"],
+                    solver="cp_sat",
+                ), None
+            result = solve_mapping(cfg.nets_to_expose, dev_board)
+            result.warnings.append("ORTOOLS_MISSING_FALLBACK_TO_GREEDY")
+            return result, None
+        result = map_pins_cp_sat(
+            cfg.nets_to_expose,
+            dev_board,
+            cfg.constraints,
+            cfg.pin_mapper.objective_weights,
+        )
+        if result.ok:
+            result.warnings.append("CP_SAT_SOLVER_USED")
+        return result, None
+
+    return MappingResult(
+        errors=[f"PIN_MAPPING_CONSTRAINT_CONFLICT: unsupported mode {mode}"],
+    ), None
 
 
 def _net_class_for_role(role: NetRole, current_ma: float) -> tuple[float, float]:

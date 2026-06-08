@@ -2,6 +2,7 @@ import json
 
 from ai_probe_router.models.module_graph import ModuleGraphResult
 from ai_probe_router.models.net import NetRole
+from ai_probe_router.solvers.pin_mapper import MappingResult
 from ai_probe_router.verification.manufacturing_report import ManufacturingReport
 from ai_probe_router.verification.readiness_report import (
     generate_readiness_report,
@@ -70,6 +71,21 @@ def test_readiness_exit_code_mapping():
     assert readiness_exit_code("PASS_WITH_REVIEW") == 2
     assert readiness_exit_code("BLOCKED") == 3
     assert readiness_exit_code("SOMETHING_ELSE") == 1
+
+
+def test_readiness_reports_pin_mapper_warnings_and_blockers():
+    warning_report = generate_readiness_report(
+        CoverageReport(run_id="APR-PIN"),
+        pin_mapping_result=MappingResult(warnings=["CP_SAT_SOLVER_USED"]),
+    )
+    assert warning_report.verdict == "PASS_WITH_REVIEW"
+    assert "CP_SAT_SOLVER_USED" in warning_report.summary_text()
+
+    blocked_report = generate_readiness_report(
+        CoverageReport(run_id="APR-PIN"),
+        pin_mapping_result=MappingResult(errors=["CP_SAT_REQUIRED_BUT_ORTOOLS_MISSING"]),
+    )
+    assert blocked_report.verdict == "BLOCKED"
 
 
 def test_readiness_blocks_module_graph_error():

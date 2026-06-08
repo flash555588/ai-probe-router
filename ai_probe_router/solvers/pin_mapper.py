@@ -28,6 +28,9 @@ class MappingResult:
     assignments: list[PinAssignment] = field(default_factory=list)
     unmapped: list[ProbeRequirement] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    solver: str = "greedy"
+    objective_score: float = 0.0
 
     @property
     def ok(self) -> bool:
