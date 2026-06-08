@@ -61,6 +61,7 @@ apr generate examples/full_config.yaml -d examples/minimal_project
 - [Project log](docs/project_log.md)
 - [Roadmap](docs/roadmap.md)
 - [Route import safety](docs/route_import_safety.md)
+- [CP-SAT pin mapper](docs/pin_mapper_cp_sat.md)
 
 ### Validate existing testpoints
 

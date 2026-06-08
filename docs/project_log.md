@@ -105,3 +105,43 @@ Results:
 
 - `pytest` - 341 passed in 75.85s.
 - `ruff check .` - all checks passed.
+
+## PR3 CP-SAT Pin Mapper
+
+Date: 2026-06-08
+
+### Scope
+
+PR3 adds an optional CP-SAT pin mapper behind a feature flag. The existing greedy mapper remains the default, and compare mode can run both solvers while preserving greedy output by default.
+
+### Changes
+
+- Added `pin_mapper` config parsing with `greedy`, `cp_sat`, and `compare` modes.
+- Added `ai_probe_router/solvers/pin_mapper_cp_sat.py`.
+- Added `ai_probe_router/solvers/pin_mapper_compare.py`.
+- Extended `MappingResult` with solver warnings and objective score metadata.
+- Updated engine phase 2 to dispatch by pin-mapper mode.
+- Added compare reports: `pin_mapper_compare_report.txt` and `pin_mapper_compare_report.json`.
+- Added readiness warnings/errors for CP-SAT usage, fallback, compare differences, and CP-SAT blockers.
+- Added CP-SAT workflow documentation in `docs/pin_mapper_cp_sat.md`.
+
+### Verification
+
+Focused checks completed during implementation:
+
+```bash
+pytest tests\test_pin_mapper_cp_sat.py tests\test_pin_mapper_compare.py tests\test_pin_mapper.py tests\test_models.py tests\test_engine.py tests\test_readiness_report.py
+ruff check ai_probe_router\config.py ai_probe_router\engine.py ai_probe_router\solvers\pin_mapper.py ai_probe_router\solvers\pin_mapper_cp_sat.py ai_probe_router\solvers\pin_mapper_compare.py ai_probe_router\solvers\__init__.py ai_probe_router\verification\readiness_report.py ai_probe_router\verification\pin_report.py tests\test_pin_mapper_cp_sat.py tests\test_pin_mapper_compare.py
+```
+
+Final PR3 verification commands:
+
+```bash
+pytest
+ruff check .
+```
+
+Results:
+
+- `pytest` - 354 passed in 80.67s.
+- `ruff check .` - all checks passed.
