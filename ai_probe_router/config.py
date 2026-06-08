@@ -32,6 +32,15 @@ from .solvers.pin_mapper import load_dev_board
 
 
 @dataclass
+class ResourceAllocatorConfig:
+    enable: bool = False
+    bus_allocation_strategy: str = "first_fit"
+    power_allocation_strategy: str = "max_headroom"
+    connector_allocation_strategy: str = "minimize_spread"
+    allow_partial_allocation: bool = False
+
+
+@dataclass
 class ProjectConfig:
     schema_version: int = 1
     eda_tool: str = "kicad"
@@ -49,6 +58,7 @@ class ProjectConfig:
     protection: ProtectionRules = field(default_factory=ProtectionRules)
     mcu_profile: McuProfile | None = None
     impedance_control: ImpedanceControl = field(default_factory=ImpedanceControl)
+    resource_allocator: ResourceAllocatorConfig = field(default_factory=ResourceAllocatorConfig)
     thermal_analysis: ThermalAnalysis = field(default_factory=ThermalAnalysis)
     process_controls: ProcessControls = field(default_factory=ProcessControls)
 
@@ -223,6 +233,18 @@ def load_config(path: str | Path) -> ProjectConfig:
             max_junction_temp_c=float(th.get("max_junction_temp_c", 125.0) or 125.0),
             ambient_temp_c=float(th.get("ambient_temp_c", 25.0) or 25.0),
             output_format=str(th.get("output_format", "csv")),
+        )
+
+    ra = raw.get("resource_allocator", {})
+    if isinstance(ra, dict):
+        cfg.resource_allocator = ResourceAllocatorConfig(
+            enable=bool(ra.get("enable", False)),
+            bus_allocation_strategy=str(ra.get("bus_allocation_strategy", "first_fit")),
+            power_allocation_strategy=str(ra.get("power_allocation_strategy", "max_headroom")),
+            connector_allocation_strategy=str(
+                ra.get("connector_allocation_strategy", "minimize_spread")
+            ),
+            allow_partial_allocation=bool(ra.get("allow_partial_allocation", False)),
         )
 
     pc = raw.get("process_controls", {})
