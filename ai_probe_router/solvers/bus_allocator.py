@@ -41,13 +41,23 @@ def allocate_buses(
 
     * strategy='first_fit' — pack onto the first bus with room.
     * strategy='best_fit'  — pack onto the bus with the most room.
+
+    Higher-priority modules are allocated first.
     """
     result = BusAllocationResult()
     bus_counters: dict[str, int] = {}
     bus_occupancy: dict[tuple[str, int], list[tuple[str, str]]] = {}
     address_map: dict[tuple[str, int, str], list[str]] = {}
 
-    for sel in modules:
+    # Sort by priority descending so critical modules get preferred
+    # bus IDs.
+    sorted_modules = sorted(
+        modules,
+        key=lambda sel: getattr(sel.module, "priority", 0),
+        reverse=True,
+    )
+
+    for sel in sorted_modules:
         mod = sel.module
         impl = sel.implementation
         instance_id = getattr(sel, "instance_id", mod.name)

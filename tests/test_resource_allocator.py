@@ -9,6 +9,7 @@ from ai_probe_router.models.module import (
     SelectedModule,
 )
 from ai_probe_router.models.power_domain import PowerDomain
+from ai_probe_router.models.readiness_codes import ReadinessCode
 from ai_probe_router.solvers.bus_allocator import allocate_buses
 from ai_probe_router.solvers.power_domain_solver import allocate_power
 from ai_probe_router.solvers.resource_allocator import allocate_resources
@@ -192,3 +193,95 @@ class TestResourceAllocator:
         result = allocate_resources(modules, cfg)
         assert result.ok
         assert not result.errors
+class TestBusAllocatorPriority:
+    def test_priority_modules_get_lower_bus_ids(self):
+        """Higher-priority modules should be allocated first."""
+        low = _sel("low_priority", interfaces=["i2c"], params={"i2c_address": "0x50"})
+        low.module.priority = 1
+        high = _sel("high_priority", interfaces=["i2c"], params={"i2c_address": "0x51"})
+        high.module.priority = 10
+        modules = [low, high]
+        result = allocate_buses(modules)
+        # Both share bus 1 because no conflict
+        assert result.assignments[0].bus_id == 1
+        assert result.assignments[1].bus_id == 1
+
+
+class TestPowerDomainSolverConfig:
+    def test_near_limit_threshold_custom(self):
+        modules = [_sel("mcu", interfaces=["uart"])]
+        # MCU draws 100mA; 100/500 = 0.2 < 0.5 → not near limit
+        domains = [PowerDomain(name="3V3", voltage=3.3, max_current_ma=500.0)]
+        result = allocate_power(modules, domains, near_limit_threshold=0.5)
+        assert not result.near_limit_domains
+        # But if threshold is very low, it triggers
+        result2 = allocate_power(modules, domains, near_limit_threshold=0.1)
+        assert len(result2.near_limit_domains) == 1
+
+    def test_overload_block_false(self):
+        modules = [_sel("motor", interfaces=["uart"], comp_type="motor_driver")]
+        domains = [PowerDomain(name="3V3", voltage=3.3, max_current_ma=50.0)]
+        result = allocate_power(
+            modules, domains, overload_block=False
+        )
+        # Overload still detected regardless of overload_block flag
+        assert len(result.overload_domains) == 1
+
+
+class TestResourceAllocatorProduction:
+    def test_simulate_flag_returns_simulated_true(self):
+        from ai_probe_router.models.design_graph import HardwarePlatform
+        cfg = ProjectConfig(
+            resource_allocator=ResourceAllocatorConfig(enable=True),
+            hardware_platform=HardwarePlatform(),
+        )
+        modules = [_sel("sensor", interfaces=["i2c"], params={"i2c_address": "0x50"})]
+        result = allocate_resources(modules, cfg, simulate=True)
+        assert result.simulated is True
+        assert result.ok
+
+    def test_readiness_code_enum_used(self):
+        from ai_probe_router.models.design_graph import HardwarePlatform
+        cfg = ProjectConfig(
+            resource_allocator=ResourceAllocatorConfig(enable=False),
+            hardware_platform=HardwarePlatform(),
+        )
+        result = allocate_resources([], cfg)
+        assert result.warnings == [ReadinessCode.RESOURCE_ALLOCATOR_DISABLED]
+
+    def test_config_near_limit_threshold_passed_through(self):
+        from ai_probe_router.models.design_graph import HardwarePlatform
+        cfg = ProjectConfig(
+            resource_allocator=ResourceAllocatorConfig(
+                enable=True,
+                near_limit_threshold=0.5,
+            ),
+            hardware_platform=HardwarePlatform(
+                target_voltage_domains=[
+                    # MCU draws 100mA; 100/500 = 0.2 < 0.5 → no near-limit
+                    PowerDomain(name="3V3", voltage=3.3, max_current_ma=500.0)
+                ]
+            ),
+        )
+        modules = [_sel("mcu", interfaces=["uart"])]
+        result = allocate_resources(modules, cfg)
+        assert result.ok
+        assert ReadinessCode.POWER_DOMAIN_NEAR_LIMIT not in result.warnings
+
+    def test_config_overload_block_true_blocks(self):
+        from ai_probe_router.models.design_graph import HardwarePlatform
+        cfg = ProjectConfig(
+            resource_allocator=ResourceAllocatorConfig(
+                enable=True,
+                overload_block=True,
+            ),
+            hardware_platform=HardwarePlatform(
+                target_voltage_domains=[
+                    PowerDomain(name="3V3", voltage=3.3, max_current_ma=50.0)
+                ]
+            ),
+        )
+        modules = [_sel("motor", interfaces=["uart"], comp_type="motor_driver")]
+        result = allocate_resources(modules, cfg)
+        assert not result.ok
+        assert ReadinessCode.POWER_DOMAIN_OVERLOAD in result.errors

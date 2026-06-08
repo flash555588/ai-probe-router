@@ -28,10 +28,19 @@ def allocate_power(
     modules: list[SelectedModule],
     platform_domains: list[PowerDomain],
     strategy: str = "max_headroom",
+    *,
+    near_limit_threshold: float = 0.8,
+    overload_block: bool = True,
 ) -> PowerAllocationResult:
     """Sum module currents per voltage domain and compare against budget.
 
-    * strategy='max_headroom' — prefers domains with the most headroom.
+    Parameters
+    ----------
+    near_limit_threshold:
+        Fraction of budget used before a domain is flagged as near-limit.
+    overload_block:
+        If True, overloads are reported in ``overload_domains``.
+        If False, they are still reported but not treated as fatal.
     """
     result = PowerAllocationResult()
     budget_by_voltage: dict[float, float] = {}
@@ -42,10 +51,9 @@ def allocate_power(
     draw_by_voltage: dict[float, float] = {}
     for sel in modules:
         impl = sel.implementation
-        if not impl:
+        if not impl.components:
             continue
         for comp in impl.components:
-            # Infer voltage from component type / chip metadata when available
             voltage = _infer_component_voltage(comp)
             current = _infer_component_current(comp)
             draw_by_voltage[voltage] = draw_by_voltage.get(voltage, 0.0) + current
@@ -54,7 +62,9 @@ def allocate_power(
     for pd in platform_domains:
         requested = draw_by_voltage.get(pd.voltage, 0.0)
         budget = pd.max_current_ma
-        headroom = ((budget - requested) / budget * 100.0) if budget else 0.0
+        headroom = (
+            round((budget - requested) / budget * 100, 1) if budget > 0 else 0.0
+        )
         status = PowerDomainStatus(
             domain_name=pd.name,
             voltage=pd.voltage,
@@ -63,13 +73,12 @@ def allocate_power(
             headroom_percent=headroom,
         )
         result.domains.append(status)
-        if requested > budget:
+        if budget > 0 and requested > budget:
             result.overload_domains.append(status)
-        elif headroom < 20.0:
+        elif budget > 0 and requested >= budget * near_limit_threshold:
             result.near_limit_domains.append(status)
 
     return result
-
 
 def _infer_component_voltage(comp) -> float:
     """Infer nominal voltage from component metadata."""

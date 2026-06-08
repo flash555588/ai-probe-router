@@ -27,6 +27,7 @@ class FunctionalModule:
     name: str
     type: str
     required: bool = True
+    priority: int = 0
     target_nets: list[str] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
     channels: int = 0
@@ -45,7 +46,6 @@ class FunctionalModule:
     require_input_protection: bool = False
     require_mux: bool = False
     params: dict[str, Any] = field(default_factory=dict)
-
 
 @dataclass
 class ComponentSpec:
@@ -100,6 +100,7 @@ def parse_functional_module(raw: dict[str, Any]) -> FunctionalModule:
         "name",
         "type",
         "required",
+        "priority",
         "target_nets",
         "depends_on",
         "channels",
@@ -122,6 +123,7 @@ def parse_functional_module(raw: dict[str, Any]) -> FunctionalModule:
         name=str(raw.get("name", "")),
         type=str(raw.get("type", "")),
         required=bool(raw.get("required", True)),
+        priority=int(raw.get("priority", 0) or 0),
         target_nets=[str(n) for n in raw.get("target_nets", [])],
         depends_on=[str(n) for n in raw.get("depends_on", [])],
         channels=int(raw.get("channels", 0) or 0),

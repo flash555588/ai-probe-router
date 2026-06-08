@@ -38,7 +38,8 @@ class ResourceAllocatorConfig:
     power_allocation_strategy: str = "max_headroom"
     connector_allocation_strategy: str = "minimize_spread"
     allow_partial_allocation: bool = False
-
+    near_limit_threshold: float = 0.8
+    overload_block: bool = True
 @dataclass
 class ModuleFootprintPreviewConfig:
     enable: bool = False
@@ -268,6 +269,8 @@ def load_config(path: str | Path) -> ProjectConfig:
                 ra.get("connector_allocation_strategy", "minimize_spread")
             ),
             allow_partial_allocation=bool(ra.get("allow_partial_allocation", False)),
+            near_limit_threshold=float(ra.get("near_limit_threshold", 0.8) or 0.8),
+            overload_block=bool(ra.get("overload_block", True)),
         )
 
     pc = raw.get("process_controls", {})
