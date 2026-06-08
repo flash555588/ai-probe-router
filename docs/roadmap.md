@@ -26,12 +26,14 @@ Status: started in `pr3-cpsat-pin-mapper`. Config parsing, CP-SAT wrapper, compa
 
 ## PR4 Library Schema And `apr library check`
 
-Add a dedicated library validation surface before broad module expansion:
+Add schema validation and a library-check command so chip/module/dev-board libraries can grow safely without breaking normal generation:
 
-- Define library schema expectations for modules, chips, footprints, alternates, and compatibility metadata.
-- Add `apr library check` to validate local library files without generating a board.
-- Report duplicate IDs, missing fields, incompatible footprint/package choices, and unsupported substitutions.
-- Keep checks machine-readable for CI.
+- JSON schemas for chip, module, dev-board, and project config.
+- Three validation layers: JSON schema, semantic, compatibility.
+- `apr library check` with text/JSON output, strict mode, and CI-friendly exit codes.
+- Library governance documentation.
+
+Status: started in `pr4-library-schema-check`. Schemas, checker, report, CLI integration, tests, and docs are implemented.
 
 ## PR5 Resource Allocator
 

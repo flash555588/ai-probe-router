@@ -62,6 +62,7 @@ apr generate examples/full_config.yaml -d examples/minimal_project
 - [Roadmap](docs/roadmap.md)
 - [Route import safety](docs/route_import_safety.md)
 - [CP-SAT pin mapper](docs/pin_mapper_cp_sat.md)
+- [Library governance](docs/library_governance.md)
 
 ### Validate existing testpoints
 

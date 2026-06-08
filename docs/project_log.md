@@ -145,3 +145,38 @@ Results:
 
 - `pytest` - 354 passed in 80.67s.
 - `ruff check .` - all checks passed.
+
+## PR4 Library Schema and `apr library check`
+
+Date: 2026-06-08
+
+### Scope
+
+PR4 adds JSON schema validation and a `apr library check` command to keep the growing chip/module/dev-board library valid and safe to use.
+
+### Changes
+
+- Added `schemas/chip_definition.schema.json`, `schemas/module_definition.schema.json`, `schemas/dev_board.schema.json`, `schemas/project_config.schema.json`.
+- Added `ai_probe_router/library/schema_loader.py` to load and cache schemas.
+- Added `ai_probe_router/library/checker.py` with three validation layers:
+  - JSON schema layer (structure, types, enums, ranges)
+  - Semantic layer (voltage domain references, I2C address range, ground capability consistency)
+  - Compatibility layer (chip package options cross-referenced from modules)
+- Added `ai_probe_router/library/report.py` for text and JSON reports with exit codes 0/2/3.
+- Added `apr library check` CLI command with `--format`, `--strict`, and `--include-experimental` options.
+- Added `docs/library_governance.md`.
+- Updated README, roadmap, and project log.
+
+### Verification
+
+Final PR4 verification commands:
+
+```bash
+pytest
+ruff check .
+```
+
+Results:
+
+- `pytest` - TBD passed.
+- `ruff check .` - all checks passed.
