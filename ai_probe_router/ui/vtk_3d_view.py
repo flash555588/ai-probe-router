@@ -6,7 +6,7 @@ Requires vtk and PyQt6.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import vtkmodules.vtkRenderingOpenGL2  # noqa: F401  ensure OpenGL backend
 from vtkmodules.vtkCommonColor import vtkNamedColors
@@ -29,6 +29,7 @@ from vtkmodules.vtkRenderingCore import (
 )
 
 if TYPE_CHECKING:
+    from .footprint_overlay import FootprintOverlayItem
     from .report_loader import FootprintEntry, IssueEntry
 
 
@@ -156,3 +157,96 @@ def create_vtk_interactor(
     interactor.SetRenderWindow(render_window)
     interactor.SetInteractorStyle(vtkInteractorStyleTrackballCamera())
     return interactor
+
+
+# --------------------------------------------------------------------------- #
+#  PR7.1 extended API
+# --------------------------------------------------------------------------- #
+
+class Vtk3DView:
+    """VTK scene manager with footprint overlays and actor metadata.
+
+    Integrates with FootprintOverlayBuilder and SeverityFilterState.
+    """
+
+    def __init__(self) -> None:
+        self.renderer = vtkRenderer()
+        self.renderer.SetBackground(0.1, 0.1, 0.15)
+        self._board_actor: vtkActor | None = None
+        self._footprint_actors: list[vtkActor] = []
+        self.actor_metadata: dict[int, dict[str, Any]] = {}
+        self._selection_callback: Any | None = None
+
+    def add_fallback_board(self, width: float = 100.0, height: float = 100.0) -> None:
+        """Add a fallback board plane when STEP is unavailable."""
+        if self._board_actor is not None:
+            self.renderer.RemoveActor(self._board_actor)
+        self._board_actor = _create_board_plane(width, height)
+        self.renderer.AddActor(self._board_actor)
+
+    def add_board_actor(self, actor: vtkActor) -> None:
+        """Add an external board actor (e.g., from STEP)."""
+        if self._board_actor is not None:
+            self.renderer.RemoveActor(self._board_actor)
+        self._board_actor = actor
+        self.renderer.AddActor(actor)
+
+    def add_footprint_overlays(
+        self,
+        items: list[FootprintOverlayItem],
+    ) -> None:
+        """Add colored footprint boxes from overlay items."""
+        colors_map = {
+            "error": "Tomato",
+            "warning": "Gold",
+            "info": "LimeGreen",
+        }
+        for item in items:
+            color = colors_map.get(item.severity, "LimeGreen")
+            actor = _create_box_actor(
+                item.wx,
+                item.wy,
+                item.wz,
+                size=item.width_mm,
+                color_name=color,
+            )
+            self._footprint_actors.append(actor)
+            self.renderer.AddActor(actor)
+            # Store metadata keyed by actor id (hash)
+            self.actor_metadata[id(actor)] = {
+                "module_name": item.module_name,
+                "reference": item.reference,
+                "footprint": item.footprint,
+                "severity": item.severity,
+                "issue_codes": item.issue_codes,
+            }
+
+    def apply_visibility(self, visible_refs: set[str]) -> None:
+        """Show/hide footprint actors by reference."""
+        for actor in self._footprint_actors:
+            meta = self.actor_metadata.get(id(actor), {})
+            ref = meta.get("reference", "")
+            actor.SetVisibility(ref in visible_refs)
+
+    def reset_camera(self) -> None:
+        """Reset camera to frame the scene."""
+        self.renderer.ResetCamera()
+        camera = self.renderer.GetActiveCamera()
+        camera.SetViewUp(0, 1, 0)
+        camera.Elevation(30)
+        camera.Azimuth(30)
+        self.renderer.ResetCameraClippingRange()
+
+    def set_selection_callback(self, callback) -> None:
+        """Set callback(module_name, reference) for actor selection."""
+        self._selection_callback = callback
+
+    def get_renderer(self) -> vtkRenderer:
+        return self.renderer
+
+    def clear_overlays(self) -> None:
+        """Remove all footprint actors."""
+        for actor in self._footprint_actors:
+            self.renderer.RemoveActor(actor)
+        self._footprint_actors.clear()
+        self.actor_metadata.clear()
