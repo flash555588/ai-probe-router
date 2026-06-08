@@ -109,6 +109,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     module_compatibility_result = None
     module_library_preflight_result = None
     resource_allocation_result = None
+    footprint_preview_result = None
     autoroute_result = None
     if cfg.functional_modules:
         module_library_preflight_result = validate_module_library(cfg.functional_modules)
@@ -138,16 +139,23 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
                     module_graph_result.graph,
                     board,
                 )
+                if cfg.module_footprint_preview.enable and module_selection is not None:
+                    from .solvers.module_footprint_planner import plan_module_footprints
+                    footprint_preview_result = plan_module_footprints(
+                        module_selection.selected,
+                        board,
+                        cfg.module_footprint_preview,
+                    )
                 routing_feasibility = analyze_routing_feasibility(
                     board, module_graph_result.graph, cfg.routing_strategy,
                 )
-
     if _module_plan_blocked(
         module_library_preflight_result,
         module_selection,
         module_graph_result,
         module_compatibility_result,
         resource_allocation_result,
+        footprint_preview_result,
     ):
         coverage = CoverageReport(
             run_id=run_id,
@@ -168,6 +176,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             module_placement_result,
             module_instantiation_result,
             routing_feasibility,
+            footprint_preview_result,
         )
         mfg_report.write(out_dir / "manufacturing_report.txt")
         artifacts = collect_artifact_manifest(out_dir)
@@ -199,6 +208,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             manufacturing_report=mfg_report,
             process_report=process_report,
             resource_allocation_result=resource_allocation_result,
+            footprint_preview_result=footprint_preview_result,
         )
         readiness.write(out_dir / "readiness_report.txt")
         coverage.write(out_dir / "testpoint_report.txt")
@@ -306,6 +316,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         module_placement_result,
         module_instantiation_result,
         routing_feasibility,
+        footprint_preview_result,
     )
     if pin_report is not None:
         pin_report.write(out_dir / "pin_mapping_report.txt")
@@ -400,6 +411,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         diff_pair_report=dp_report,
         process_report=process_report,
         resource_allocation_result=resource_allocation_result,
+        footprint_preview_result=footprint_preview_result,
     )
     readiness.write(out_dir / "readiness_report.txt")
     artifacts = collect_artifact_manifest(out_dir)
@@ -689,6 +701,7 @@ def _module_plan_blocked(
     module_graph_result,
     module_compatibility_result,
     resource_allocation_result=None,
+    footprint_preview_result=None,
 ) -> bool:
     return any(
         result is not None and not result.ok
@@ -698,6 +711,7 @@ def _module_plan_blocked(
             module_graph_result,
             module_compatibility_result,
             resource_allocation_result,
+            footprint_preview_result,
         )
     )
 
@@ -712,6 +726,7 @@ def _write_module_planning_reports(
     module_placement_result,
     module_instantiation_result,
     routing_feasibility,
+    footprint_preview_result=None,
 ) -> None:
     if module_library_preflight_result is not None:
         ModuleLibraryPreflightReport(module_library_preflight_result).write(
@@ -740,6 +755,9 @@ def _write_module_planning_reports(
         RoutingFeasibilityReport(routing_feasibility).write(
             out_dir / "routing_feasibility_report.txt",
         )
+    if footprint_preview_result is not None:
+        from .verification.footprint_preview_report import write_footprint_preview_report
+        write_footprint_preview_report(footprint_preview_result, out_dir)
 
 
 def _run_phase1(
