@@ -54,6 +54,28 @@ class AutorouteConfig:
 
 
 @dataclass
+class PinMapperObjectiveWeights:
+    preferred_pin: int = 100
+    capability_match: int = 80
+    current_margin: int = 30
+    preserve_spare_pins: int = 5
+    duplicate_probe_grouping: int = 20
+    differential_pair_adjacency: int = 50
+    route_length: int = 1
+
+
+@dataclass
+class PinMapperConfig:
+    mode: str = "greedy"
+    fallback_to_greedy: bool = True
+    require_ortools: bool = False
+    selected_output: str = "greedy"
+    objective_weights: PinMapperObjectiveWeights = field(
+        default_factory=PinMapperObjectiveWeights,
+    )
+
+
+@dataclass
 class ProjectConfig:
     schema_version: int = 1
     eda_tool: str = "kicad"
@@ -66,6 +88,7 @@ class ProjectConfig:
     routing_strategy: RoutingStrategy = field(default_factory=RoutingStrategy)
     autoroute: AutorouteConfig = field(default_factory=AutorouteConfig)
     probe: ProbeConfig = field(default_factory=ProbeConfig)
+    pin_mapper: PinMapperConfig = field(default_factory=PinMapperConfig)
     nets_to_expose: list[ProbeRequirement] = field(default_factory=list)
     constraints: Constraints = field(default_factory=Constraints)
     development_board: DevelopmentBoard | None = None
@@ -172,6 +195,34 @@ def load_config(path: str | Path) -> ProjectConfig:
         require_fiducials=pi.get("require_fiducials", False),
         require_tooling_holes=pi.get("require_tooling_holes", False),
     )
+    pm = raw.get("pin_mapper", {})
+    if isinstance(pm, dict):
+        mode = str(pm.get("mode", "greedy"))
+        selected_output = str(pm.get("selected_output", "greedy"))
+        if mode not in {"greedy", "cp_sat", "compare"}:
+            raise ValueError("pin_mapper.mode must be one of: greedy, cp_sat, compare")
+        if selected_output not in {"greedy", "cp_sat"}:
+            raise ValueError("pin_mapper.selected_output must be one of: greedy, cp_sat")
+        weights = pm.get("objective_weights", {})
+        cfg.pin_mapper = PinMapperConfig(
+            mode=mode,
+            fallback_to_greedy=bool(pm.get("fallback_to_greedy", True)),
+            require_ortools=bool(pm.get("require_ortools", False)),
+            selected_output=selected_output,
+            objective_weights=PinMapperObjectiveWeights(
+                preferred_pin=int(weights.get("preferred_pin", 100) or 100),
+                capability_match=int(weights.get("capability_match", 80) or 80),
+                current_margin=int(weights.get("current_margin", 30) or 30),
+                preserve_spare_pins=int(weights.get("preserve_spare_pins", 5) or 5),
+                duplicate_probe_grouping=int(
+                    weights.get("duplicate_probe_grouping", 20) or 20,
+                ),
+                differential_pair_adjacency=int(
+                    weights.get("differential_pair_adjacency", 50) or 50,
+                ),
+                route_length=int(weights.get("route_length", 1) or 1),
+            ),
+        )
     nets_to_expose = raw.get("nets_to_expose", [])
     if not nets_to_expose and not cfg.functional_modules:
         raise ValueError(
