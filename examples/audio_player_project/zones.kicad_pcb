@@ -1,4 +1,3 @@
-  ;; === Auto-generated placement zones (Digital/Analog split) ===
   (zone (net 0) (net_name "") (layers "*.Cu") (tstamp "digital_region")
     (name "Digital_Region")
     (hatch edge 0.5)

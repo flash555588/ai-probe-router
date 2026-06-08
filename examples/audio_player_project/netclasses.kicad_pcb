@@ -1,4 +1,3 @@
-  ;; === Auto-generated net classes (Audio Player) ===
   (net_class "Default" "Standard digital signals"
     (clearance 0.15)
     (trace_width 0.15)

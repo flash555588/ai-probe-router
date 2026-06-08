@@ -18,6 +18,7 @@ Or import as a module:
 
 from __future__ import annotations
 
+import uuid
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -314,7 +315,7 @@ def _zone_to_kicad(z: KeepoutZone) -> str:
     )
     return (
         f'  (zone (net 0) (net_name "") (layers "{z.layer}") '
-        f'(tstamp "{z.name.lower()}")\n'
+        f'(uuid "{uuid.uuid4()}")\n'
         f'    (name "{z.name}")\n'
         f'    (hatch edge 0.5)\n'
         f'    (connect_pads no)\n'
@@ -338,6 +339,11 @@ def _nets_block() -> str:
 
 
 def generate_full_pcb_skeleton() -> str:
+    """Generate a complete minimal .kicad_pcb skeleton with constraints."""
+    import uuid
+    def _u():
+        return str(uuid.uuid4())
+
     nets = _nets_block()
     netclasses = "\n".join(_netclass_to_kicad(nc) for nc in NET_CLASSES)
     zones = "\n".join(_zone_to_kicad(z) for z in PLACEMENT_ZONES)
@@ -389,10 +395,14 @@ def generate_full_pcb_skeleton() -> str:
 {nets}
 {netclasses}
 {zones}
-  (gr_line (start 0 0) (end 75 0) (layer "Edge.Cuts") (width 0.1))
-  (gr_line (start 75 0) (end 75 45) (layer "Edge.Cuts") (width 0.1))
-  (gr_line (start 75 45) (end 0 45) (layer "Edge.Cuts") (width 0.1))
-  (gr_line (start 0 45) (end 0 0) (layer "Edge.Cuts") (width 0.1))
+  (gr_rect
+    (start 0 0)
+    (end 75 45)
+    (stroke (width 0.1) (type default))
+    (fill none)
+    (layer "Edge.Cuts")
+    (uuid "{_u()}")
+  )
 )
 """
 
