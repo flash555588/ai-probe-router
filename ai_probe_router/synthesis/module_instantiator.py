@@ -18,11 +18,13 @@ class GeneratedModuleSheet:
     module_name: str
     sheet_file: str
     absolute_path: str
+    run_id: str = ""
     pins: list[str] = field(default_factory=list)
 
 
 @dataclass
 class ModuleInstantiationResult:
+    run_id: str = ""
     sheets: list[GeneratedModuleSheet] = field(default_factory=list)
     skipped: bool = False
     skip_reason: str = ""
@@ -33,8 +35,9 @@ def instantiate_module_sheets(
     sch: Schematic | None,
     graph: ModuleGraph,
     output_dir: str | Path,
+    run_id: str = "",
 ) -> ModuleInstantiationResult:
-    result = ModuleInstantiationResult()
+    result = ModuleInstantiationResult(run_id=run_id)
     if sch is None:
         result.skipped = True
         result.skip_reason = "no_schematic"
@@ -51,16 +54,17 @@ def instantiate_module_sheets(
         relative_file = f"generated_modules/{file_name}"
         absolute_path = generated_dir / file_name
         pins = _sheet_pins(instance)
-        _write_child_sheet(absolute_path, instance, pins)
+        _write_child_sheet(absolute_path, instance, pins, run_id)
         x = 25.0 + (index % 3) * 45.0
         y = 25.0 + (index // 3) * 30.0
-        add_module_sheet_symbol(sch, instance, relative_file, x, y)
+        add_module_sheet_symbol(sch, instance, relative_file, x, y, run_id=run_id)
         result.sheets.append(
             GeneratedModuleSheet(
                 module_id=instance.instance_id,
                 module_name=instance.name,
                 sheet_file=relative_file,
                 absolute_path=str(absolute_path),
+                run_id=run_id,
                 pins=pins,
             )
         )
@@ -71,6 +75,7 @@ def _write_child_sheet(
     path: Path,
     instance: ModuleInstance,
     pins: list[str],
+    run_id: str,
 ) -> None:
     raw: list = [
         "kicad_sch",
@@ -99,6 +104,12 @@ def _write_child_sheet(
         ["at", "20", str(35 + len(pins) * 5.08), "0"],
         ["effects", ["font", ["size", "1.0", "1.0"]]],
     ])
+    if run_id:
+        raw.append([
+            "text", f"APR_RUN_ID={run_id}",
+            ["at", "20", str(40 + len(pins) * 5.08), "0"],
+            ["effects", ["font", ["size", "1.0", "1.0"]]],
+        ])
     path.write_text(serialize(raw) + "\n", encoding="utf-8")
 
 
@@ -134,4 +145,3 @@ def _sheet_pins(instance: ModuleInstance) -> list[str]:
 def _slug(value: str) -> str:
     text = "".join(ch if ch.isalnum() else "_" for ch in value.lower())
     return text.strip("_") or "module"
-

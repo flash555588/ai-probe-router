@@ -18,6 +18,7 @@ def test_coverage_report_pct_zero():
 
 def test_coverage_report_summary_text():
     report = CoverageReport(
+        run_id="APR-TEST",
         total_nets_requested=2, covered=2, missing=0,
         entries=[
             NetCoverage("SWDIO", NetRole.DEBUG, True, True, 110, 100, "top"),
@@ -26,6 +27,7 @@ def test_coverage_report_summary_text():
         drc_ok=True, erc_ok=True,
     )
     text = report.summary_text()
+    assert "APR-TEST" in text
     assert "100.0%" in text
     assert "SWDIO" in text
     assert "PASS" in text

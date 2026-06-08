@@ -151,14 +151,30 @@ routing_strategy:
   coarse_grid_mm: 5
   congestion_weight: 10
   sensitive_net_spacing_mm: 5
+
+process_controls:
+  strict_signoff: false
+  require_autorouter_feedback: false
+  scalability_module_warning_threshold: 20
+  scalability_net_warning_threshold: 200
+  waivers:
+    - id: WV-1
+      source: electrical_signoff
+      issue_id: electrical_review_required
+      owner: layout-review
+      reason: external checklist completed
 ```
 
 The module-planning pass is rule based. It writes selected implementations,
-module graph diagnostics, bus/power reports, a per-module BOM, and routing
-feasibility corridors. It also reports module, implementation, chip, and
-footprint version metadata for compatibility and substitution review. Generated
-hierarchical sheet stubs are written under `output/generated_modules/` when a
-schematic is available. AI hints are advisory only and are reported when ignored.
+module library preflight diagnostics, module graph diagnostics, bus/power
+reports, a per-module BOM, and routing feasibility corridors. It also reports
+module, implementation, chip, and footprint version metadata for compatibility
+and substitution review. Generated hierarchical sheet stubs are written under
+`output/generated_modules/` when a schematic is available. AI hints are advisory
+only and are reported when ignored. The process-control pass covers electrical
+signoff gaps, power-integrity assumptions, DFM, fixture realism, library
+governance, waivers, incremental diffs, scalability thresholds, autorouter
+feedback, and reproducibility manifests.
 
 ## Architecture
 
@@ -187,6 +203,9 @@ ai_probe_router/
 
 After running `apr generate`, the `output/` directory contains:
 
+Text reports, `bom_report.csv`, and generated module sheets include a deterministic
+`APR-*` run ID so outputs from the same planning run can be traced together.
+
 | File | Description |
 |------|-------------|
 | `*.kicad_pcb` | Updated PCB with testpoints, connector, fiducials, tooling holes, keepouts |
@@ -194,6 +213,7 @@ After running `apr generate`, the `output/` directory contains:
 | `testpoint_report.txt` | Coverage report with net class recommendations and review gates |
 | `pin_mapping_report.txt` | Development board pin assignment table |
 | `module_report.txt` | Schema v2 module selections, rejected alternatives, and review gates |
+| `module_library_preflight_report.txt` | Module library YAML structure, metadata, duplicate, and request coverage checks |
 | `module_graph_report.txt` | Module instances, dependencies, generated resources, graph diagnostics |
 | `module_compatibility_report.txt` | Module, implementation, chip, footprint, and alternate compatibility matrix |
 | `bus_report.txt` | Module bus grouping, I2C address conflicts, pull-up coverage |
@@ -204,6 +224,9 @@ After running `apr generate`, the `output/` directory contains:
 | `generated_modules/*.kicad_sch` | Generated hierarchical module child sheets |
 | `bom_report.csv` | Per-module generated component rows |
 | `manufacturing_report.txt` | Manufacturing readiness summary |
+| `design_process_report.txt` | Process gaps, waivers, signoff coverage, and next actions |
+| `readiness_report.txt` | Top-level PASS, PASS_WITH_REVIEW, or BLOCKED verdict |
+| `decision_manifest.json` | Run ID, tool versions, decisions, waivers, artifact hashes, and diff summary |
 | `routing.dsn` | Specctra DSN for FreeRouting autorouter |
 
 ## Development

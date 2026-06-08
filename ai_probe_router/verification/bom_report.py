@@ -12,11 +12,13 @@ from ..models.module_graph import ModuleGraphResult
 @dataclass
 class BomReport:
     result: ModuleGraphResult
+    run_id: str = ""
 
     def write(self, path: str | Path) -> None:
         with Path(path).open("w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([
+                "run_id",
                 "module_id",
                 "module_name",
                 "module_type",
@@ -40,6 +42,7 @@ class BomReport:
             for instance in self.result.graph.instances:
                 for component in instance.components:
                     writer.writerow([
+                        self.run_id,
                         instance.instance_id,
                         instance.name,
                         instance.module_type,

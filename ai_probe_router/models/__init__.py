@@ -23,6 +23,10 @@ from .module_graph import (
     ModuleInstance,
     PowerDomainUsage,
 )
+from .module_library_preflight import (
+    ModuleLibraryPreflightIssue,
+    ModuleLibraryPreflightResult,
+)
 from .module_placement import (
     ComponentPlacement,
     ModulePlacementPlan,
@@ -33,6 +37,7 @@ from .net import Net, NetNode, NetRole
 from .package import PackageOption
 from .power_domain import PowerDomain
 from .probe import ProbeConfig, ProbeRequirement, ProbeStyle
+from .process_control import ProcessControls, ProcessWaiver
 from .protection import (
     ProtectionComponent,
     ProtectionRules,
@@ -46,10 +51,12 @@ __all__ = [
     "BoundingBox", "EdgeSegment", "Footprint", "Pad", "Board", "Schematic",
     "BusSpec", "ChipDefinition", "ChipPin",
     "ProbeConfig", "ProbeRequirement", "ProbeStyle",
+    "ProcessControls", "ProcessWaiver",
     "AiHint", "ComponentSpec", "FunctionalModule", "ModuleDefinition", "ModuleImplementation",
     "SelectedModule",
     "BusGroup", "ModuleDependency", "ModuleGraph", "ModuleGraphResult", "ModuleInstance",
     "ModuleCompatibilityResult", "ModuleCompatibilityRow", "PowerDomainUsage",
+    "ModuleLibraryPreflightIssue", "ModuleLibraryPreflightResult",
     "ComponentPlacement", "ModulePlacementPlan", "ModulePlacementResult", "ModuleRegionPlan",
     "DevBoardPin", "DevelopmentBoard",
     "DesignGoals", "HardwarePlatform", "InterfaceSpec", "ModulePlacementRules",

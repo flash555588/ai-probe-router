@@ -207,6 +207,44 @@ routing_strategy:
     assert cfg.routing_strategy.sensitive_net_spacing_mm == 7
 
 
+def test_load_process_controls_and_waivers(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+
+process_controls:
+  strict_signoff: true
+  require_autorouter_feedback: true
+  require_manufacturing_exports: true
+  scalability_module_warning_threshold: 2
+  scalability_net_warning_threshold: 4
+  waivers:
+    - id: WV-1
+      source: electrical_signoff
+      issue_id: electrical_review_required
+      owner: reviewer
+      reason: external checklist complete
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+
+    assert cfg.process_controls.strict_signoff
+    assert cfg.process_controls.require_autorouter_feedback
+    assert cfg.process_controls.require_manufacturing_exports
+    assert cfg.process_controls.scalability_module_warning_threshold == 2
+    assert cfg.process_controls.scalability_net_warning_threshold == 4
+    assert cfg.process_controls.waivers[0].waiver_id == "WV-1"
+    assert cfg.process_controls.waivers[0].complete
+
+
 def test_load_config_expanded_protection_type(tmp_path):
     config = """\
 project:

@@ -27,6 +27,8 @@ class RoutingFeasibilityReport:
         lines.extend([
             f"  Corridors:          {len(self.result.corridors)}",
             f"  Congestion spots:   {len(self.result.congestion_hotspots)}",
+            f"  Hard obstacles:     {self.result.hard_obstacle_count}",
+            f"  Grid capacity:      {self.result.grid_capacity}",
             "",
             "  Corridors:",
             "  " + "-" * 96,
@@ -37,7 +39,10 @@ class RoutingFeasibilityReport:
                 f"  {corridor.source_id:<8} -> {corridor.target_id:<8} "
                 f"{corridor.reason:<24} {status:<18} "
                 f"len={corridor.length_mm:.1f} cost={corridor.total_cost:.1f} "
-                f"cong={corridor.congestion_score:.1f} sens={corridor.sensitive_penalty:.1f}"
+                f"cong={corridor.congestion_score:.1f} "
+                f"cap={corridor.capacity_penalty:.1f} "
+                f"obs={corridor.obstacle_penalty:.1f} "
+                f"sens={corridor.sensitive_penalty:.1f}"
             )
         if self.result.congestion_hotspots:
             lines.append("")
@@ -55,4 +60,3 @@ class RoutingFeasibilityReport:
 
     def write(self, path: str | Path) -> None:
         Path(path).write_text(self.summary_text(), encoding="utf-8")
-

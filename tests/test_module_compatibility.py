@@ -60,9 +60,11 @@ def test_bom_report_includes_version_and_alternate_columns(tmp_path):
     ])
 
     path = tmp_path / "bom_report.csv"
-    BomReport(graph).write(path)
+    BomReport(graph, run_id="APR-TEST").write(path)
     text = path.read_text(encoding="utf-8")
 
+    assert text.startswith("run_id,module_id")
+    assert "APR-TEST,MOD1,analog" in text
     assert "implementation_version" in text
     assert "chip_version" in text
     assert "alternate_chips" in text

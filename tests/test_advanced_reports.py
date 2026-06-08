@@ -28,10 +28,10 @@ def test_advanced_reports_include_module_data(tmp_path):
     assert "Power Domain Report" in power_text
 
     bom_path = tmp_path / "bom_report.csv"
-    BomReport(graph_result).write(bom_path)
+    BomReport(graph_result, run_id="APR-TEST").write(bom_path)
     bom_text = bom_path.read_text(encoding="utf-8")
-    assert "module_id,module_name" in bom_text
-    assert "MOD1,analog" in bom_text
+    assert "run_id,module_id,module_name" in bom_text
+    assert "APR-TEST,MOD1,analog" in bom_text
 
 
 def test_routing_feasibility_report_text():
@@ -57,4 +57,3 @@ def test_routing_feasibility_report_text():
     assert "Routing Feasibility Report" in text
     assert "Corridors:" in text
     assert "MOD" in text
-
