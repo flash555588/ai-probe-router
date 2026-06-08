@@ -20,6 +20,7 @@ from .models.mcu_profile import McuProfile, load_mcu_profile
 from .models.module import FunctionalModule, parse_functional_module
 from .models.power_domain import PowerDomain
 from .models.probe import ProbeConfig, ProbeRequirement, ProbeStyle
+from .models.process_control import ProcessControls, ProcessWaiver
 from .models.protection import (
     ProtectionComponent,
     ProtectionRules,
@@ -49,6 +50,7 @@ class ProjectConfig:
     mcu_profile: McuProfile | None = None
     impedance_control: ImpedanceControl = field(default_factory=ImpedanceControl)
     thermal_analysis: ThermalAnalysis = field(default_factory=ThermalAnalysis)
+    process_controls: ProcessControls = field(default_factory=ProcessControls)
 
 
 def load_config(path: str | Path) -> ProjectConfig:
@@ -223,4 +225,56 @@ def load_config(path: str | Path) -> ProjectConfig:
             output_format=str(th.get("output_format", "csv")),
         )
 
+    pc = raw.get("process_controls", {})
+    if isinstance(pc, dict):
+        waiver_rows = pc.get("waivers", raw.get("waivers", []))
+        cfg.process_controls = ProcessControls(
+            waivers=[
+                _parse_process_waiver(row)
+                for row in waiver_rows
+                if isinstance(row, dict)
+            ],
+            strict_signoff=bool(pc.get("strict_signoff", False)),
+            require_autorouter_feedback=bool(
+                pc.get("require_autorouter_feedback", False),
+            ),
+            require_manufacturing_exports=bool(
+                pc.get("require_manufacturing_exports", False),
+            ),
+            scalability_module_warning_threshold=int(
+                pc.get("scalability_module_warning_threshold", 20) or 20,
+            ),
+            scalability_net_warning_threshold=int(
+                pc.get("scalability_net_warning_threshold", 200) or 200,
+            ),
+            params={
+                k: v for k, v in pc.items()
+                if k not in {
+                    "waivers",
+                    "strict_signoff",
+                    "require_autorouter_feedback",
+                    "require_manufacturing_exports",
+                    "scalability_module_warning_threshold",
+                    "scalability_net_warning_threshold",
+                }
+            },
+        )
+    elif raw.get("waivers"):
+        cfg.process_controls.waivers = [
+            _parse_process_waiver(row)
+            for row in raw.get("waivers", [])
+            if isinstance(row, dict)
+        ]
+
     return cfg
+
+
+def _parse_process_waiver(raw: dict) -> ProcessWaiver:
+    return ProcessWaiver(
+        waiver_id=str(raw.get("id", raw.get("waiver_id", ""))),
+        source=str(raw.get("source", "")),
+        issue_id=str(raw.get("issue_id", "")),
+        reason=str(raw.get("reason", "")),
+        owner=str(raw.get("owner", raw.get("approved_by", ""))),
+        expires_on=str(raw.get("expires_on", raw.get("expires", ""))),
+    )

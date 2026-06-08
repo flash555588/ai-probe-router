@@ -36,16 +36,19 @@ def _graph():
 def test_module_instantiator_adds_parent_sheet_and_child_file(tmp_path):
     sch = _schematic()
 
-    result = instantiate_module_sheets(sch, _graph(), tmp_path)
+    result = instantiate_module_sheets(sch, _graph(), tmp_path, run_id="APR-TEST")
 
     assert not result.skipped
+    assert result.run_id == "APR-TEST"
     assert len(result.sheets) == 1
     assert any(isinstance(node, list) and node[0] == "sheet" for node in sch.raw)
+    assert "APR_RUN_ID" in str(sch.raw)
     child = tmp_path / result.sheets[0].sheet_file
     assert child.exists()
     text = child.read_text(encoding="utf-8")
     assert "SWDIO" in text
     assert "APR_GENERATED" in text
+    assert "APR_RUN_ID=APR-TEST" in text
 
 
 def test_module_instantiator_skips_without_schematic(tmp_path):
@@ -57,10 +60,10 @@ def test_module_instantiator_skips_without_schematic(tmp_path):
 
 def test_module_instantiation_report_text(tmp_path):
     sch = _schematic()
-    result = instantiate_module_sheets(sch, _graph(), tmp_path)
+    result = instantiate_module_sheets(sch, _graph(), tmp_path, run_id="APR-TEST")
 
     text = ModuleInstantiationReport(result).summary_text()
 
     assert "Module Instantiation Report" in text
+    assert "APR-TEST" in text
     assert "generated_modules" in text
-

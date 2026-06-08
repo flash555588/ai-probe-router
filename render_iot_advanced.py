@@ -1,9 +1,11 @@
 import matplotlib
+
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from pathlib import Path
 import re
+from pathlib import Path
+
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 
 text = Path('examples/iot_sensor_node_project/output/main.kicad_pcb').read_text(encoding='utf-8')
 
@@ -150,6 +152,7 @@ ax.set_ylabel('Y (mm)')
 ax.grid(True, alpha=0.25)
 
 from matplotlib.lines import Line2D
+
 legend_elements = [
     Line2D([0], [0], marker='s', color='w', markerfacecolor='lightblue', markeredgecolor='navy', markersize=10, label='MCU'),
     Line2D([0], [0], marker='s', color='w', markerfacecolor='plum', markeredgecolor='purple', markersize=10, label='Protection'),

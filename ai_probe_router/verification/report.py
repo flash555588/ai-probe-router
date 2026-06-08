@@ -30,6 +30,7 @@ class NetCoverage:
 
 @dataclass
 class CoverageReport:
+    run_id: str = ""
     total_nets_requested: int = 0
     covered: int = 0
     missing: int = 0
@@ -59,12 +60,16 @@ class CoverageReport:
             "  AI Probe Router - Testpoint Coverage Report",
             "=" * 96,
             "",
+        ]
+        if self.run_id:
+            lines.append(f"  Run ID:           {self.run_id}")
+        lines.extend([
             f"  Requested nets:   {self.total_nets_requested}",
             f"  Covered:          {self.covered}",
             f"  Missing:          {self.missing}",
             f"  Coverage:         {self.coverage_pct:.1f}%",
             "",
-        ]
+        ])
         total_routes = self.routed_connections + self.unrouted_connections
         if self.routing_ok is not None:
             status = "PASS" if self.routing_ok else "UNROUTED"

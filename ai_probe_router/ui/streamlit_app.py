@@ -21,9 +21,10 @@ from ai_probe_router.engine import run
 
 def _render_pcb_preview(pcb_path: Path):
     """Generate a matplotlib figure from a KiCad PCB file."""
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
     import re
+
+    import matplotlib.patches as patches
+    import matplotlib.pyplot as plt
 
     text = pcb_path.read_text(encoding="utf-8")
     m = re.search(
@@ -112,8 +113,8 @@ def _render_pcb_preview(pcb_path: Path):
 def _render_thermal_heatmap(thermal_csv: Path):
     """Render a thermal heatmap from the thermal simulation CSV."""
     import csv
+
     import matplotlib.pyplot as plt
-    import numpy as np
 
     rows = []
     with thermal_csv.open(newline="", encoding="utf-8") as f:

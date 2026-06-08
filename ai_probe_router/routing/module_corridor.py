@@ -18,6 +18,31 @@ CorridorEndpoint = tuple[
 
 
 @dataclass
+class _RoutingGrid:
+    board: Board
+    graph: ModuleGraph
+    bounds: BoundingBox
+    grid: float
+    min_ix: int
+    min_iy: int
+    max_ix: int
+    max_iy: int
+    blocked: set[tuple[int, int]] = field(default_factory=set)
+    usage: dict[tuple[int, int], int] = field(default_factory=dict)
+    capacity: int = 1
+    obstacle_margin_mm: float = 0.0
+
+    def to_node(self, point: tuple[float, float]) -> tuple[int, int]:
+        return round(point[0] / self.grid), round(point[1] / self.grid)
+
+    def to_point(self, node: tuple[int, int]) -> tuple[float, float]:
+        return round(node[0] * self.grid, 6), round(node[1] * self.grid, 6)
+
+    def in_bounds(self, node: tuple[int, int]) -> bool:
+        return self.min_ix <= node[0] <= self.max_ix and self.min_iy <= node[1] <= self.max_iy
+
+
+@dataclass
 class RoutingCorridor:
     source_id: str
     target_id: str
@@ -26,6 +51,8 @@ class RoutingCorridor:
     length_mm: float = 0.0
     estimated_vias: int = 0
     congestion_score: float = 0.0
+    capacity_penalty: float = 0.0
+    obstacle_penalty: float = 0.0
     sensitive_penalty: float = 0.0
     total_cost: float = 0.0
     ok: bool = True
@@ -38,6 +65,8 @@ class RoutingFeasibilityResult:
     skip_reason: str = ""
     corridors: list[RoutingCorridor] = field(default_factory=list)
     congestion_hotspots: list[tuple[float, float, int]] = field(default_factory=list)
+    hard_obstacle_count: int = 0
+    grid_capacity: int = 1
     warnings: list[str] = field(default_factory=list)
 
     @property
@@ -65,41 +94,124 @@ def analyze_routing_feasibility(
     if any(instance.region is None for instance in graph.instances):
         _assign_regions(graph, bounds)
     endpoints = _corridor_endpoints(graph, bounds)
-    node_usage: dict[tuple[float, float], int] = {}
+    routing_grid = _build_routing_grid(board, graph, strategy, bounds)
+    result.hard_obstacle_count = len(routing_grid.blocked)
+    result.grid_capacity = routing_grid.capacity
 
     for source, target, reason in endpoints:
-        corridor = _route_corridor(board, source, target, reason, strategy)
+        corridor = _route_corridor(
+            board,
+            source,
+            target,
+            reason,
+            strategy,
+            routing_grid,
+        )
         result.corridors.append(corridor)
         for point in corridor.points:
-            node_usage[point] = node_usage.get(point, 0) + 1
+            node = routing_grid.to_node(point)
+            routing_grid.usage[node] = routing_grid.usage.get(node, 0) + 1
 
     for corridor in result.corridors:
         corridor.congestion_score = sum(
-            max(node_usage.get(point, 0) - 1, 0)
+            max(routing_grid.usage.get(routing_grid.to_node(point), 0) - 1, 0)
             for point in corridor.points
         )
+        corridor.capacity_penalty = sum(
+            max(
+                routing_grid.usage.get(routing_grid.to_node(point), 0)
+                - routing_grid.capacity,
+                0,
+            )
+            for point in corridor.points
+        )
+        corridor.obstacle_penalty = _obstacle_near_miss_penalty(routing_grid, corridor)
         corridor.sensitive_penalty = _sensitive_penalty(graph, corridor, strategy)
         corridor.total_cost = (
             corridor.length_mm * strategy.length_weight
             + corridor.estimated_vias * strategy.via_weight
             + corridor.congestion_score * strategy.congestion_weight
+            + corridor.capacity_penalty * strategy.congestion_weight
+            + corridor.obstacle_penalty
             + corridor.sensitive_penalty
         )
 
     result.congestion_hotspots = sorted(
         (
-            (x, y, count)
-            for (x, y), count in node_usage.items()
+            (*routing_grid.to_point(node), count)
+            for node, count in routing_grid.usage.items()
             if count > 1
         ),
         key=lambda item: item[2],
         reverse=True,
     )[:10]
+    if result.hard_obstacle_count:
+        result.warnings.append(
+            f"{result.hard_obstacle_count} coarse grid nodes blocked by obstacles"
+        )
+    over_capacity = [
+        (node, count)
+        for node, count in routing_grid.usage.items()
+        if count > routing_grid.capacity
+    ]
+    if over_capacity:
+        result.warnings.append(
+            f"{len(over_capacity)} coarse grid nodes exceed layer capacity "
+            f"{routing_grid.capacity}"
+        )
     if result.congestion_hotspots:
         result.warnings.append(
             f"{len(result.congestion_hotspots)} coarse routing congestion hotspots"
         )
     return result
+
+
+def _build_routing_grid(
+    board: Board,
+    graph: ModuleGraph,
+    strategy: RoutingStrategy,
+    bounds: BoundingBox,
+) -> _RoutingGrid:
+    grid_size = max(strategy.coarse_grid_mm, 0.5)
+    routing_grid = _RoutingGrid(
+        board=board,
+        graph=graph,
+        bounds=bounds,
+        grid=grid_size,
+        min_ix=math.floor(bounds.min_x / grid_size),
+        min_iy=math.floor(bounds.min_y / grid_size),
+        max_ix=math.ceil(bounds.max_x / grid_size),
+        max_iy=math.ceil(bounds.max_y / grid_size),
+        capacity=max(int(strategy.max_corridor_layers or 1), 1),
+        obstacle_margin_mm=max(grid_size * 0.25, 0.5),
+    )
+
+    obstacle_boxes: list[BoundingBox] = []
+    for footprint in board.footprints:
+        obstacle_boxes.append(_expand_box(board.footprint_bounds(footprint), 0.5))
+    for instance in graph.instances:
+        if instance.region is not None:
+            obstacle_boxes.append(_expand_box(instance.region, routing_grid.obstacle_margin_mm))
+
+    for ix in range(routing_grid.min_ix, routing_grid.max_ix + 1):
+        for iy in range(routing_grid.min_iy, routing_grid.max_iy + 1):
+            node = (ix, iy)
+            point = routing_grid.to_point(node)
+            if not board.contains_point(*point):
+                routing_grid.blocked.add(node)
+                continue
+            if any(box.contains(*point) for box in obstacle_boxes):
+                routing_grid.blocked.add(node)
+    return routing_grid
+
+
+def _expand_box(box: BoundingBox, margin: float) -> BoundingBox:
+    return BoundingBox(
+        box.min_x - margin,
+        box.min_y - margin,
+        box.max_x + margin,
+        box.max_y + margin,
+    )
 
 
 def _assign_regions(graph: ModuleGraph, bounds: BoundingBox) -> None:
@@ -191,15 +303,21 @@ def _route_corridor(
     target: ModuleInstance | tuple[str, tuple[float, float]],
     reason: str,
     strategy: RoutingStrategy,
+    routing_grid: _RoutingGrid,
 ) -> RoutingCorridor:
     start = _instance_center(source)
+    allowed_boxes = []
+    if source.region is not None:
+        allowed_boxes.append(source.region)
     if isinstance(target, ModuleInstance):
         end = _instance_center(target)
         target_id = target.instance_id
+        if target.region is not None:
+            allowed_boxes.append(target.region)
     else:
         target_id, end = target
 
-    path = _astar(board, start, end, strategy.coarse_grid_mm)
+    path = _astar(routing_grid, start, end, strategy, allowed_boxes)
     if not path:
         return RoutingCorridor(
             source_id=source.instance_id,
@@ -219,28 +337,14 @@ def _route_corridor(
 
 
 def _astar(
-    board: Board,
+    routing_grid: _RoutingGrid,
     start: tuple[float, float],
     end: tuple[float, float],
-    grid: float,
+    strategy: RoutingStrategy,
+    allowed_boxes: list[BoundingBox],
 ) -> list[tuple[float, float]]:
-    bounds = board.board_bounds()
-    if bounds is None:
-        return []
-    grid = max(grid, 0.5)
-    min_ix = math.floor(bounds.min_x / grid)
-    min_iy = math.floor(bounds.min_y / grid)
-    max_ix = math.ceil(bounds.max_x / grid)
-    max_iy = math.ceil(bounds.max_y / grid)
-
-    def to_node(point: tuple[float, float]) -> tuple[int, int]:
-        return round(point[0] / grid), round(point[1] / grid)
-
-    def to_point(node: tuple[int, int]) -> tuple[float, float]:
-        return round(node[0] * grid, 6), round(node[1] * grid, 6)
-
-    start_node = to_node(start)
-    end_node = to_node(end)
+    start_node = routing_grid.to_node(start)
+    end_node = routing_grid.to_node(end)
     open_heap: list[tuple[float, int, tuple[int, int]]] = [(0.0, 0, start_node)]
     came_from: dict[tuple[int, int], tuple[int, int]] = {}
     g_score = {start_node: 0.0}
@@ -253,7 +357,7 @@ def _astar(
             continue
         if current == end_node:
             route = [start]
-            route.extend(to_point(n) for n in _reconstruct(came_from, current))
+            route.extend(routing_grid.to_point(n) for n in _reconstruct(came_from, current))
             route.append(end)
             return _compress(route)
         closed.add(current)
@@ -261,20 +365,56 @@ def _astar(
             neighbor = (current[0] + dx, current[1] + dy)
             if neighbor in closed:
                 continue
-            if not (min_ix <= neighbor[0] <= max_ix and min_iy <= neighbor[1] <= max_iy):
+            if not routing_grid.in_bounds(neighbor):
                 continue
-            point = to_point(neighbor)
-            if not board.contains_point(*point):
+            point = routing_grid.to_point(neighbor)
+            if not routing_grid.board.contains_point(*point):
                 continue
-            tentative = g_score[current] + grid
+            if _node_blocked(routing_grid, neighbor, point, allowed_boxes, end_node):
+                continue
+            usage_penalty = (
+                routing_grid.usage.get(neighbor, 0)
+                * strategy.congestion_weight
+            )
+            tentative = g_score[current] + routing_grid.grid + usage_penalty
             if tentative >= g_score.get(neighbor, float("inf")):
                 continue
             came_from[neighbor] = current
             g_score[neighbor] = tentative
             counter += 1
-            priority = tentative + _manhattan(neighbor, end_node) * grid
+            priority = tentative + _manhattan(neighbor, end_node) * routing_grid.grid
             heapq.heappush(open_heap, (priority, counter, neighbor))
     return []
+
+
+def _node_blocked(
+    routing_grid: _RoutingGrid,
+    node: tuple[int, int],
+    point: tuple[float, float],
+    allowed_boxes: list[BoundingBox],
+    end_node: tuple[int, int],
+) -> bool:
+    if node == end_node:
+        return False
+    if node not in routing_grid.blocked:
+        return False
+    return not any(box.contains(*point) for box in allowed_boxes)
+
+
+def _obstacle_near_miss_penalty(
+    routing_grid: _RoutingGrid,
+    corridor: RoutingCorridor,
+) -> float:
+    if not corridor.points or not routing_grid.blocked:
+        return 0.0
+    penalty = 0.0
+    for point in corridor.points:
+        node = routing_grid.to_node(point)
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if (node[0] + dx, node[1] + dy) in routing_grid.blocked:
+                penalty += routing_grid.obstacle_margin_mm
+                break
+    return penalty
 
 
 def _instance_center(instance: ModuleInstance) -> tuple[float, float]:

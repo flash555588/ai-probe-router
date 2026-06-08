@@ -194,15 +194,121 @@ functional_modules:
     module_report = tmp_path / "output" / "module_report.txt"
     assert module_report.exists()
     assert "power_observation" in module_report.read_text(encoding="utf-8")
+    assert (tmp_path / "output" / "module_library_preflight_report.txt").exists()
     assert (tmp_path / "output" / "module_graph_report.txt").exists()
     assert (tmp_path / "output" / "module_compatibility_report.txt").exists()
     assert (tmp_path / "output" / "bus_report.txt").exists()
     assert (tmp_path / "output" / "power_report.txt").exists()
     assert (tmp_path / "output" / "routing_feasibility_report.txt").exists()
     assert (tmp_path / "output" / "module_placement_report.txt").exists()
+    assert (tmp_path / "output" / "readiness_report.txt").exists()
+    assert (tmp_path / "output" / "design_process_report.txt").exists()
+    manifest = tmp_path / "output" / "decision_manifest.json"
+    assert manifest.exists()
+    assert '"run_id": "APR-' in manifest.read_text(encoding="utf-8")
+    readiness = (tmp_path / "output" / "readiness_report.txt").read_text(encoding="utf-8")
+    assert "Run ID:    APR-" in readiness
+    assert "Run ID:           APR-" in (
+        tmp_path / "output" / "testpoint_report.txt"
+    ).read_text(encoding="utf-8")
     instantiation = tmp_path / "output" / "module_instantiation_report.txt"
     assert instantiation.exists()
     assert "SKIPPED (no_schematic)" in instantiation.read_text(encoding="utf-8")
     bom = tmp_path / "output" / "bom_report.csv"
     assert bom.exists()
-    assert "module_id,module_name" in bom.read_text(encoding="utf-8")
+    bom_text = bom.read_text(encoding="utf-8")
+    assert "run_id,module_id,module_name" in bom_text
+    assert "APR-" in bom_text
+
+
+def test_engine_blocks_generation_on_module_graph_error(tmp_path):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+
+    config_yaml = """\
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+functional_modules:
+  - name: fixture
+    type: protected_probe_fixture
+    depends_on: [debug]
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+    cfg = load_config(tmp_path / "config.yaml")
+
+    report, pin_report = run(cfg, tmp_path)
+
+    out_dir = tmp_path / "output"
+    assert pin_report is None
+    assert report.missing == 1
+    assert (out_dir / "module_graph_report.txt").exists()
+    assert "depends on missing module" in (
+        out_dir / "module_graph_report.txt"
+    ).read_text(encoding="utf-8")
+    readiness = (out_dir / "readiness_report.txt").read_text(encoding="utf-8")
+    assert "Verdict:   BLOCKED" in readiness
+    assert not (out_dir / "main.kicad_pcb").exists()
+    assert not (out_dir / "main.kicad_sch").exists()
+
+
+def test_engine_blocks_generation_on_module_preflight_error(tmp_path):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+
+    config_yaml = """\
+schema_version: 2
+
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+functional_modules:
+  - name: impossible_module
+    type: not_in_library
+    required: true
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+    cfg = load_config(tmp_path / "config.yaml")
+
+    report, pin_report = run(cfg, tmp_path)
+
+    out_dir = tmp_path / "output"
+    assert pin_report is None
+    assert report.missing == 1
+    preflight = (out_dir / "module_library_preflight_report.txt").read_text(
+        encoding="utf-8",
+    )
+    assert "requested module type 'not_in_library'" in preflight
+    readiness = (out_dir / "readiness_report.txt").read_text(encoding="utf-8")
+    assert "Verdict:   BLOCKED" in readiness
+    assert "module_library_preflight" in readiness
+    assert not (out_dir / "module_report.txt").exists()
+    assert not (out_dir / "main.kicad_pcb").exists()

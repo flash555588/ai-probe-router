@@ -29,14 +29,20 @@ _PATTERNS: list[tuple[re.Pattern, NetRole]] = [
 _SUB_PATTERNS: list[tuple[re.Pattern, NetSubRole]] = [
     # Audio I2S
     (re.compile(r"(I2S_?D|I2S_?SD|DIN|DOUT|I2S_?DATA)", re.I), NetSubRole.I2S_DATA),
-    (re.compile(r"(BCLK|BIT_?CLK|I2S_?CLK|LRCK|WS|WORD_?SEL|MCLK|I2S_?SCK)", re.I), NetSubRole.I2S_CLOCK),
+    (
+        re.compile(r"(BCLK|BIT_?CLK|I2S_?CLK|LRCK|WS|WORD_?SEL|MCLK|I2S_?SCK)", re.I),
+        NetSubRole.I2S_CLOCK,
+    ),
     # SD card
     (re.compile(r"(SD_?DAT|SD_?D\d|SD_?CMD|SDIO_?D|SDIO_?CMD)", re.I), NetSubRole.SD_DATA),
     (re.compile(r"(SD_?CLK|SDIO_?CLK)", re.I), NetSubRole.SD_CLK),
     # Battery
     (re.compile(r"(VBAT|BAT_?\+|BATTERY|LI_?ION|CELL)", re.I), NetSubRole.BATTERY),
     # Audio analog
-    (re.compile(r"(AUDIO|HP_?L|HP_?R|OUTL|OUTR|LINE_?OUT|MIC_?IN|SPK)", re.I), NetSubRole.AUDIO_ANALOG),
+    (
+        re.compile(r"(AUDIO|HP_?L|HP_?R|OUTL|OUTR|LINE_?OUT|MIC_?IN|SPK)", re.I),
+        NetSubRole.AUDIO_ANALOG,
+    ),
     # ADC
     (re.compile(r"(ADC|AIN|AN\d|VREF|AREF)", re.I), NetSubRole.ADC_INPUT),
     # USB

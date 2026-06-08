@@ -1,7 +1,8 @@
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from pathlib import Path
 import re
+from pathlib import Path
+
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 
 text = Path('examples/bluetooth_module/output/main.kicad_pcb').read_text(encoding='utf-8')
 lines = text.splitlines()
@@ -115,6 +116,7 @@ ax.set_ylabel('Y (mm)')
 ax.grid(True, alpha=0.3)
 
 from matplotlib.lines import Line2D
+
 legend_elements = [
     Line2D([0], [0], marker='s', color='w', markerfacecolor='lightblue', markersize=10, label='Components'),
     Line2D([0], [0], marker='o', color='w', markerfacecolor='limegreen', markersize=10, label='Test Points'),
@@ -133,7 +135,7 @@ plt.close()
 print("\n" + "="*60)
 print("  Bluetooth Module — Component Placement Summary")
 print("="*60)
-print(f"  Board: 40.0 x 30.0 mm")
+print("  Board: 40.0 x 30.0 mm")
 print(f"  Original components: {len(original)}")
 print(f"  Generated testpoints: {len(testpoints)}")
 print(f"  Generated fiducials: {len(fiducials)}")

@@ -440,6 +440,7 @@ def add_module_sheet_symbol(
     *,
     width: float = 35.56,
     height: float = 20.32,
+    run_id: str = "",
 ) -> None:
     """Add a generated hierarchical sheet symbol for a module instance."""
     uid = str(_uuid.uuid4())
@@ -467,6 +468,12 @@ def add_module_sheet_symbol(
          ["at", str(x), str(y + height + 6.35), "0"],
          ["effects", ["font", ["size", "1.0", "1.0"]]], "hide"],
     ]
+    if run_id:
+        sheet_node.append([
+            "property", "APR_RUN_ID", run_id,
+            ["at", str(x), str(y + height + 7.62), "0"],
+            ["effects", ["font", ["size", "1.0", "1.0"]]], "hide",
+        ])
     for index, net_name in enumerate(_sheet_pins(instance)):
         pin_y = y + 3.81 + index * 2.54
         if pin_y > y + height - 2.54:

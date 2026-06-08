@@ -19,6 +19,9 @@ class ModuleInstantiationReport:
             "=" * 96,
             "",
         ]
+        if self.result.run_id:
+            lines.append(f"  Run ID:           {self.result.run_id}")
+            lines.append("")
         if self.result.skipped:
             lines.append(f"  Module instantiation: SKIPPED ({self.result.skip_reason})")
             lines.append("=" * 96)
@@ -46,4 +49,3 @@ class ModuleInstantiationReport:
 
     def write(self, path: str | Path) -> None:
         Path(path).write_text(self.summary_text(), encoding="utf-8")
-

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from pathlib import Path
 
@@ -35,7 +37,7 @@ from .eda_adapters.kicad.sch_writer import (
     add_testpoint_symbol,
     write_schematic,
 )
-from .models.board import Board, Schematic, _pad_bounds
+from .models.board import Board, BoundingBox, Schematic, _pad_bounds
 from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
@@ -52,6 +54,14 @@ from .solvers.placement_solver import find_placement, place_pogo_array
 from .synthesis.module_instantiator import instantiate_module_sheets
 from .verification.bom_report import BomReport
 from .verification.bus_report import BusReport
+from .verification.decision_manifest import (
+    artifact_paths,
+    collect_artifact_manifest,
+    read_prior_manifest,
+    write_decision_manifest,
+)
+from .verification.design_process_report import generate_design_process_report
+from .verification.diff_pair_skew_report import generate_diff_pair_skew_report
 from .verification.manufacturing_report import generate_manufacturing_report
 from .verification.module_compatibility_report import (
     ModuleCompatibilityReport,
@@ -59,13 +69,17 @@ from .verification.module_compatibility_report import (
 )
 from .verification.module_graph_report import ModuleGraphReport
 from .verification.module_instantiation_report import ModuleInstantiationReport
+from .verification.module_library_preflight_report import (
+    ModuleLibraryPreflightReport,
+    validate_module_library,
+)
 from .verification.module_placement_report import ModulePlacementReport
 from .verification.module_report import ModuleReport
 from .verification.pin_report import PinMapReport
 from .verification.power_report import PowerReport
+from .verification.readiness_report import generate_readiness_report
 from .verification.report import CoverageReport, NetCoverage
 from .verification.routing_feasibility_report import RoutingFeasibilityReport
-from .verification.diff_pair_skew_report import generate_diff_pair_skew_report
 
 
 def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, PinMapReport | None]:
@@ -81,35 +95,132 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     if cfg.schematic_file and sch_path.is_file():
         sch = parse_schematic(sch_path)
 
+    run_id = _build_run_id(cfg, base)
+    out_dir = base / "output"
+    out_dir.mkdir(exist_ok=True)
+    prior_manifest = read_prior_manifest(out_dir / "decision_manifest.json")
+
     module_selection = None
     module_graph_result = None
     module_placement_result = None
     routing_feasibility = None
     module_instantiation_result = None
     module_compatibility_result = None
+    module_library_preflight_result = None
+    autoroute_result = None
     if cfg.functional_modules:
-        module_selection = select_modules(cfg.functional_modules)
-        module_graph_result = build_module_graph(cfg, module_selection, board)
-        module_compatibility_result = analyze_module_compatibility(module_graph_result)
-        module_placement_result = plan_module_placement(module_graph_result.graph, board)
-        routing_feasibility = analyze_routing_feasibility(
-            board, module_graph_result.graph, cfg.routing_strategy,
+        module_library_preflight_result = validate_module_library(cfg.functional_modules)
+        if not _module_plan_blocked(
+            module_library_preflight_result,
+            module_selection,
+            module_graph_result,
+            module_compatibility_result,
+        ):
+            module_selection = select_modules(cfg.functional_modules)
+            module_graph_result = build_module_graph(cfg, module_selection, board)
+            module_compatibility_result = analyze_module_compatibility(module_graph_result)
+            if not _module_plan_blocked(
+                module_library_preflight_result,
+                module_selection,
+                module_graph_result,
+                module_compatibility_result,
+            ):
+                module_placement_result = plan_module_placement(
+                    module_graph_result.graph,
+                    board,
+                )
+                routing_feasibility = analyze_routing_feasibility(
+                    board, module_graph_result.graph, cfg.routing_strategy,
+                )
+
+    if _module_plan_blocked(
+        module_library_preflight_result,
+        module_selection,
+        module_graph_result,
+        module_compatibility_result,
+    ):
+        coverage = CoverageReport(
+            run_id=run_id,
+            total_nets_requested=len(cfg.nets_to_expose),
+            missing=len(cfg.nets_to_expose),
         )
+        coverage.notes.append(
+            "Module planning blocked generation; no PCB or schematic changes were written"
+        )
+        mfg_report = generate_manufacturing_report(board, coverage)
+        _write_module_planning_reports(
+            out_dir,
+            run_id,
+            module_library_preflight_result,
+            module_selection,
+            module_graph_result,
+            module_compatibility_result,
+            module_placement_result,
+            module_instantiation_result,
+            routing_feasibility,
+        )
+        mfg_report.write(out_dir / "manufacturing_report.txt")
+        artifacts = collect_artifact_manifest(out_dir)
+        process_report = generate_design_process_report(
+            cfg,
+            run_id=run_id,
+            board=board,
+            coverage=coverage,
+            module_graph_result=module_graph_result,
+            module_compatibility_result=module_compatibility_result,
+            routing_feasibility=routing_feasibility,
+            manufacturing_report=mfg_report,
+            autoroute_result=autoroute_result,
+            prior_manifest=prior_manifest,
+            generated_artifacts=artifact_paths(artifacts),
+        )
+        process_report.write(out_dir / "design_process_report.txt")
+        readiness = generate_readiness_report(
+            coverage,
+            run_id=run_id,
+            module_library_preflight=module_library_preflight_result,
+            module_selection=module_selection,
+            module_graph_result=module_graph_result,
+            module_compatibility_result=module_compatibility_result,
+            module_placement_result=module_placement_result,
+            module_instantiation_result=module_instantiation_result,
+            routing_feasibility=routing_feasibility,
+            manufacturing_report=mfg_report,
+            process_report=process_report,
+        )
+        readiness.write(out_dir / "readiness_report.txt")
+        coverage.write(out_dir / "testpoint_report.txt")
+        artifacts = collect_artifact_manifest(out_dir)
+        write_decision_manifest(
+            out_dir / "decision_manifest.json",
+            run_id=run_id,
+            cfg=cfg,
+            coverage=coverage,
+            readiness_report=readiness,
+            process_report=process_report,
+            module_selection=module_selection,
+            module_graph_result=module_graph_result,
+            module_compatibility_result=module_compatibility_result,
+            routing_feasibility=routing_feasibility,
+            autoroute_result=autoroute_result,
+            prior_manifest=prior_manifest,
+            artifacts=artifacts,
+        )
+        return coverage, None
 
     pin_report: PinMapReport | None = None
     if cfg.development_board is not None and cfg.nets_to_expose:
         pin_report = _run_phase2(cfg, board, sch, cfg.development_board)
 
     coverage = _run_phase1(cfg, board, sch)
-
-    out_dir = base / "output"
-    out_dir.mkdir(exist_ok=True)
+    coverage.run_id = run_id
 
     if module_graph_result is not None:
         module_instantiation_result = instantiate_module_sheets(
             sch,
             module_graph_result.graph,
             out_dir,
+            run_id=run_id,
         )
 
     if board is not None:
@@ -173,31 +284,17 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         coverage.erc_ok = erc.ok
         coverage.erc_violations = len(erc.violations)
 
-    report_path = out_dir / "testpoint_report.txt"
-    coverage.write(report_path)
-    if module_selection is not None:
-        ModuleReport(module_selection).write(out_dir / "module_report.txt")
-    if module_graph_result is not None:
-        ModuleGraphReport(module_graph_result).write(out_dir / "module_graph_report.txt")
-        BusReport(module_graph_result).write(out_dir / "bus_report.txt")
-        PowerReport(module_graph_result).write(out_dir / "power_report.txt")
-        BomReport(module_graph_result).write(out_dir / "bom_report.csv")
-    if module_compatibility_result is not None:
-        ModuleCompatibilityReport(module_compatibility_result).write(
-            out_dir / "module_compatibility_report.txt",
-        )
-    if module_placement_result is not None:
-        ModulePlacementReport(module_placement_result).write(
-            out_dir / "module_placement_report.txt",
-        )
-    if module_instantiation_result is not None:
-        ModuleInstantiationReport(module_instantiation_result).write(
-            out_dir / "module_instantiation_report.txt",
-        )
-    if routing_feasibility is not None:
-        RoutingFeasibilityReport(routing_feasibility).write(
-            out_dir / "routing_feasibility_report.txt",
-        )
+    _write_module_planning_reports(
+        out_dir,
+        run_id,
+        module_library_preflight_result,
+        module_selection,
+        module_graph_result,
+        module_compatibility_result,
+        module_placement_result,
+        module_instantiation_result,
+        routing_feasibility,
+    )
     if pin_report is not None:
         pin_report.write(out_dir / "pin_mapping_report.txt")
 
@@ -207,8 +304,9 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     dp_report = generate_diff_pair_skew_report(coverage, cfg.nets_to_expose)
     dp_report.write(out_dir / "diff_pair_skew_report.txt")
     if not dp_report.ok() and dp_report.pairs:
+        failed_pairs = sum(1 for pair in dp_report.pairs if not pair.ok)
         coverage.notes.append(
-            f"Diff pair skew: {sum(1 for p in dp_report.pairs if not p.ok)} pair(s) exceed threshold"
+            f"Diff pair skew: {failed_pairs} pair(s) exceed threshold"
         )
 
     # Run design review if schematic is available
@@ -225,14 +323,14 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     if board is not None:
         dsn_path = out_dir / "routing.dsn"
         export_dsn(board, dsn_path)
-        route_result = run_freerouting_route(board, dsn_path, out_dir, timeout_sec=60)
-        if route_result.ok:
+        autoroute_result = run_freerouting_route(board, dsn_path, out_dir, timeout_sec=60)
+        if autoroute_result.ok:
             coverage.notes.append(
-                f"Auto-routed in {route_result.duration_sec:.1f}s"
+                f"Auto-routed in {autoroute_result.duration_sec:.1f}s"
             )
         else:
             coverage.notes.append(
-                f"Auto-route skipped: {route_result.error}"
+                f"Auto-route skipped: {autoroute_result.error}"
             )
 
     # Thermal analysis export (placeholder)
@@ -272,7 +370,287 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         if pos_result.ok:
             coverage.notes.append("Pick&Place file exported")
 
+    artifacts = collect_artifact_manifest(out_dir)
+    process_report = generate_design_process_report(
+        cfg,
+        run_id=run_id,
+        board=board,
+        coverage=coverage,
+        module_graph_result=module_graph_result,
+        module_compatibility_result=module_compatibility_result,
+        routing_feasibility=routing_feasibility,
+        manufacturing_report=mfg_report,
+        diff_pair_report=dp_report,
+        autoroute_result=autoroute_result,
+        prior_manifest=prior_manifest,
+        generated_artifacts=artifact_paths(artifacts),
+    )
+    process_report.write(out_dir / "design_process_report.txt")
+    coverage.write(out_dir / "testpoint_report.txt")
+    readiness = generate_readiness_report(
+        coverage,
+        run_id=run_id,
+        module_library_preflight=module_library_preflight_result,
+        module_selection=module_selection,
+        module_graph_result=module_graph_result,
+        module_compatibility_result=module_compatibility_result,
+        module_placement_result=module_placement_result,
+        module_instantiation_result=module_instantiation_result,
+        routing_feasibility=routing_feasibility,
+        pin_mapping_result=pin_report.result if pin_report is not None else None,
+        manufacturing_report=mfg_report,
+        diff_pair_report=dp_report,
+        process_report=process_report,
+    )
+    readiness.write(out_dir / "readiness_report.txt")
+    artifacts = collect_artifact_manifest(out_dir)
+    write_decision_manifest(
+        out_dir / "decision_manifest.json",
+        run_id=run_id,
+        cfg=cfg,
+        coverage=coverage,
+        readiness_report=readiness,
+        process_report=process_report,
+        module_selection=module_selection,
+        module_graph_result=module_graph_result,
+        module_compatibility_result=module_compatibility_result,
+        routing_feasibility=routing_feasibility,
+        autoroute_result=autoroute_result,
+        prior_manifest=prior_manifest,
+        artifacts=artifacts,
+    )
+
     return coverage, pin_report
+
+
+def _build_run_id(cfg: ProjectConfig, base: Path) -> str:
+    payload = {
+        "schema_version": cfg.schema_version,
+        "board": _project_file_fingerprint(base, cfg.board_file),
+        "schematic": _project_file_fingerprint(base, cfg.schematic_file),
+        "design_goals": {
+            "optimize_for": cfg.design_goals.optimize_for,
+            "max_added_area_mm2": cfg.design_goals.max_added_area_mm2,
+            "preferred_side": cfg.design_goals.preferred_side,
+            "human_review_required_for": cfg.design_goals.human_review_required_for,
+        },
+        "hardware_platform": {
+            "target_voltage_domains": [
+                {
+                    "name": domain.name,
+                    "voltage": domain.voltage,
+                    "max_current_ma": domain.max_current_ma,
+                }
+                for domain in cfg.hardware_platform.target_voltage_domains
+            ],
+        },
+        "module_placement": {
+            "group_by_module": cfg.module_placement.group_by_module,
+            "keep_power_modules_near_input": cfg.module_placement.keep_power_modules_near_input,
+            "keep_analog_modules_away_from_switching_power": (
+                cfg.module_placement.keep_analog_modules_away_from_switching_power
+            ),
+            "keep_debug_near_board_edge": cfg.module_placement.keep_debug_near_board_edge,
+            "max_module_to_probe_distance_mm": (
+                cfg.module_placement.max_module_to_probe_distance_mm
+            ),
+        },
+        "routing_strategy": {
+            "coarse_grid_mm": cfg.routing_strategy.coarse_grid_mm,
+            "max_corridor_layers": cfg.routing_strategy.max_corridor_layers,
+            "congestion_weight": cfg.routing_strategy.congestion_weight,
+            "via_weight": cfg.routing_strategy.via_weight,
+            "length_weight": cfg.routing_strategy.length_weight,
+            "sensitive_net_spacing_mm": cfg.routing_strategy.sensitive_net_spacing_mm,
+        },
+        "probe": {
+            "style": cfg.probe.style.name,
+            "side": cfg.probe.side,
+            "pad_diameter_mm": cfg.probe.pad_diameter_mm,
+            "min_spacing_mm": cfg.probe.min_spacing_mm,
+            "preferred_grid_mm": cfg.probe.preferred_grid_mm,
+            "require_silkscreen_labels": cfg.probe.require_silkscreen_labels,
+            "require_fiducials": cfg.probe.require_fiducials,
+            "require_tooling_holes": cfg.probe.require_tooling_holes,
+        },
+        "constraints": {
+            "routing": {
+                "default_trace_width_mm": cfg.constraints.routing.default_trace_width_mm,
+                "power_trace_width_mm": cfg.constraints.routing.power_trace_width_mm,
+                "min_clearance_mm": cfg.constraints.routing.min_clearance_mm,
+                "max_vias_per_signal": cfg.constraints.routing.max_vias_per_signal,
+                "avoid_under_components": cfg.constraints.routing.avoid_under_components,
+            },
+            "placement": {
+                "keep_probe_pads_on_grid": cfg.constraints.placement.keep_probe_pads_on_grid,
+                "avoid_tall_components": cfg.constraints.placement.avoid_tall_components,
+                "min_distance_from_board_edge_mm": (
+                    cfg.constraints.placement.min_distance_from_board_edge_mm
+                ),
+                "group_by_function": cfg.constraints.placement.group_by_function,
+            },
+        },
+        "process_controls": {
+            "strict_signoff": cfg.process_controls.strict_signoff,
+            "require_autorouter_feedback": (
+                cfg.process_controls.require_autorouter_feedback
+            ),
+            "require_manufacturing_exports": (
+                cfg.process_controls.require_manufacturing_exports
+            ),
+            "scalability_module_warning_threshold": (
+                cfg.process_controls.scalability_module_warning_threshold
+            ),
+            "scalability_net_warning_threshold": (
+                cfg.process_controls.scalability_net_warning_threshold
+            ),
+            "waivers": [
+                {
+                    "waiver_id": waiver.waiver_id,
+                    "source": waiver.source,
+                    "issue_id": waiver.issue_id,
+                    "owner": waiver.owner,
+                    "reason": waiver.reason,
+                    "expires_on": waiver.expires_on,
+                }
+                for waiver in cfg.process_controls.waivers
+            ],
+            "params": _json_safe(cfg.process_controls.params),
+        },
+        "nets": [
+            {
+                "net": req.net_name,
+                "role": str(req.role),
+                "required": req.required,
+                "pair": req.pair_net_name,
+                "duplicates": req.duplicate_probe_count,
+                "current_ma": req.current_ma,
+                "preferred_devboard_pins": req.preferred_devboard_pins,
+            }
+            for req in cfg.nets_to_expose
+        ],
+        "modules": [
+            {
+                "name": module.name,
+                "type": module.type,
+                "required": module.required,
+                "version": module.version,
+                "target_nets": module.target_nets,
+                "depends_on": module.depends_on,
+                "channels": module.channels,
+                "voltage_domains": module.voltage_domains,
+                "allowed_implementations": module.allowed_implementations,
+                "allowed_interfaces": module.allowed_interfaces,
+                "rails": module.rails,
+                "telemetry_bus": module.telemetry_bus,
+                "resolution_bits_min": module.resolution_bits_min,
+                "budget_area_mm2": module.budget_area_mm2,
+                "preferred_region": module.preferred_region,
+                "ai_hints": [
+                    {
+                        "type": hint.hint_type,
+                        "target": hint.target,
+                        "value": hint.value,
+                        "params": _json_safe(hint.params),
+                        "ignored_reason": hint.ignored_reason,
+                    }
+                    for hint in module.ai_hints
+                ],
+                "require_level_shift": module.require_level_shift,
+                "require_esd": module.require_esd,
+                "require_input_protection": module.require_input_protection,
+                "require_mux": module.require_mux,
+                "params": _json_safe(module.params),
+            }
+            for module in cfg.functional_modules
+        ],
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    digest = hashlib.sha1(encoded.encode("utf-8")).hexdigest()[:12].upper()
+    return f"APR-{digest}"
+
+
+def _project_file_fingerprint(base: Path, value: str) -> dict[str, object]:
+    if not value:
+        return {"path": "", "exists": False}
+    path = Path(value)
+    if not path.is_absolute():
+        path = base / path
+    normalized = value.replace("\\", "/")
+    if not path.is_file():
+        return {"path": normalized, "exists": False}
+    data = path.read_bytes()
+    return {
+        "path": normalized,
+        "exists": True,
+        "size_bytes": len(data),
+        "sha1": hashlib.sha1(data).hexdigest(),
+    }
+
+
+def _json_safe(value: object) -> object:
+    try:
+        json.dumps(value, sort_keys=True)
+    except TypeError:
+        return repr(value)
+    return value
+
+
+def _module_plan_blocked(
+    module_library_preflight_result,
+    module_selection,
+    module_graph_result,
+    module_compatibility_result,
+) -> bool:
+    return any(
+        result is not None and not result.ok
+        for result in (
+            module_library_preflight_result,
+            module_selection,
+            module_graph_result,
+            module_compatibility_result,
+        )
+    )
+
+
+def _write_module_planning_reports(
+    out_dir: Path,
+    run_id: str,
+    module_library_preflight_result,
+    module_selection,
+    module_graph_result,
+    module_compatibility_result,
+    module_placement_result,
+    module_instantiation_result,
+    routing_feasibility,
+) -> None:
+    if module_library_preflight_result is not None:
+        ModuleLibraryPreflightReport(module_library_preflight_result).write(
+            out_dir / "module_library_preflight_report.txt",
+        )
+    if module_selection is not None:
+        ModuleReport(module_selection).write(out_dir / "module_report.txt")
+    if module_graph_result is not None:
+        ModuleGraphReport(module_graph_result).write(out_dir / "module_graph_report.txt")
+        BusReport(module_graph_result).write(out_dir / "bus_report.txt")
+        PowerReport(module_graph_result).write(out_dir / "power_report.txt")
+        BomReport(module_graph_result, run_id=run_id).write(out_dir / "bom_report.csv")
+    if module_compatibility_result is not None:
+        ModuleCompatibilityReport(module_compatibility_result).write(
+            out_dir / "module_compatibility_report.txt",
+        )
+    if module_placement_result is not None:
+        ModulePlacementReport(module_placement_result).write(
+            out_dir / "module_placement_report.txt",
+        )
+    if module_instantiation_result is not None:
+        ModuleInstantiationReport(module_instantiation_result).write(
+            out_dir / "module_instantiation_report.txt",
+        )
+    if routing_feasibility is not None:
+        RoutingFeasibilityReport(routing_feasibility).write(
+            out_dir / "routing_feasibility_report.txt",
+        )
 
 
 def _run_phase1(
@@ -638,7 +1016,12 @@ def _find_protection_placement(
             bb = _pad_bounds(pad)
             occupied.append(bb)
 
-    fp_half = {"0402": 0.7, "0603": 1.0, "0805": 1.3, "SOT-23-6": 1.8}.get(protection.package, 1.0)
+    fp_half = {
+        "0402": 0.7,
+        "0603": 1.0,
+        "0805": 1.3,
+        "SOT-23-6": 1.8,
+    }.get(protection.package, 1.0)
     margin = 2.0
 
     for frac in [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]:
@@ -651,7 +1034,15 @@ def _find_protection_placement(
         f_max_y = cy + fp_half
         clear = True
         for bb in occupied:
-            if f_min_x - margin <= bb.max_x and f_max_x + margin >= bb.min_x and f_min_y - margin <= bb.max_y and f_max_y + margin >= bb.min_y:
+            overlaps_x = (
+                f_min_x - margin <= bb.max_x
+                and f_max_x + margin >= bb.min_x
+            )
+            overlaps_y = (
+                f_min_y - margin <= bb.max_y
+                and f_max_y + margin >= bb.min_y
+            )
+            if overlaps_x and overlaps_y:
                 clear = False
                 break
         if clear:
