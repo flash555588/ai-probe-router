@@ -50,9 +50,15 @@ class KiCadPluginShell:
     The real window is created on ``run()``.
     """
 
-    def __init__(self, output_dir: Path, step_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        output_dir: Path,
+        step_path: Path | None = None,
+        enable_3d: bool = True,
+    ) -> None:
         self.output_dir = Path(output_dir)
         self.step_path = step_path
+        self.enable_3d = enable_3d
         self.footprint_data = None
         self.resource_data = None
         self.readiness_data = None
@@ -125,7 +131,8 @@ class KiCadPluginShell:
         tabs.addTab(self._build_footprint_tab(), "Footprint Preview")
         tabs.addTab(self._build_resource_tab(), "Resource Allocation")
         tabs.addTab(self._build_route_tab(), "Route Import")
-        tabs.addTab(self._build_3d_tab(), "3D View")
+        if self.enable_3d:
+            tabs.addTab(self._build_3d_tab(), "3D View")
 
     def _build_status_bar(self) -> None:
         QtWidgets = _require_pyqt6()
@@ -429,6 +436,8 @@ class KiCadPluginShell:
             self._warnings_list.addItem(f"[{w.source}] {w.message}")
 
     def _refresh_3d_view(self) -> None:
+        if not self.enable_3d:
+            return
         if self.footprint_data is None:
             return
 

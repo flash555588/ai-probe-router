@@ -18,8 +18,8 @@ Or import as a module:
 
 from __future__ import annotations
 
-import uuid
 import json
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -249,22 +249,25 @@ class KeepoutZone:
     name: str
     layer: str
     polygon_mm: list[tuple[float, float]]
+    keepout: bool = True
 
 
 PLACEMENT_ZONES: list[KeepoutZone] = [
     KeepoutZone(
         name="Digital_Region",
-        layer="*.Cu",
+        layer="Cmts.User",
         polygon_mm=[
             (0.0, 22.5), (75.0, 22.5), (75.0, 45.0), (0.0, 45.0),
         ],
+        keepout=False,
     ),
     KeepoutZone(
         name="Analog_Region",
-        layer="*.Cu",
+        layer="Cmts.User",
         polygon_mm=[
             (0.0, 0.0), (75.0, 0.0), (75.0, 22.5), (0.0, 22.5),
         ],
+        keepout=False,
     ),
     KeepoutZone(
         name="Isolation_Gap",
@@ -308,20 +311,24 @@ def _netclass_to_kicad(nc: NetClass) -> str:
 
 def _zone_to_kicad(z: KeepoutZone) -> str:
     pts = " ".join(f"(xy {x} {y})" for x, y in z.polygon_mm)
-    keepout = (
-        "    (keepout (tracks not_allowed) (vias not_allowed) "
-        "(pads not_allowed) (copperpour not_allowed) "
-        "(footprints not_allowed))\n"
-    )
+    keepout = ""
+    if z.keepout:
+        keepout = (
+            "    (keepout (tracks not_allowed) (vias not_allowed) "
+            "(pads not_allowed) (copperpour not_allowed) "
+            "(footprints not_allowed))\n"
+        )
+    connect_pads = "no" if z.keepout else "yes"
+    fill = "no" if not z.keepout else "yes"
     return (
         f'  (zone (net 0) (net_name "") (layers "{z.layer}") '
         f'(uuid "{uuid.uuid4()}")\n'
         f'    (name "{z.name}")\n'
         f'    (hatch edge 0.5)\n'
-        f'    (connect_pads no)\n'
+        f'    (connect_pads {connect_pads})\n'
         f'    (min_thickness 0.15)\n'
         f'{keepout}'
-        f'    (fill yes (thermal_gap 0.5) (thermal_bridge_width 0.5))\n'
+        f'    (fill {fill} (thermal_gap 0.5) (thermal_bridge_width 0.5))\n'
         f'    (polygon\n'
         f'      (pts\n'
         f'        {pts}\n'

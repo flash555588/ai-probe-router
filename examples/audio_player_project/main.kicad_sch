@@ -1,8 +1,8 @@
 (kicad_sch
   (version 20231120)
-  (generator "eeschema")
-  (generator_version "8.0")
-  (uuid "a1b2c3d4-1111-2222-3333-444444444444")
+  (generator "ai-probe-router")
+  (generator_version "1.0.0")
+  (uuid b762c9cc-2696-4147-85b9-e594e1723a55)
   (paper "A4")
   (title_block
     (title "High-Fidelity Audio Player / Handheld Console")
@@ -10,542 +10,2025 @@
     (rev "v0.1")
     (company "DIY Audio Project")
   )
-
   (lib_symbols
     (symbol "MCU_ST_STM32F4:STM32F405RGT6"
-      (in_bom yes) (on_board yes)
-      (property "Reference" "U" (at -10.16 20.32 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "STM32F405RGT6" (at 0 0 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "Package_QFP:LQFP-64_10x10mm_P0.5mm" (at 0 -22.86 0) (effects (font (size 1.27 1.27)) hide))
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "U"
+        (at -10.16 20.32 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "STM32F405RGT6"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "Package_QFP:LQFP-64_10x10mm_P0.5mm"
+        (at 0 -22.86 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
       (symbol "STM32F405RGT6_0_1"
-        (rectangle (start -15.24 20.32) (end 15.24 -20.32)
-          (stroke (width 0.254) (type default)) (fill (type background))))
+        (rectangle
+          (start -15.24 20.32)
+          (end 15.24 -20.32)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
       (symbol "STM32F405RGT6_1_1"
-        (pin passive line (at -17.78 17.78 0) (length 2.54)
-          (name "NRST" (effects (font (size 1.27 1.27)))) (number "7" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 15.24 0) (length 2.54)
-          (name "SWDIO" (effects (font (size 1.27 1.27)))) (number "46" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 12.7 0) (length 2.54)
-          (name "SWCLK" (effects (font (size 1.27 1.27)))) (number "49" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 10.16 0) (length 2.54)
-          (name "WKUP" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 5.08 0) (length 2.54)
-          (name "I2S_MCK" (effects (font (size 1.27 1.27)))) (number "28" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 2.54 0) (length 2.54)
-          (name "I2S_SCK" (effects (font (size 1.27 1.27)))) (number "29" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 0 0) (length 2.54)
-          (name "I2S_SD" (effects (font (size 1.27 1.27)))) (number "30" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 -2.54 0) (length 2.54)
-          (name "I2S_WS" (effects (font (size 1.27 1.27)))) (number "31" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 -7.62 0) (length 2.54)
-          (name "SPI1_SCK" (effects (font (size 1.27 1.27)))) (number "21" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 -10.16 0) (length 2.54)
-          (name "SPI1_MISO" (effects (font (size 1.27 1.27)))) (number "22" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 -12.7 0) (length 2.54)
-          (name "SPI1_MOSI" (effects (font (size 1.27 1.27)))) (number "23" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 -15.24 0) (length 2.54)
-          (name "FLASH_CS" (effects (font (size 1.27 1.27)))) (number "20" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 17.78 180) (length 2.54)
-          (name "USB_DP" (effects (font (size 1.27 1.27)))) (number "44" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 15.24 180) (length 2.54)
-          (name "USB_DM" (effects (font (size 1.27 1.27)))) (number "43" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 10.16 180) (length 2.54)
-          (name "SDIO_CMD" (effects (font (size 1.27 1.27)))) (number "53" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 7.62 180) (length 2.54)
-          (name "SDIO_CLK" (effects (font (size 1.27 1.27)))) (number "52" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 5.08 180) (length 2.54)
-          (name "SDIO_D0" (effects (font (size 1.27 1.27)))) (number "50" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 0 180) (length 2.54)
-          (name "I2C1_SCL" (effects (font (size 1.27 1.27)))) (number "42" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 -2.54 180) (length 2.54)
-          (name "I2C1_SDA" (effects (font (size 1.27 1.27)))) (number "43" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 0 -22.86 90) (length 2.54)
-          (name "VDD" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 5.08 -22.86 90) (length 2.54)
-          (name "VSS" (effects (font (size 1.27 1.27)))) (number "12" (effects (font (size 1.27 1.27)))))
+        (pin passive line
+          (at -17.78 17.78 0)
+          (length 2.54)
+          (name "NRST"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "7"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 15.24 0)
+          (length 2.54)
+          (name "SWDIO"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "46"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 12.7 0)
+          (length 2.54)
+          (name "SWCLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "49"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 10.16 0)
+          (length 2.54)
+          (name "WKUP"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 5.08 0)
+          (length 2.54)
+          (name "I2S_MCK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "28"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 2.54 0)
+          (length 2.54)
+          (name "I2S_SCK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "29"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 0 0)
+          (length 2.54)
+          (name "I2S_SD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "30"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 -2.54 0)
+          (length 2.54)
+          (name "I2S_WS"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "31"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 -7.62 0)
+          (length 2.54)
+          (name "SPI1_SCK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "21"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 -10.16 0)
+          (length 2.54)
+          (name "SPI1_MISO"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "22"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 -12.7 0)
+          (length 2.54)
+          (name "SPI1_MOSI"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "23"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 -15.24 0)
+          (length 2.54)
+          (name "FLASH_CS"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "20"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 17.78 180)
+          (length 2.54)
+          (name "USB_DP"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "44"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 15.24 180)
+          (length 2.54)
+          (name "USB_DM"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "43"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 10.16 180)
+          (length 2.54)
+          (name "SDIO_CMD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "53"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 7.62 180)
+          (length 2.54)
+          (name "SDIO_CLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "52"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 5.08 180)
+          (length 2.54)
+          (name "SDIO_D0"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "50"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 0 180)
+          (length 2.54)
+          (name "I2C1_SCL"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "42"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 -2.54 180)
+          (length 2.54)
+          (name "I2C1_SDA"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "43"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 -22.86 90)
+          (length 2.54)
+          (name "VDD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 5.08 -22.86 90)
+          (length 2.54)
+          (name "VSS"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "12"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
       )
     )
-
     (symbol "Memory_Flash:W25Q128JVSIM"
-      (in_bom yes) (on_board yes)
-      (property "Reference" "U" (at -7.62 8.89 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "W25Q128JVSIM" (at 0 0 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm" (at 0 -10.16 0) (effects (font (size 1.27 1.27)) hide))
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "U"
+        (at -7.62 8.89 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "W25Q128JVSIM"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm"
+        (at 0 -10.16 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
       (symbol "W25Q128JVSIM_0_1"
-        (rectangle (start -7.62 7.62) (end 7.62 -7.62)
-          (stroke (width 0.254) (type default)) (fill (type background))))
+        (rectangle
+          (start -7.62 7.62)
+          (end 7.62 -7.62)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
       (symbol "W25Q128JVSIM_1_1"
-        (pin passive line (at -10.16 5.08 0) (length 2.54)
-          (name "~CS" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -10.16 2.54 0) (length 2.54)
-          (name "DO" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -10.16 0 0) (length 2.54)
-          (name "~WP" (effects (font (size 1.27 1.27)))) (number "3" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -10.16 -2.54 0) (length 2.54)
-          (name "GND" (effects (font (size 1.27 1.27)))) (number "4" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 10.16 -2.54 180) (length 2.54)
-          (name "DI" (effects (font (size 1.27 1.27)))) (number "5" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 10.16 0 180) (length 2.54)
-          (name "CLK" (effects (font (size 1.27 1.27)))) (number "6" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 10.16 2.54 180) (length 2.54)
-          (name "~HOLD" (effects (font (size 1.27 1.27)))) (number "7" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 10.16 5.08 180) (length 2.54)
-          (name "VCC" (effects (font (size 1.27 1.27)))) (number "8" (effects (font (size 1.27 1.27)))))
+        (pin passive line
+          (at -10.16 5.08 0)
+          (length 2.54)
+          (name "~CS"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -10.16 2.54 0)
+          (length 2.54)
+          (name "DO"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "2"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -10.16 0 0)
+          (length 2.54)
+          (name "~WP"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "3"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -10.16 -2.54 0)
+          (length 2.54)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "4"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 10.16 -2.54 180)
+          (length 2.54)
+          (name "DI"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "5"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 10.16 0 180)
+          (length 2.54)
+          (name "CLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "6"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 10.16 2.54 180)
+          (length 2.54)
+          (name "~HOLD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "7"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 10.16 5.08 180)
+          (length 2.54)
+          (name "VCC"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "8"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
       )
     )
-
     (symbol "Audio_ESS:ES9018K2M"
-      (in_bom yes) (on_board yes)
-      (property "Reference" "U" (at -12.7 15.24 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "ES9018K2M" (at 0 0 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "Package_DFN_QFN:QFN-28-1EP_5x5mm_P0.5mm_EP3.35x3.35mm" (at 0 -17.78 0) (effects (font (size 1.27 1.27)) hide))
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "U"
+        (at -12.7 15.24 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "ES9018K2M"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "Package_DFN_QFN:QFN-28-1EP_5x5mm_P0.5mm_EP3.35x3.35mm"
+        (at 0 -17.78 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
       (symbol "ES9018K2M_0_1"
-        (rectangle (start -15.24 15.24) (end 15.24 -15.24)
-          (stroke (width 0.254) (type default)) (fill (type background))))
+        (rectangle
+          (start -15.24 15.24)
+          (end 15.24 -15.24)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
       (symbol "ES9018K2M_1_1"
-        (pin passive line (at -17.78 12.7 0) (length 2.54)
-          (name "MCLK" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 10.16 0) (length 2.54)
-          (name "BCLK" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 7.62 0) (length 2.54)
-          (name "DATA" (effects (font (size 1.27 1.27)))) (number "3" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 5.08 0) (length 2.54)
-          (name "LRCK" (effects (font (size 1.27 1.27)))) (number "4" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 0 0) (length 2.54)
-          (name "RST" (effects (font (size 1.27 1.27)))) (number "5" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 -2.54 0) (length 2.54)
-          (name "I2C_SCL" (effects (font (size 1.27 1.27)))) (number "6" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -17.78 -5.08 0) (length 2.54)
-          (name "I2C_SDA" (effects (font (size 1.27 1.27)))) (number "7" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 10.16 180) (length 2.54)
-          (name "LPOUT+" (effects (font (size 1.27 1.27)))) (number "20" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 7.62 180) (length 2.54)
-          (name "LPOUT-" (effects (font (size 1.27 1.27)))) (number "21" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 2.54 180) (length 2.54)
-          (name "RPOUT+" (effects (font (size 1.27 1.27)))) (number "22" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 17.78 0 180) (length 2.54)
-          (name "RPOUT-" (effects (font (size 1.27 1.27)))) (number "23" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 0 -17.78 90) (length 2.54)
-          (name "AVCC" (effects (font (size 1.27 1.27)))) (number "24" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 5.08 -17.78 90) (length 2.54)
-          (name "DVDD" (effects (font (size 1.27 1.27)))) (number "25" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at -5.08 -17.78 90) (length 2.54)
-          (name "AGND" (effects (font (size 1.27 1.27)))) (number "26" (effects (font (size 1.27 1.27)))))
+        (pin passive line
+          (at -17.78 12.7 0)
+          (length 2.54)
+          (name "MCLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 10.16 0)
+          (length 2.54)
+          (name "BCLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "2"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 7.62 0)
+          (length 2.54)
+          (name "DATA"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "3"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 5.08 0)
+          (length 2.54)
+          (name "LRCK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "4"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 0 0)
+          (length 2.54)
+          (name "RST"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "5"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 -2.54 0)
+          (length 2.54)
+          (name "I2C_SCL"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "6"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -17.78 -5.08 0)
+          (length 2.54)
+          (name "I2C_SDA"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "7"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 10.16 180)
+          (length 2.54)
+          (name "LPOUT+"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "20"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 7.62 180)
+          (length 2.54)
+          (name "LPOUT-"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "21"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 2.54 180)
+          (length 2.54)
+          (name "RPOUT+"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "22"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 17.78 0 180)
+          (length 2.54)
+          (name "RPOUT-"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "23"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 -17.78 90)
+          (length 2.54)
+          (name "AVCC"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "24"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 5.08 -17.78 90)
+          (length 2.54)
+          (name "DVDD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "25"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at -5.08 -17.78 90)
+          (length 2.54)
+          (name "AGND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "26"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
       )
     )
-
     (symbol "Audio_ESS:ES9601K"
-      (in_bom yes) (on_board yes)
-      (property "Reference" "U" (at -7.62 7.62 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "ES9601K" (at 0 0 0) (effects (font (size 1.27 1.27))))
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "U"
+        (at -7.62 7.62 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "ES9601K"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "ES9601K_0_1"
-        (rectangle (start -10.16 7.62) (end 10.16 -7.62)
-          (stroke (width 0.254) (type default)) (fill (type background))))
+        (rectangle
+          (start -10.16 7.62)
+          (end 10.16 -7.62)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
       (symbol "ES9601K_1_1"
-        (pin passive line (at -12.7 5.08 0) (length 2.54)
-          (name "IN_L+" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 2.54 0) (length 2.54)
-          (name "IN_L-" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 0 0) (length 2.54)
-          (name "IN_R+" (effects (font (size 1.27 1.27)))) (number "3" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 -2.54 0) (length 2.54)
-          (name "IN_R-" (effects (font (size 1.27 1.27)))) (number "4" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 12.7 5.08 180) (length 2.54)
-          (name "OUT_L" (effects (font (size 1.27 1.27)))) (number "5" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 12.7 2.54 180) (length 2.54)
-          (name "OUT_R" (effects (font (size 1.27 1.27)))) (number "6" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 0 -10.16 90) (length 2.54)
-          (name "VCC" (effects (font (size 1.27 1.27)))) (number "7" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 5.08 -10.16 90) (length 2.54)
-          (name "GND" (effects (font (size 1.27 1.27)))) (number "8" (effects (font (size 1.27 1.27)))))
+        (pin passive line
+          (at -12.7 5.08 0)
+          (length 2.54)
+          (name "IN_L+"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 2.54 0)
+          (length 2.54)
+          (name "IN_L-"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "2"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 0 0)
+          (length 2.54)
+          (name "IN_R+"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "3"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 -2.54 0)
+          (length 2.54)
+          (name "IN_R-"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "4"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 12.7 5.08 180)
+          (length 2.54)
+          (name "OUT_L"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "5"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 12.7 2.54 180)
+          (length 2.54)
+          (name "OUT_R"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "6"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 -10.16 90)
+          (length 2.54)
+          (name "VCC"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "7"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 5.08 -10.16 90)
+          (length 2.54)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "8"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
       )
     )
-
     (symbol "Audio_MAXIM:MAX98357A"
-      (in_bom yes) (on_board yes)
-      (property "Reference" "U" (at -7.62 10.16 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "MAX98357A" (at 0 0 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "Package_DFN_QFN:DFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm" (at 0 -12.7 0) (effects (font (size 1.27 1.27)) hide))
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "U"
+        (at -7.62 10.16 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "MAX98357A"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "Package_DFN_QFN:DFN-16-1EP_3x3mm_P0.5mm_EP1.7x1.7mm"
+        (at 0 -12.7 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
       (symbol "MAX98357A_0_1"
-        (rectangle (start -10.16 10.16) (end 10.16 -10.16)
-          (stroke (width 0.254) (type default)) (fill (type background))))
+        (rectangle
+          (start -10.16 10.16)
+          (end 10.16 -10.16)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
       (symbol "MAX98357A_1_1"
-        (pin passive line (at -12.7 7.62 0) (length 2.54)
-          (name "BCLK" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 5.08 0) (length 2.54)
-          (name "LRCLK" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 2.54 0) (length 2.54)
-          (name "DIN" (effects (font (size 1.27 1.27)))) (number "3" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 0 0) (length 2.54)
-          (name "GAIN_SLOT" (effects (font (size 1.27 1.27)))) (number "4" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 12.7 7.62 180) (length 2.54)
-          (name "OUTP" (effects (font (size 1.27 1.27)))) (number "12" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 12.7 5.08 180) (length 2.54)
-          (name "OUTN" (effects (font (size 1.27 1.27)))) (number "13" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at -5.08 -12.7 90) (length 2.54)
-          (name "PVDD" (effects (font (size 1.27 1.27)))) (number "14" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 0 -12.7 90) (length 2.54)
-          (name "DVDD" (effects (font (size 1.27 1.27)))) (number "15" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 5.08 -12.7 90) (length 2.54)
-          (name "GND" (effects (font (size 1.27 1.27)))) (number "16" (effects (font (size 1.27 1.27)))))
+        (pin passive line
+          (at -12.7 7.62 0)
+          (length 2.54)
+          (name "BCLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 5.08 0)
+          (length 2.54)
+          (name "LRCLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "2"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 2.54 0)
+          (length 2.54)
+          (name "DIN"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "3"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 0 0)
+          (length 2.54)
+          (name "GAIN_SLOT"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "4"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 12.7 7.62 180)
+          (length 2.54)
+          (name "OUTP"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "12"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 12.7 5.08 180)
+          (length 2.54)
+          (name "OUTN"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "13"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at -5.08 -12.7 90)
+          (length 2.54)
+          (name "PVDD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "14"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 -12.7 90)
+          (length 2.54)
+          (name "DVDD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "15"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 5.08 -12.7 90)
+          (length 2.54)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "16"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
       )
     )
-
     (symbol "Oscillator:SG-210STF"
-      (in_bom yes) (on_board yes)
-      (property "Reference" "Y" (at -5.08 5.08 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "38.4MHz" (at 0 0 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "Oscillator:Oscillator_SMD_3225-4Pin_3.2x2.5mm" (at 0 -7.62 0) (effects (font (size 1.27 1.27)) hide))
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "Y"
+        (at -5.08 5.08 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "38.4MHz"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "Oscillator:Oscillator_SMD_3225-4Pin_3.2x2.5mm"
+        (at 0 -7.62 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
       (symbol "SG-210STF_0_1"
-        (rectangle (start -5.08 3.81) (end 5.08 -3.81)
-          (stroke (width 0.254) (type default)) (fill (type background))))
+        (rectangle
+          (start -5.08 3.81)
+          (end 5.08 -3.81)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
       (symbol "SG-210STF_1_1"
-        (pin passive line (at -7.62 0 0) (length 2.54)
-          (name "OUT" (effects (font (size 1.27 1.27)))) (number "3" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 0 -6.35 90) (length 2.54)
-          (name "GND" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))
-        (pin power_in line (at 0 6.35 270) (length 2.54)
-          (name "VCC" (effects (font (size 1.27 1.27)))) (number "4" (effects (font (size 1.27 1.27)))))
+        (pin passive line
+          (at -7.62 0 0)
+          (length 2.54)
+          (name "OUT"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "3"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 -6.35 90)
+          (length 2.54)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "2"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 6.35 270)
+          (length 2.54)
+          (name "VCC"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "4"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
       )
     )
-
     (symbol "Connector:USB_C_Receptacle_USB2.0"
-      (in_bom yes) (on_board yes)
-      (property "Reference" "J" (at -7.62 10.16 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "USB_C" (at 0 0 0) (effects (font (size 1.27 1.27))))
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "J"
+        (at -7.62 10.16 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "USB_C"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "USB_C_0_1"
-        (rectangle (start -10.16 10.16) (end 10.16 -10.16)
-          (stroke (width 0.254) (type default)) (fill (type background))))
+        (rectangle
+          (start -10.16 10.16)
+          (end 10.16 -10.16)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
       (symbol "USB_C_1_1"
-        (pin passive line (at -12.7 7.62 0) (length 2.54)
-          (name "VBUS" (effects (font (size 1.27 1.27)))) (number "A4" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 5.08 0) (length 2.54)
-          (name "DP" (effects (font (size 1.27 1.27)))) (number "A6" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 2.54 0) (length 2.54)
-          (name "DM" (effects (font (size 1.27 1.27)))) (number "A7" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 0 0) (length 2.54)
-          (name "CC1" (effects (font (size 1.27 1.27)))) (number "A5" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -12.7 -2.54 0) (length 2.54)
-          (name "GND" (effects (font (size 1.27 1.27)))) (number "A1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at 12.7 7.62 180) (length 2.54)
-          (name "SBU1" (effects (font (size 1.27 1.27)))) (number "A8" (effects (font (size 1.27 1.27)))))
+        (pin passive line
+          (at -12.7 7.62 0)
+          (length 2.54)
+          (name "VBUS"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "A4"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 5.08 0)
+          (length 2.54)
+          (name "DP"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "A6"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 2.54 0)
+          (length 2.54)
+          (name "DM"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "A7"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 0 0)
+          (length 2.54)
+          (name "CC1"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "A5"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -12.7 -2.54 0)
+          (length 2.54)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "A1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 12.7 7.62 180)
+          (length 2.54)
+          (name "SBU1"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "A8"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
       )
     )
-
-    (symbol "power:GND" (power) (pin_numbers hide) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Value" "GND" (at 0 -1.27 0) (effects (font (size 1.27 1.27))))
+    (symbol "power:GND"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "GND"
+        (at 0 -1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "GND_0_1"
-        (polyline (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
-          (stroke (width 0) (type default)) (fill (type none))))
+        (polyline
+          (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
       (symbol "GND_1_1"
-        (pin power_in line (at 0 0 270) (length 0) (name "GND" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))
-
-    (symbol "power:AGND" (power) (pin_numbers hide) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Value" "AGND" (at 0 -1.27 0) (effects (font (size 1.27 1.27))))
+        (pin power_in line
+          (at 0 0 270)
+          (length 0)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "power:AGND"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "AGND"
+        (at 0 -1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "AGND_0_1"
-        (polyline (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
-          (stroke (width 0) (type default)) (fill (type none))))
+        (polyline
+          (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
       (symbol "AGND_1_1"
-        (pin power_in line (at 0 0 270) (length 0) (name "AGND" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))
-
-    (symbol "power:+3.3V" (power) (pin_numbers hide) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Value" "+3.3V" (at 0 1.27 0) (effects (font (size 1.27 1.27))))
+        (pin power_in line
+          (at 0 0 270)
+          (length 0)
+          (name "AGND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "power:+3.3V"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "+3.3V"
+        (at 0 1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "+3.3V_0_1"
-        (polyline (pts (xy -0.762 1.27) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 0) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 2.54) (xy 0.762 1.27)) (stroke (width 0) (type default)) (fill (type none))))
+        (polyline
+          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 0) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
       (symbol "+3.3V_1_1"
-        (pin power_in line (at 0 0 90) (length 0) (name "+3.3V" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))
-
-    (symbol "power:+3.3VA" (power) (pin_numbers hide) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Value" "+3.3VA" (at 0 1.27 0) (effects (font (size 1.27 1.27))))
+        (pin power_in line
+          (at 0 0 90)
+          (length 0)
+          (name "+3.3V"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "power:+3.3VA"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "+3.3VA"
+        (at 0 1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "+3.3VA_0_1"
-        (polyline (pts (xy -0.762 1.27) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 0) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 2.54) (xy 0.762 1.27)) (stroke (width 0) (type default)) (fill (type none))))
+        (polyline
+          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 0) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
       (symbol "+3.3VA_1_1"
-        (pin power_in line (at 0 0 90) (length 0) (name "+3.3VA" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))
-
-    (symbol "power:+1.8V" (power) (pin_numbers hide) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Value" "+1.8V" (at 0 1.27 0) (effects (font (size 1.27 1.27))))
+        (pin power_in line
+          (at 0 0 90)
+          (length 0)
+          (name "+3.3VA"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "power:+1.8V"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "+1.8V"
+        (at 0 1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "+1.8V_0_1"
-        (polyline (pts (xy -0.762 1.27) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 0) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 2.54) (xy 0.762 1.27)) (stroke (width 0) (type default)) (fill (type none))))
+        (polyline
+          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 0) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
       (symbol "+1.8V_1_1"
-        (pin power_in line (at 0 0 90) (length 0) (name "+1.8V" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))
-
-    (symbol "power:VBAT" (power) (pin_numbers hide) (in_bom yes) (on_board yes)
-      (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Value" "VBAT" (at 0 1.27 0) (effects (font (size 1.27 1.27))))
+        (pin power_in line
+          (at 0 0 90)
+          (length 0)
+          (name "+1.8V"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "power:VBAT"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "VBAT"
+        (at 0 1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
       (symbol "VBAT_0_1"
-        (polyline (pts (xy -0.762 1.27) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 0) (xy 0 2.54)) (stroke (width 0) (type default)) (fill (type none)))
-        (polyline (pts (xy 0 2.54) (xy 0.762 1.27)) (stroke (width 0) (type default)) (fill (type none))))
+        (polyline
+          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 0) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
       (symbol "VBAT_1_1"
-        (pin power_in line (at 0 0 90) (length 0) (name "VBAT" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))
+        (pin power_in line
+          (at 0 0 90)
+          (length 0)
+          (name "VBAT"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
   )
-
-
-  (symbol (lib_id "MCU_ST_STM32F4:STM32F405RGT6") (at 100 100 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "u1000000-0000-0000-0000-000000000001")
-    (property "Reference" "U1" (at 88.9 113.97 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "STM32F405RGT6" (at 88.9 111.43 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "7" (uuid "u1p00001-0000-0000-0000-000000000001"))
-    (pin "46" (uuid "u1p00001-0000-0000-0000-000000000046"))
-    (pin "49" (uuid "u1p00001-0000-0000-0000-000000000049"))
-    (pin "1" (uuid "u1p00001-0000-0000-0000-000000000002"))
-    (pin "28" (uuid "u1p00001-0000-0000-0000-000000000028"))
-    (pin "29" (uuid "u1p00001-0000-0000-0000-000000000029"))
-    (pin "30" (uuid "u1p00001-0000-0000-0000-000000000030"))
-    (pin "31" (uuid "u1p00001-0000-0000-0000-000000000031"))
-    (pin "21" (uuid "u1p00001-0000-0000-0000-000000000021"))
-    (pin "22" (uuid "u1p00001-0000-0000-0000-000000000022"))
-    (pin "23" (uuid "u1p00001-0000-0000-0000-000000000023"))
-    (pin "20" (uuid "u1p00001-0000-0000-0000-000000000020"))
-    (pin "44" (uuid "u1p00001-0000-0000-0000-000000000044"))
-    (pin "43" (uuid "u1p00001-0000-0000-0000-000000000043"))
-    (pin "53" (uuid "u1p00001-0000-0000-0000-000000000053"))
-    (pin "52" (uuid "u1p00001-0000-0000-0000-000000000052"))
-    (pin "50" (uuid "u1p00001-0000-0000-0000-000000000050"))
-    (pin "42" (uuid "u1p00001-0000-0000-0000-000000000042"))
-    (pin "1" (uuid "u1p00001-0000-0000-0000-000000000003"))
-    (pin "12" (uuid "u1p00001-0000-0000-0000-000000000012")))
-
-  (symbol (lib_id "Memory_Flash:W25Q128JVSIM") (at 140 100 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "u2000000-0000-0000-0000-000000000001")
-    (property "Reference" "U2" (at 132.3 108.89 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "W25Q128JVSIM" (at 132.3 106.35 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "1" (uuid "u2p00001-0000-0000-0000-000000000001"))
-    (pin "2" (uuid "u2p00001-0000-0000-0000-000000000002"))
-    (pin "3" (uuid "u2p00001-0000-0000-0000-000000000003"))
-    (pin "4" (uuid "u2p00001-0000-0000-0000-000000000004"))
-    (pin "5" (uuid "u2p00001-0000-0000-0000-000000000005"))
-    (pin "6" (uuid "u2p00001-0000-0000-0000-000000000006"))
-    (pin "7" (uuid "u2p00001-0000-0000-0000-000000000007"))
-    (pin "8" (uuid "u2p00001-0000-0000-0000-000000000008")))
-
-  (symbol (lib_id "Audio_ESS:ES9018K2M") (at 100 150 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "u3000000-0000-0000-0000-000000000001")
-    (property "Reference" "U3" (at 88.9 163.97 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "ES9018K2M" (at 88.9 161.43 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "1" (uuid "u3p00001-0000-0000-0000-000000000001"))
-    (pin "2" (uuid "u3p00001-0000-0000-0000-000000000002"))
-    (pin "3" (uuid "u3p00001-0000-0000-0000-000000000003"))
-    (pin "4" (uuid "u3p00001-0000-0000-0000-000000000004"))
-    (pin "5" (uuid "u3p00001-0000-0000-0000-000000000005"))
-    (pin "6" (uuid "u3p00001-0000-0000-0000-000000000006"))
-    (pin "7" (uuid "u3p00001-0000-0000-0000-000000000007"))
-    (pin "20" (uuid "u3p00001-0000-0000-0000-000000000020"))
-    (pin "21" (uuid "u3p00001-0000-0000-0000-000000000021"))
-    (pin "22" (uuid "u3p00001-0000-0000-0000-000000000022"))
-    (pin "23" (uuid "u3p00001-0000-0000-0000-000000000023"))
-    (pin "24" (uuid "u3p00001-0000-0000-0000-000000000024"))
-    (pin "25" (uuid "u3p00001-0000-0000-0000-000000000025"))
-    (pin "26" (uuid "u3p00001-0000-0000-0000-000000000026")))
-
-  (symbol (lib_id "Audio_ESS:ES9601K") (at 140 150 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "u4000000-0000-0000-0000-000000000001")
-    (property "Reference" "U4" (at 132.3 158.89 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "ES9601K" (at 132.3 156.35 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "1" (uuid "u4p00001-0000-0000-0000-000000000001"))
-    (pin "2" (uuid "u4p00001-0000-0000-0000-000000000002"))
-    (pin "3" (uuid "u4p00001-0000-0000-0000-000000000003"))
-    (pin "4" (uuid "u4p00001-0000-0000-0000-000000000004"))
-    (pin "5" (uuid "u4p00001-0000-0000-0000-000000000005"))
-    (pin "6" (uuid "u4p00001-0000-0000-0000-000000000006"))
-    (pin "7" (uuid "u4p00001-0000-0000-0000-000000000007"))
-    (pin "8" (uuid "u4p00001-0000-0000-0000-000000000008")))
-
-  (symbol (lib_id "Audio_MAXIM:MAX98357A") (at 100 200 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "u5000000-0000-0000-0000-000000000001")
-    (property "Reference" "U5" (at 88.9 213.97 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "MAX98357A_L" (at 88.9 211.43 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "1" (uuid "u5p00001-0000-0000-0000-000000000001"))
-    (pin "2" (uuid "u5p00001-0000-0000-0000-000000000002"))
-    (pin "3" (uuid "u5p00001-0000-0000-0000-000000000003"))
-    (pin "4" (uuid "u5p00001-0000-0000-0000-000000000004"))
-    (pin "12" (uuid "u5p00001-0000-0000-0000-000000000012"))
-    (pin "13" (uuid "u5p00001-0000-0000-0000-000000000013"))
-    (pin "14" (uuid "u5p00001-0000-0000-0000-000000000014"))
-    (pin "15" (uuid "u5p00001-0000-0000-0000-000000000015"))
-    (pin "16" (uuid "u5p00001-0000-0000-0000-000000000016")))
-
-  (symbol (lib_id "Audio_MAXIM:MAX98357A") (at 140 200 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "u6000000-0000-0000-0000-000000000001")
-    (property "Reference" "U6" (at 132.3 213.97 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "MAX98357A_R" (at 132.3 211.43 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "1" (uuid "u6p00001-0000-0000-0000-000000000001"))
-    (pin "2" (uuid "u6p00001-0000-0000-0000-000000000002"))
-    (pin "3" (uuid "u6p00001-0000-0000-0000-000000000003"))
-    (pin "4" (uuid "u6p00001-0000-0000-0000-000000000004"))
-    (pin "12" (uuid "u6p00001-0000-0000-0000-000000000012"))
-    (pin "13" (uuid "u6p00001-0000-0000-0000-000000000013"))
-    (pin "14" (uuid "u6p00001-0000-0000-0000-000000000014"))
-    (pin "15" (uuid "u6p00001-0000-0000-0000-000000000015"))
-    (pin "16" (uuid "u6p00001-0000-0000-0000-000000000016")))
-
-  (symbol (lib_id "Oscillator:SG-210STF") (at 60 150 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "y1000000-0000-0000-0000-000000000001")
-    (property "Reference" "Y1" (at 54.92 158.89 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "SG-210STF 38.4MHz" (at 54.92 156.35 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "3" (uuid "y1p00001-0000-0000-0000-000000000003"))
-    (pin "2" (uuid "y1p00001-0000-0000-0000-000000000002"))
-    (pin "4" (uuid "y1p00001-0000-0000-0000-000000000004")))
-
-  (symbol (lib_id "Connector:USB_C_Receptacle_USB2.0") (at 60 100 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "j1000000-0000-0000-0000-000000000001")
-    (property "Reference" "J1" (at 54.92 108.89 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (property "Value" "USB-C" (at 54.92 106.35 0) (effects (font (size 1.27 1.27)) (justify left)))
-    (pin "A4" (uuid "j1p00001-0000-0000-0000-0000000000a4"))
-    (pin "A6" (uuid "j1p00001-0000-0000-0000-0000000000a6"))
-    (pin "A7" (uuid "j1p00001-0000-0000-0000-0000000000a7"))
-    (pin "A5" (uuid "j1p00001-0000-0000-0000-0000000000a5"))
-    (pin "A1" (uuid "j1p00001-0000-0000-0000-0000000000a1"))
-    (pin "A8" (uuid "j1p00001-0000-0000-0000-0000000000a8")))
-
-  (symbol (lib_id "power:GND") (at 100 125 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "pwr-gnd-0001")
-    (property "Reference" "#PWR01" (at 100 128.81 0) (effects (font (size 1.27 1.27)) hide))
-    (property "Value" "GND" (at 100 126.27 0) (effects (font (size 1.27 1.27))))
-    (pin "1" (uuid "pwr-gnd-p01")))
-
-  (symbol (lib_id "power:AGND") (at 100 175 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "pwr-agnd-0001")
-    (property "Reference" "#PWR02" (at 100 178.81 0) (effects (font (size 1.27 1.27)) hide))
-    (property "Value" "AGND" (at 100 176.27 0) (effects (font (size 1.27 1.27))))
-    (pin "1" (uuid "pwr-agnd-p01")))
-
-  (symbol (lib_id "power:+3.3V") (at 100 75 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "pwr-3v3-0001")
-    (property "Reference" "#PWR03" (at 100 78.81 0) (effects (font (size 1.27 1.27)) hide))
-    (property "Value" "+3.3V" (at 100 73.73 0) (effects (font (size 1.27 1.27))))
-    (pin "1" (uuid "pwr-3v3-p01")))
-
-  (symbol (lib_id "power:+3.3VA") (at 80 150 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "pwr-3v3a-0001")
-    (property "Reference" "#PWR04" (at 80 153.81 0) (effects (font (size 1.27 1.27)) hide))
-    (property "Value" "+3.3VA" (at 80 148.73 0) (effects (font (size 1.27 1.27))))
-    (pin "1" (uuid "pwr-3v3a-p01")))
-
-  (symbol (lib_id "power:+1.8V") (at 120 150 0) (unit 1)
-    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
-    (uuid "pwr-1v8-0001")
-    (property "Reference" "#PWR05" (at 120 153.81 0) (effects (font (size 1.27 1.27)) hide))
-    (property "Value" "+1.8V" (at 120 148.73 0) (effects (font (size 1.27 1.27))))
-    (pin "1" (uuid "pwr-1v8-p01")))
-
-
-  (wire (pts (xy 100 122.22) (xy 100 125)) (stroke (width 0) (type default)) (uuid "w0000001-0001-0001-0001-000000000001"))
-  (wire (pts (xy 100 77.78) (xy 100 75)) (stroke (width 0) (type default)) (uuid "w0000001-0001-0001-0001-000000000002"))
-  (wire (pts (xy 100 172.22) (xy 100 175)) (stroke (width 0) (type default)) (uuid "w0000001-0001-0001-0001-000000000003"))
-  (wire (pts (xy 80 147.22) (xy 80 150)) (stroke (width 0) (type default)) (uuid "w0000001-0001-0001-0001-000000000004"))
-  (wire (pts (xy 120 147.22) (xy 120 150)) (stroke (width 0) (type default)) (uuid "w0000001-0001-0001-0001-000000000005"))
-
-  (wire (pts (xy 84.76 105.08) (xy 75 105.08)) (stroke (width 0) (type default)) (uuid "w-i2s-0001"))
-  (wire (pts (xy 84.76 102.54) (xy 75 102.54)) (stroke (width 0) (type default)) (uuid "w-i2s-0002"))
-  (wire (pts (xy 84.76 100) (xy 75 100)) (stroke (width 0) (type default)) (uuid "w-i2s-0003"))
-  (wire (pts (xy 84.76 97.46) (xy 75 97.46)) (stroke (width 0) (type default)) (uuid "w-i2s-0004"))
-
-  (wire (pts (xy 115.24 157.62) (xy 125 157.62)) (stroke (width 0) (type default)) (uuid "w-dac-l-0001"))
-  (wire (pts (xy 115.24 160.16) (xy 125 160.16)) (stroke (width 0) (type default)) (uuid "w-dac-l-0002"))
-
-  (wire (pts (xy 115.24 155.08) (xy 125 155.08)) (stroke (width 0) (type default)) (uuid "w-dac-r-0001"))
-  (wire (pts (xy 115.24 152.54) (xy 125 152.54)) (stroke (width 0) (type default)) (uuid "w-dac-r-0002"))
-
-  (wire (pts (xy 84.76 92.38) (xy 75 92.38)) (stroke (width 0) (type default)) (uuid "w-spi-0001"))
-  (wire (pts (xy 84.76 89.84) (xy 75 89.84)) (stroke (width 0) (type default)) (uuid "w-spi-0002"))
-  (wire (pts (xy 84.76 87.3) (xy 75 87.3)) (stroke (width 0) (type default)) (uuid "w-spi-0003"))
-  (wire (pts (xy 84.76 84.76) (xy 75 84.76)) (stroke (width 0) (type default)) (uuid "w-spi-0004"))
-
-  (wire (pts (xy 115.24 117.78) (xy 125 117.78)) (stroke (width 0) (type default)) (uuid "w-usb-0001"))
-  (wire (pts (xy 115.24 115.24) (xy 125 115.24)) (stroke (width 0) (type default)) (uuid "w-usb-0002"))
-
-  (wire (pts (xy 65.08 150) (xy 82.22 150)) (stroke (width 0) (type default)) (uuid "w-tcxo-0001"))
-
-  (global_label "NRST" (shape input) (at 75 106.35 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-nrst-0001"))
-  (global_label "SWDIO" (shape input) (at 75 103.81 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-swdio-0001"))
-  (global_label "SWCLK" (shape input) (at 75 97.46 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-swclk-0001"))
-  (global_label "WKUP" (shape input) (at 75 117.78 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-wkup-0001"))
-
-  (global_label "I2S_MCK" (shape input) (at 75 105.08 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-mck-0001"))
-  (global_label "I2S_SCK" (shape input) (at 75 102.54 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-sck-0001"))
-  (global_label "I2S_SD" (shape input) (at 75 100 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-sd-0001"))
-  (global_label "I2S_WS" (shape input) (at 75 97.46 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-ws-0001"))
-
-  (global_label "SPI_SCK" (shape input) (at 75 92.38 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-spi-sck-0001"))
-  (global_label "SPI_MISO" (shape input) (at 75 89.84 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-spi-miso-0001"))
-  (global_label "SPI_MOSI" (shape input) (at 75 87.3 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-spi-mosi-0001"))
-  (global_label "FLASH_CS" (shape input) (at 75 84.76 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-flash-cs-0001"))
-
-  (global_label "USB_DP" (shape input) (at 125 117.78 0)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-usb-dp-0001"))
-  (global_label "USB_DM" (shape input) (at 125 115.24 0)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-usb-dm-0001"))
-
-  (global_label "DAC_L+" (shape input) (at 125 160.16 0)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-dac-lp-0001"))
-  (global_label "DAC_L-" (shape input) (at 125 157.62 0)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-dac-lm-0001"))
-  (global_label "DAC_R+" (shape input) (at 125 155.08 0)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-dac-rp-0001"))
-  (global_label "DAC_R-" (shape input) (at 125 152.54 0)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-dac-rm-0001"))
-
-  (global_label "MCLK_38M4" (shape input) (at 70 150 180)
-    (effects (font (size 1.27 1.27)) (justify right)) (uuid "gl-mclk-0001"))
-
-  (global_label "3V3" (shape input) (at 100 75 90)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-3v3-0001"))
-  (global_label "GND" (shape input) (at 100 125 270)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-gnd-0001"))
-  (global_label "AGND" (shape input) (at 100 175 270)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-agnd-0001"))
-  (global_label "3V3A" (shape input) (at 80 150 90)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-3v3a-0001"))
-  (global_label "1V8" (shape input) (at 120 150 90)
-    (effects (font (size 1.27 1.27)) (justify left)) (uuid "gl-1v8-0001"))
-
-  (text "Digital Region (STM32F405, Flash, USB, TF)" (at 100 65 0)
-    (effects (font (size 2.54 2.54)) (justify left)) (uuid "txt-digital-0001"))
-  (text "Analog Region (ES9018K2M, ES9601K, TCXO)" (at 100 140 0)
-    (effects (font (size 2.54 2.54)) (justify left)) (uuid "txt-analog-0001"))
-  (text "Power Region (MAX98357A x2)" (at 100 190 0)
-    (effects (font (size 2.54 2.54)) (justify left)) (uuid "txt-power-0001"))
-
-  (rectangle (start 50 60) (end 160 130)
-    (stroke (width 0.254) (type dash)) (fill (type none)) (uuid "rect-digital-0001"))
-  (rectangle (start 50 135) (end 160 180)
-    (stroke (width 0.254) (type dash_dot)) (fill (type none)) (uuid "rect-analog-0001"))
-  (rectangle (start 50 185) (end 160 220)
-    (stroke (width 0.254) (type dash)) (fill (type none)) (uuid "rect-amp-0001"))
+  (symbol
+    (lib_id "MCU_ST_STM32F4:STM32F405RGT6")
+    (at 100 100 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 7592f2a4-117c-44c9-b80e-e2ec448caeb1)
+    (property "Reference" "U1"
+      (at 88.9 113.97 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "STM32F405RGT6"
+      (at 88.9 111.43 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "7"
+      (uuid 7a811905-d05f-4ea5-afa4-4b5a0c0e14a4)
+    )
+    (pin "46"
+      (uuid 44489162-4e54-4bd1-84b9-4c0dbd7358f3)
+    )
+    (pin "49"
+      (uuid 7d8c6f80-b089-426f-8795-82d8d463d7f9)
+    )
+    (pin "1"
+      (uuid a53de5d2-86f0-4e1d-b1ff-98618299f4b2)
+    )
+    (pin "28"
+      (uuid be8e99d8-6af0-4ae1-9c96-527bea36f4a0)
+    )
+    (pin "29"
+      (uuid 6ad1078b-cff1-49b5-bc6c-9f157c2333d1)
+    )
+    (pin "30"
+      (uuid 8ab35e14-359e-4bea-963b-ba8770994278)
+    )
+    (pin "31"
+      (uuid 33d608e1-c95b-4853-afc8-2d4c808f2076)
+    )
+    (pin "21"
+      (uuid a2d308c5-ed53-4a53-be70-56f446dc965e)
+    )
+    (pin "22"
+      (uuid 3e222e0a-f7fb-4c82-89f1-ef2c3849c7fa)
+    )
+    (pin "23"
+      (uuid fbb9dfd2-f93b-4c2d-ae15-dad97e1c5d5d)
+    )
+    (pin "20"
+      (uuid 66462320-a8e8-4f0b-bdbd-4f67d1c1a9fa)
+    )
+    (pin "44"
+      (uuid b39a6570-4549-4647-8360-48acfff1bda7)
+    )
+    (pin "43"
+      (uuid 1d9c5bed-eb7a-4075-bc18-059c6855bd0e)
+    )
+    (pin "53"
+      (uuid 0ecc5333-2f07-48d1-843b-d97c74db3cbb)
+    )
+    (pin "52"
+      (uuid 28b89dd7-8a07-473d-b63e-7c7aa147ee9e)
+    )
+    (pin "50"
+      (uuid 02c61741-1c45-48e4-a62a-06f621ff182a)
+    )
+    (pin "42"
+      (uuid 82dadb4d-83b4-415f-8083-bd9d9bebcc27)
+    )
+    (pin "1"
+      (uuid aae60aa5-b234-4e9b-9259-3bfeb96f29d5)
+    )
+    (pin "12"
+      (uuid e430b5b6-56ba-458e-8982-9140747fc5ac)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "U1")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "Memory_Flash:W25Q128JVSIM")
+    (at 140 100 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid b6e68549-cdf3-46b8-b814-17aff6171770)
+    (property "Reference" "U2"
+      (at 132.3 108.89 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "W25Q128JVSIM"
+      (at 132.3 106.35 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "1"
+      (uuid f19b4e22-5aa0-463d-8077-7e6a4906b6d2)
+    )
+    (pin "2"
+      (uuid 308644fd-ca23-460d-91b9-0f9d655bc720)
+    )
+    (pin "3"
+      (uuid dcd72d69-4883-4c35-94e6-70785409f644)
+    )
+    (pin "4"
+      (uuid 6d4250a2-849e-472e-a43c-a394c432680e)
+    )
+    (pin "5"
+      (uuid e88adec0-6695-4d53-93d0-44466dbb28e4)
+    )
+    (pin "6"
+      (uuid 6f9b9c98-4b97-46d6-82ab-0617531b2cbb)
+    )
+    (pin "7"
+      (uuid d2e36f52-d8b3-42b3-8e71-0ea75808d44e)
+    )
+    (pin "8"
+      (uuid be6b544f-157b-43ea-96f6-564497d91e57)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "U2")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "Audio_ESS:ES9018K2M")
+    (at 100 150 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 1e677584-1677-4721-85ce-1acf9fcb709c)
+    (property "Reference" "U3"
+      (at 88.9 163.97 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "ES9018K2M"
+      (at 88.9 161.43 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "1"
+      (uuid 0d826333-33df-467f-9402-feb29fa6fdfa)
+    )
+    (pin "2"
+      (uuid faaf4994-d083-407b-9265-132fca3823c3)
+    )
+    (pin "3"
+      (uuid d5cea7ec-1b78-4b75-ab51-fb1ccdd6fa82)
+    )
+    (pin "4"
+      (uuid 71d3b7cb-ce10-48ba-8965-af6ed2b2bdeb)
+    )
+    (pin "5"
+      (uuid b39af269-1215-4223-8be9-61aa4fb5b0f7)
+    )
+    (pin "6"
+      (uuid c1d20fd5-78fa-4e0e-ab3c-56323b76a1d5)
+    )
+    (pin "7"
+      (uuid c34f08f7-c263-4a72-a5f0-e519869020fe)
+    )
+    (pin "20"
+      (uuid b8dcc03d-fe56-41bc-bcb8-7178b1eec6d8)
+    )
+    (pin "21"
+      (uuid 34f23d83-7aec-4b1f-a881-2a12260a281d)
+    )
+    (pin "22"
+      (uuid bd8f1d68-d8a7-474a-92d6-5908f176c89e)
+    )
+    (pin "23"
+      (uuid 2abd8043-1636-46b0-9809-5fc2366c5c79)
+    )
+    (pin "24"
+      (uuid 4c5bc95f-8c0d-4d2a-a3be-bb4c845bd512)
+    )
+    (pin "25"
+      (uuid d76463fd-7652-460f-af24-94537365f4f4)
+    )
+    (pin "26"
+      (uuid 08858079-da07-4ca0-9ee6-e75e214fe13f)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "U3")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "Audio_ESS:ES9601K")
+    (at 140 150 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 05d76264-b5b3-44ec-a46f-4f153b0e1703)
+    (property "Reference" "U4"
+      (at 132.3 158.89 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "ES9601K"
+      (at 132.3 156.35 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "1"
+      (uuid 68feef14-d4b9-4c33-a2e2-54578e9b3314)
+    )
+    (pin "2"
+      (uuid cb85db6d-9416-4ec0-bede-6e8abbaf5a62)
+    )
+    (pin "3"
+      (uuid f821199f-4b52-47bf-9d4e-30cce370d9a5)
+    )
+    (pin "4"
+      (uuid 439ec23f-a368-42f5-b33f-b4757aa2da41)
+    )
+    (pin "5"
+      (uuid 2e40b9e1-fee9-401e-b330-32abc3f69e8b)
+    )
+    (pin "6"
+      (uuid bd2f7597-ba95-4421-a487-a1c18664a0fa)
+    )
+    (pin "7"
+      (uuid 77ed8adf-5d00-4f46-ac23-f6b7a4b1f2b9)
+    )
+    (pin "8"
+      (uuid c6109a69-dd82-4200-8b42-f117c813f95a)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "U4")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "Audio_MAXIM:MAX98357A")
+    (at 100 200 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 43ad41a2-7167-4258-9125-1a5de86abb89)
+    (property "Reference" "U5"
+      (at 88.9 213.97 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "MAX98357A_L"
+      (at 88.9 211.43 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "1"
+      (uuid 4e3b0b80-0d65-47a0-9005-cc4be56ebae1)
+    )
+    (pin "2"
+      (uuid e7334d3f-608b-49fa-a39e-176d0a9c5e3f)
+    )
+    (pin "3"
+      (uuid 5db28672-b61a-4a60-a221-fa7515f940f8)
+    )
+    (pin "4"
+      (uuid 939f7f54-d490-4c2d-b077-4941804ffe32)
+    )
+    (pin "12"
+      (uuid 08a8728c-548c-4162-b900-c80c4ad0a216)
+    )
+    (pin "13"
+      (uuid fc5df1b5-ef1c-4bbc-aaf5-f66dbcffc156)
+    )
+    (pin "14"
+      (uuid 252b8682-a439-4a4c-8886-5687a02e3a49)
+    )
+    (pin "15"
+      (uuid 49437821-e9df-4dc4-93fc-2f6014e9d21a)
+    )
+    (pin "16"
+      (uuid 725fc4c6-daeb-4c4a-98aa-d82bd2561c47)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "U5")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "Audio_MAXIM:MAX98357A")
+    (at 140 200 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid f46a578a-c3e9-4dd9-98a9-dee4ff6995dc)
+    (property "Reference" "U6"
+      (at 132.3 213.97 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "MAX98357A_R"
+      (at 132.3 211.43 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "1"
+      (uuid 955e1cbc-ce55-47a5-a827-b4b561bd7589)
+    )
+    (pin "2"
+      (uuid c6aefa80-eda2-4103-a56a-3b9563868977)
+    )
+    (pin "3"
+      (uuid 2da0d15b-791a-4687-82f8-b55ec20951ee)
+    )
+    (pin "4"
+      (uuid 10b8625d-ce17-4959-821e-0cdc3626889e)
+    )
+    (pin "12"
+      (uuid 5dfa3bb1-c898-4f1a-b00f-1062096f0311)
+    )
+    (pin "13"
+      (uuid e7e85519-fe12-419d-aefb-67cfcf7ec081)
+    )
+    (pin "14"
+      (uuid 56e63245-a045-4183-8855-f7249b5a0e84)
+    )
+    (pin "15"
+      (uuid 9bc9c340-7574-414a-a37a-d5e0c919c84b)
+    )
+    (pin "16"
+      (uuid eef86cc1-f1c1-4c82-8399-fc1d70f85cbe)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "U6")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "Oscillator:SG-210STF")
+    (at 60 150 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid bef7b527-f5ba-4a51-b0ae-97f5c3a7219a)
+    (property "Reference" "Y1"
+      (at 54.92 158.89 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "SG-210STF 38.4MHz"
+      (at 54.92 156.35 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "3"
+      (uuid bd27f7f5-d6e6-48a4-94f9-8e36ab1e422b)
+    )
+    (pin "2"
+      (uuid b2227886-dd40-4c83-9e4c-5b3715cb703f)
+    )
+    (pin "4"
+      (uuid d536c993-5fd3-4cfe-905e-a1904b62eed5)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "Y1")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "Connector:USB_C_Receptacle_USB2.0")
+    (at 60 100 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 0527c9c1-0320-4cda-8cb9-fed22e58c393)
+    (property "Reference" "J1"
+      (at 54.92 108.89 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "USB-C"
+      (at 54.92 106.35 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "A4"
+      (uuid e3b2d863-e89f-45f7-86ab-0bc9d08d268e)
+    )
+    (pin "A6"
+      (uuid a0420403-b480-47bc-9f40-408e16ee28db)
+    )
+    (pin "A7"
+      (uuid 972653ac-55b7-493e-9b0d-a60dc77937bd)
+    )
+    (pin "A5"
+      (uuid 92cecd2d-f05f-4315-beeb-058b1e359166)
+    )
+    (pin "A1"
+      (uuid 9e87a5c5-9786-4182-9375-3ebb9c941ce4)
+    )
+    (pin "A8"
+      (uuid d37b9630-8c94-4755-b3e4-7fd3cede0121)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "J1")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "power:GND")
+    (at 100 125 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid addafd80-b01a-4e7a-8844-9c58d39f3d3e)
+    (property "Reference" "#PWR01"
+      (at 100 128.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND"
+      (at 100 126.27 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid 1867b107-b096-4668-843e-c2e8b00ab6b7)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "#PWR01")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "power:AGND")
+    (at 100 175 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid ea3d7f1e-3f6e-4a0e-a2dd-620cce5840bd)
+    (property "Reference" "#PWR02"
+      (at 100 178.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "AGND"
+      (at 100 176.27 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid a04b2041-baba-4ff2-8615-d4426a83cf15)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "#PWR02")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "power:+3.3V")
+    (at 100 75 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 04e30ea7-c556-4838-859f-dc98f0d73846)
+    (property "Reference" "#PWR03"
+      (at 100 78.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+3.3V"
+      (at 100 73.73 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid 7c00e091-bd31-4fa4-9666-c1f8ce4dbd1f)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "#PWR03")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "power:+3.3VA")
+    (at 80 150 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 129241a9-6ab1-4e85-ab90-d88f491185bb)
+    (property "Reference" "#PWR04"
+      (at 80 153.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+3.3VA"
+      (at 80 148.73 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid 3771e9d1-4a95-49ab-8f77-45f646fbf39b)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "#PWR04")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "power:+1.8V")
+    (at 120 150 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid 2bcf51ce-ed8d-4479-89fc-a96ffbf3de51)
+    (property "Reference" "#PWR05"
+      (at 120 153.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+1.8V"
+      (at 120 148.73 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid c948511e-320b-47a4-b9ed-ac158d7a5fad)
+    )
+    (instances
+      (project ""
+        (path "/"
+          (reference "#PWR05")
+          (unit 1)
+        )
+      )
+    )
+  )
+  (wire
+    (pts (xy 100 122.22) (xy 100 125))
+    (stroke (width 0) (type default))
+    (uuid f878cab4-fc25-4bf1-9373-51562612e292)
+  )
+  (wire
+    (pts (xy 100 77.78) (xy 100 75))
+    (stroke (width 0) (type default))
+    (uuid 0ddb566c-06f4-4489-84be-d82d3e952f82)
+  )
+  (wire
+    (pts (xy 100 172.22) (xy 100 175))
+    (stroke (width 0) (type default))
+    (uuid d9068f4f-faa2-477e-be86-7d5b8e62d59b)
+  )
+  (wire
+    (pts (xy 80 147.22) (xy 80 150))
+    (stroke (width 0) (type default))
+    (uuid 571222e3-af2f-486b-be17-b28a674b8462)
+  )
+  (wire
+    (pts (xy 120 147.22) (xy 120 150))
+    (stroke (width 0) (type default))
+    (uuid a2bc0998-5272-4fe9-8523-cce2ef44df8a)
+  )
+  (wire
+    (pts (xy 84.76 105.08) (xy 75 105.08))
+    (stroke (width 0) (type default))
+    (uuid 17822d47-1afd-4f0e-9711-3c02d359288d)
+  )
+  (wire
+    (pts (xy 84.76 102.54) (xy 75 102.54))
+    (stroke (width 0) (type default))
+    (uuid f9aa9a8a-a791-4d1b-aedb-3da55d15eb76)
+  )
+  (wire
+    (pts (xy 84.76 100) (xy 75 100))
+    (stroke (width 0) (type default))
+    (uuid c1af226e-77d2-431b-b2f9-a484d5324859)
+  )
+  (wire
+    (pts (xy 84.76 97.46) (xy 75 97.46))
+    (stroke (width 0) (type default))
+    (uuid 53e54637-aeec-4f49-9574-49c00272c16d)
+  )
+  (wire
+    (pts (xy 115.24 157.62) (xy 125 157.62))
+    (stroke (width 0) (type default))
+    (uuid 79b60b8b-2cef-40dd-be96-ddc66ceecb6c)
+  )
+  (wire
+    (pts (xy 115.24 160.16) (xy 125 160.16))
+    (stroke (width 0) (type default))
+    (uuid 2f85929e-bcd0-4429-8bad-9adb530d558e)
+  )
+  (wire
+    (pts (xy 115.24 155.08) (xy 125 155.08))
+    (stroke (width 0) (type default))
+    (uuid f74c3f0f-78c5-442a-a95d-71681fc3c213)
+  )
+  (wire
+    (pts (xy 115.24 152.54) (xy 125 152.54))
+    (stroke (width 0) (type default))
+    (uuid 53648349-e8d1-45d8-b1e6-277b8d441b23)
+  )
+  (wire
+    (pts (xy 84.76 92.38) (xy 75 92.38))
+    (stroke (width 0) (type default))
+    (uuid 7327be3f-0698-4f71-ad1d-36a570b8f28c)
+  )
+  (wire
+    (pts (xy 84.76 89.84) (xy 75 89.84))
+    (stroke (width 0) (type default))
+    (uuid e85778af-06ad-4978-9112-515e25a6de03)
+  )
+  (wire
+    (pts (xy 84.76 87.3) (xy 75 87.3))
+    (stroke (width 0) (type default))
+    (uuid 0e6df5ec-e524-43a7-9d19-4e0e791869cc)
+  )
+  (wire
+    (pts (xy 84.76 84.76) (xy 75 84.76))
+    (stroke (width 0) (type default))
+    (uuid be20335f-737a-4266-b607-749b3e0ff474)
+  )
+  (wire
+    (pts (xy 115.24 117.78) (xy 125 117.78))
+    (stroke (width 0) (type default))
+    (uuid a05de255-875f-4933-8d56-40c8ec43cfbd)
+  )
+  (wire
+    (pts (xy 115.24 115.24) (xy 125 115.24))
+    (stroke (width 0) (type default))
+    (uuid 8c237d98-e361-401f-bf50-de52254c39a9)
+  )
+  (wire
+    (pts (xy 65.08 150) (xy 82.22 150))
+    (stroke (width 0) (type default))
+    (uuid 6a5b7517-c747-48fd-a5d2-88f3daf56664)
+  )
+  (global_label "NRST"
+    (shape input)
+    (at 75 106.35 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 48de69dc-0d91-4c13-b713-928edb4e35ba)
+  )
+  (global_label "SWDIO"
+    (shape input)
+    (at 75 103.81 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid fdcd55a8-b546-4fcc-88c1-6632457a7436)
+  )
+  (global_label "SWCLK"
+    (shape input)
+    (at 75 97.46 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 1f308824-7a51-4870-9ea7-7c310d31b823)
+  )
+  (global_label "WKUP"
+    (shape input)
+    (at 75 117.78 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 2a636d23-68fd-4757-8bd1-faa2d35488a8)
+  )
+  (global_label "I2S_MCK"
+    (shape input)
+    (at 75 105.08 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 1f656c35-d53d-463b-9ae2-bb39dc831b60)
+  )
+  (global_label "I2S_SCK"
+    (shape input)
+    (at 75 102.54 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid b667ae26-d4dd-4274-b852-8d5898c54877)
+  )
+  (global_label "I2S_SD"
+    (shape input)
+    (at 75 100 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 0505bcd5-5248-4829-a0e5-98ec43bdfca4)
+  )
+  (global_label "I2S_WS"
+    (shape input)
+    (at 75 97.46 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid a6984274-ef4d-4486-bd60-c915f4f39fdc)
+  )
+  (global_label "SPI_SCK"
+    (shape input)
+    (at 75 92.38 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 177e2a9f-a09b-4f6e-b6a5-93aa3f3a4fcd)
+  )
+  (global_label "SPI_MISO"
+    (shape input)
+    (at 75 89.84 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid d27b9901-7c76-444f-9475-05e32bdc4bec)
+  )
+  (global_label "SPI_MOSI"
+    (shape input)
+    (at 75 87.3 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid b9f77884-39b3-46ec-a758-18409d95b605)
+  )
+  (global_label "FLASH_CS"
+    (shape input)
+    (at 75 84.76 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 92e14a7d-5a23-4e8b-a253-6135803c7255)
+  )
+  (global_label "USB_DP"
+    (shape input)
+    (at 125 117.78 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid d799eef0-527c-4824-95f2-e1bf72dfcc7a)
+  )
+  (global_label "USB_DM"
+    (shape input)
+    (at 125 115.24 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid 0d2fcde6-d415-4c96-9f37-cf012db1f187)
+  )
+  (global_label "DAC_L+"
+    (shape input)
+    (at 125 160.16 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid a151b53e-1fb6-40e3-9f0a-6f1e7ac959fa)
+  )
+  (global_label "DAC_L-"
+    (shape input)
+    (at 125 157.62 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid b4232d5e-9ca8-4005-bd12-27e03168aa18)
+  )
+  (global_label "DAC_R+"
+    (shape input)
+    (at 125 155.08 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid d768396a-bbad-4d2a-99af-7fbfe64534f4)
+  )
+  (global_label "DAC_R-"
+    (shape input)
+    (at 125 152.54 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid 3f017881-b270-4adf-9143-e4ebb0c79f6b)
+  )
+  (global_label "MCLK_38M4"
+    (shape input)
+    (at 70 150 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid 5cb48678-7aeb-48d1-bc56-e4aadb0337a0)
+  )
+  (global_label "3V3"
+    (shape input)
+    (at 100 75 90)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid a6425d94-298c-46da-8a1b-5a15c395b884)
+  )
+  (global_label "GND"
+    (shape input)
+    (at 100 125 270)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid 2b6c9f72-728f-44d9-a875-822f5d440dc5)
+  )
+  (global_label "AGND"
+    (shape input)
+    (at 100 175 270)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid d26af2b5-60b0-43bb-9ebe-672a80fe4a8f)
+  )
+  (global_label "3V3A"
+    (shape input)
+    (at 80 150 90)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid e0aded12-3791-4877-ad4c-f659efaa02f8)
+  )
+  (global_label "1V8"
+    (shape input)
+    (at 120 150 90)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid 38e9d0d3-dd3e-4650-b0f0-fcb6e8dc5b9f)
+  )
+  (text "Digital Region (STM32F405, Flash, USB, TF)"
+    (at 100 65 0)
+    (effects (font (size 2.54 2.54)) (justify left))
+    (uuid 9e0e9052-8036-4fe2-90ee-6b6111844a58)
+  )
+  (text "Analog Region (ES9018K2M, ES9601K, TCXO)"
+    (at 100 140 0)
+    (effects (font (size 2.54 2.54)) (justify left))
+    (uuid 29179419-13cf-406f-9260-d8f302006d8f)
+  )
+  (text "Power Region (MAX98357A x2)"
+    (at 100 190 0)
+    (effects (font (size 2.54 2.54)) (justify left))
+    (uuid 834c353e-f5bc-4eb0-bfe3-66765662216a)
+  )
+  (rectangle
+    (start 50 60)
+    (end 160 130)
+    (stroke (width 0.254) (type dash))
+    (fill
+      (type none)
+    )
+    (uuid 82053d13-2372-40ef-a7cf-fa0fd79bd32e)
+  )
+  (rectangle
+    (start 50 135)
+    (end 160 180)
+    (stroke (width 0.254) (type dash_dot))
+    (fill
+      (type none)
+    )
+    (uuid 8f117804-9f09-470d-a5a3-1f88840fd552)
+  )
+  (rectangle
+    (start 50 185)
+    (end 160 220)
+    (stroke (width 0.254) (type dash))
+    (fill
+      (type none)
+    )
+    (uuid 27f27fe1-f65d-49bc-9be2-3b364b7903de)
+  )
+  (sheet_instances
+    (path "/"
+      (page "1")
+    )
+  )
 )

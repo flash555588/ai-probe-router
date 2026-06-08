@@ -80,7 +80,7 @@ functional_modules:
     preferred_region: digital_near_mcu
     params:
       capacity_mb: 16
-      interface: spi_qaud
+      interface: spi_quad
       chip: W25Q128JVSIM
 
   - name: tf_card

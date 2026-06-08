@@ -9,7 +9,16 @@ from ...models.board import Schematic
 from ...models.module_graph import ModuleInstance
 from ...models.protection import ProtectionComponent, ProtectionType
 from ...solvers.pin_mapper import PinAssignment
+from ..kicad.sch_health import repair_schematic_tree
 from ..kicad.sexpr import QuotedStr, serialize
+
+
+def _quoted(value: object) -> QuotedStr:
+    """Return a KiCad string field value."""
+    if isinstance(value, QuotedStr):
+        return value
+    return QuotedStr(str(value))
+
 
 _TESTPOINT_LIB_SYMBOL = [
     "symbol", "Connector:TestPoint",
@@ -100,23 +109,23 @@ def _make_probe_fields(
     offset = 2.54
     if role:
         fields.append(
-            ["property", "PROBE_ROLE", role,
+            ["property", _quoted("PROBE_ROLE"), _quoted(role),
              ["at", str(x + offset), str(y - offset), "0"],
              ["effects", ["font", ["size", "1.27", "1.27"]]]]
         )
     fields.append(
-        ["property", "TEST_REQUIRED", "yes" if required else "no",
+        ["property", _quoted("TEST_REQUIRED"), _quoted("yes" if required else "no"),
          ["at", str(x + offset), str(y - offset - 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]]
     )
     if current_ma > 0:
         fields.append(
-            ["property", "CURRENT_LIMIT", f"{current_ma}mA",
+            ["property", _quoted("CURRENT_LIMIT"), _quoted(f"{current_ma}mA"),
              ["at", str(x + offset), str(y - offset - 2.54), "0"],
              ["effects", ["font", ["size", "1.27", "1.27"]]]]
         )
     fields.append(
-        ["property", "ACCESS_SIDE", side,
+        ["property", _quoted("ACCESS_SIDE"), _quoted(side),
          ["at", str(x + offset), str(y - offset - 3.81), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]]
     )
@@ -138,7 +147,7 @@ def add_testpoint_symbol(
     uid = str(_uuid.uuid4())
     symbol_node = [
         "symbol",
-        ["lib_id", "Connector:TestPoint"],
+        ["lib_id", _quoted("Connector:TestPoint")],
         ["at", str(x), str(y), "0"],
         ["unit", "1"],
         ["exclude_from_sim", "no"],
@@ -146,18 +155,18 @@ def add_testpoint_symbol(
         ["on_board", "yes"],
         ["dnp", "no"],
         ["uuid", uid],
-        ["property", "Reference", ref,
+        ["property", _quoted("Reference"), _quoted(ref),
          ["at", str(x + 1.27), str(y - 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["property", "Value", f"TP_{net_name}",
+        ["property", _quoted("Value"), _quoted(f"TP_{net_name}"),
          ["at", str(x + 1.27), str(y + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
         ["pin", QuotedStr("1"), ["uuid", str(_uuid.uuid4())]],
     ]
-    symbol_node[8:8] = _make_probe_fields(x, y, role, required, current_ma, side)
+    symbol_node[-1:-1] = _make_probe_fields(x, y, role, required, current_ma, side)
     label_uid = str(_uuid.uuid4())
     label_node = [
-        "label", net_name,
+        "label", _quoted(net_name),
         ["at", str(x), str(y + 2.54), "0"],
         ["effects", ["font", ["size", "1.27", "1.27"]]],
         ["uuid", label_uid],
@@ -213,7 +222,7 @@ def add_protected_testpoint_symbol(
     prot_uid = str(_uuid.uuid4())
     prot_node = [
         "symbol",
-        ["lib_id", lib_id],
+        ["lib_id", _quoted(lib_id)],
         ["at", str(prot_x), str(prot_y), "0"],
         ["unit", "1"],
         ["exclude_from_sim", "no"],
@@ -221,10 +230,10 @@ def add_protected_testpoint_symbol(
         ["on_board", "yes"],
         ["dnp", "no"],
         ["uuid", prot_uid],
-        ["property", "Reference", prot_ref,
+        ["property", _quoted("Reference"), _quoted(prot_ref),
          ["at", str(prot_x + 1.27), str(prot_y), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["property", "Value", QuotedStr(protection.value),
+        ["property", _quoted("Value"), _quoted(protection.value),
          ["at", str(prot_x + 1.27), str(prot_y + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
         ["pin", QuotedStr("1"), ["uuid", str(_uuid.uuid4())]],
@@ -236,7 +245,7 @@ def add_protected_testpoint_symbol(
     tp_uid = str(_uuid.uuid4())
     tp_node = [
         "symbol",
-        ["lib_id", "Connector:TestPoint"],
+        ["lib_id", _quoted("Connector:TestPoint")],
         ["at", str(x), str(y), "0"],
         ["unit", "1"],
         ["exclude_from_sim", "no"],
@@ -244,14 +253,14 @@ def add_protected_testpoint_symbol(
         ["on_board", "yes"],
         ["dnp", "no"],
         ["uuid", tp_uid],
-        ["property", "Reference", tp_ref,
+        ["property", _quoted("Reference"), _quoted(tp_ref),
          ["at", str(x + 1.27), str(y - 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["property", "Value", f"TP_{net_name}",
+        ["property", _quoted("Value"), _quoted(f"TP_{net_name}"),
          ["at", str(x + 1.27), str(y + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
     ]
-    tp_node[-1:-1] = _make_probe_fields(x, y, role, required, current_ma, side)
+    tp_node.extend(_make_probe_fields(x, y, role, required, current_ma, side))
     tp_node.append(["pin", QuotedStr("1"), ["uuid", str(_uuid.uuid4())]])
     sch.raw.append(tp_node)
 
@@ -267,7 +276,7 @@ def add_protected_testpoint_symbol(
 
     # Net label for original net (connects to protection pin 1)
     sch.raw.append([
-        "label", net_name,
+        "label", _quoted(net_name),
         ["at", str(x), str(label_y), "0"],
         ["effects", ["font", ["size", "1.27", "1.27"]]],
         ["uuid", str(_uuid.uuid4())],
@@ -284,7 +293,7 @@ def add_protected_testpoint_symbol(
 
     # Probe net label at testpoint (the protected side)
     sch.raw.append([
-        "label", probe_net,
+        "label", _quoted(probe_net),
         ["at", str(x), str(y - 2.54), "0"],
         ["effects", ["font", ["size", "1.27", "1.27"]]],
         ["uuid", str(_uuid.uuid4())],
@@ -314,7 +323,7 @@ def add_connector_symbol(
 
     symbol_node = [
         "symbol",
-        ["lib_id", lib_id],
+        ["lib_id", _quoted(lib_id)],
         ["at", str(x), str(y), "0"],
         ["unit", "1"],
         ["exclude_from_sim", "no"],
@@ -322,10 +331,10 @@ def add_connector_symbol(
         ["on_board", "yes"],
         ["dnp", "no"],
         ["uuid", uid],
-        ["property", "Reference", ref,
+        ["property", _quoted("Reference"), _quoted(ref),
          ["at", str(x + 1.27), str(y - 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["property", "Value", f"CONN_{ref}",
+        ["property", _quoted("Value"), _quoted(f"CONN_{ref}"),
          ["at", str(x + 1.27), str(y + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
     ]
@@ -343,7 +352,7 @@ def add_connector_symbol(
     for i, a in enumerate(assignments):
         label_y = y + i * 2.54
         label_node = [
-            "global_label", a.net_name,
+            "global_label", _quoted(a.net_name),
             ["shape", "input"],
             ["at", str(x + 5.08), str(label_y), "0"],
             ["effects", ["font", ["size", "1.27", "1.27"]]],
@@ -452,25 +461,25 @@ def add_module_sheet_symbol(
         ["stroke", ["width", "0.1524"], ["type", "solid"]],
         ["fill", ["color", "0", "0", "0", "0.0000"]],
         ["uuid", uid],
-        ["property", "Sheetname", f"{instance.instance_id}_{instance.name}",
+        ["property", _quoted("Sheetname"), _quoted(f"{instance.instance_id}_{instance.name}"),
          ["at", str(x), str(y - 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["property", "Sheetfile", sheet_file,
+        ["property", _quoted("Sheetfile"), _quoted(sheet_file),
          ["at", str(x), str(y + height + 1.27), "0"],
          ["effects", ["font", ["size", "1.27", "1.27"]]]],
-        ["property", "APR_MODULE", instance.instance_id,
+        ["property", _quoted("APR_MODULE"), _quoted(instance.instance_id),
          ["at", str(x), str(y + height + 3.81), "0"],
          ["effects", ["font", ["size", "1.0", "1.0"]]], "hide"],
-        ["property", "APR_INSTANCE", instance.name,
+        ["property", _quoted("APR_INSTANCE"), _quoted(instance.name),
          ["at", str(x), str(y + height + 5.08), "0"],
          ["effects", ["font", ["size", "1.0", "1.0"]]], "hide"],
-        ["property", "APR_GENERATED", "yes",
+        ["property", _quoted("APR_GENERATED"), _quoted("yes"),
          ["at", str(x), str(y + height + 6.35), "0"],
          ["effects", ["font", ["size", "1.0", "1.0"]]], "hide"],
     ]
     if run_id:
         sheet_node.append([
-            "property", "APR_RUN_ID", run_id,
+            "property", _quoted("APR_RUN_ID"), _quoted(run_id),
             ["at", str(x), str(y + height + 7.62), "0"],
             ["effects", ["font", ["size", "1.0", "1.0"]]], "hide",
         ])
@@ -501,5 +510,6 @@ def _sheet_pins(instance: ModuleInstance) -> list[str]:
 
 
 def write_schematic(sch: Schematic, path: str | Path) -> None:
+    repair_schematic_tree(sch.raw)
     text = serialize(sch.raw) + "\n"
     Path(path).write_text(text, encoding="utf-8")

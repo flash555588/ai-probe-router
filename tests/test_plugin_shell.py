@@ -1,7 +1,10 @@
 """Tests for KiCad Plugin Shell report loading and 3D view."""
 
+import importlib.util
 import json
 from pathlib import Path
+
+import pytest
 
 from ai_probe_router.ui.report_loader import (
     FootprintEntry,
@@ -116,6 +119,7 @@ class TestReportLoader:
         assert len(result.blockers) == 0
 
 
+@pytest.mark.skipif(importlib.util.find_spec("vtkmodules") is None, reason="vtk not installed")
 class TestVtk3DView:
     def test_build_3d_scene(self):
         fps = [
@@ -176,3 +180,53 @@ class TestPluginShellImport:
         assert shell.footprint_data is not None
         assert shell.readiness_data is not None
         assert shell.readiness_data.verdict == "PASS"
+
+    def test_shell_can_disable_3d_without_vtk(self, tmp_path, monkeypatch):
+        from ai_probe_router.ui import plugin_shell
+
+        class FakeTabs:
+            def __init__(self):
+                self.labels = []
+
+            def addTab(self, _widget, label):
+                self.labels.append(label)
+
+        class FakeQtWidgets:
+            @staticmethod
+            def QTabWidget():
+                return tabs
+
+        class FakeWindow:
+            def setCentralWidget(self, widget):
+                self.central_widget = widget
+
+        tabs = FakeTabs()
+        shell = plugin_shell.KiCadPluginShell(tmp_path, enable_3d=False)
+        shell._window = FakeWindow()
+
+        monkeypatch.setattr(plugin_shell, "_require_pyqt6", lambda: FakeQtWidgets)
+        monkeypatch.setattr(
+            plugin_shell.KiCadPluginShell,
+            "_build_footprint_tab",
+            lambda self: object(),
+        )
+        monkeypatch.setattr(
+            plugin_shell.KiCadPluginShell,
+            "_build_resource_tab",
+            lambda self: object(),
+        )
+        monkeypatch.setattr(
+            plugin_shell.KiCadPluginShell,
+            "_build_route_tab",
+            lambda self: object(),
+        )
+        monkeypatch.setattr(
+            plugin_shell.KiCadPluginShell,
+            "_build_3d_tab",
+            lambda self: (_ for _ in ()).throw(AssertionError("3D tab should be disabled")),
+        )
+
+        shell._build_tabs()
+
+        assert tabs.labels == ["Footprint Preview", "Resource Allocation", "Route Import"]
+        assert shell._window.central_widget is tabs

@@ -59,6 +59,8 @@ _COMPACT_TAGS = frozenset({
 def _needs_quoting(s: str) -> bool:
     if not s:
         return True
+    if _looks_like_uuid(s):
+        return False
     # Numbers (int/float/negative) don't need quoting
     try:
         float(s)
@@ -70,6 +72,13 @@ def _needs_quoting(s: str) -> bool:
         return False
     # Everything else needs quoting (uppercase, dots, colons, hyphens, etc.)
     return True
+
+
+def _looks_like_uuid(s: str) -> bool:
+    parts = s.split("-")
+    if [len(p) for p in parts] != [8, 4, 4, 4, 12]:
+        return False
+    return all(part and all(c in "0123456789abcdefABCDEF" for c in part) for part in parts)
 
 
 def _tokenize(text: str) -> list[str]:

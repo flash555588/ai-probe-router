@@ -1,52 +1,87 @@
 """3D VTK view for footprint preview overlay.
 
 Renders a board plane and colored footprint bounding boxes.
-Requires vtk and PyQt6.
+VTK is imported lazily so the core package works without the optional
+``plugin`` dependencies installed.
 """
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
-import vtkmodules.vtkRenderingOpenGL2  # noqa: F401  ensure OpenGL backend
-from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkCommonCore import vtkPoints
-from vtkmodules.vtkCommonDataModel import (
-    VTK_HEXAHEDRON,
-    vtkCellArray,
-    vtkHexahedron,
-    vtkUnstructuredGrid,
-)
-from vtkmodules.vtkFiltersSources import vtkPlaneSource
-from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
-from vtkmodules.vtkRenderingCore import (
-    vtkActor,
-    vtkDataSetMapper,
-    vtkPolyDataMapper,
-    vtkRenderer,
-    vtkRenderWindow,
-    vtkRenderWindowInteractor,
-)
-
 if TYPE_CHECKING:
+    from vtkmodules.vtkRenderingCore import (
+        vtkActor,
+        vtkRenderer,
+        vtkRenderWindowInteractor,
+    )
+
     from .footprint_overlay import FootprintOverlayItem
     from .report_loader import FootprintEntry, IssueEntry
 
 
+def _require_vtk() -> SimpleNamespace:
+    """Import VTK classes on demand."""
+    try:
+        import vtkmodules.vtkRenderingOpenGL2  # noqa: F401  ensure OpenGL backend
+        from vtkmodules.vtkCommonColor import vtkNamedColors
+        from vtkmodules.vtkCommonCore import vtkPoints
+        from vtkmodules.vtkCommonDataModel import (
+            VTK_HEXAHEDRON,
+            vtkCellArray,
+            vtkHexahedron,
+            vtkUnstructuredGrid,
+        )
+        from vtkmodules.vtkFiltersSources import vtkPlaneSource
+        from vtkmodules.vtkInteractionStyle import vtkInteractorStyleTrackballCamera
+        from vtkmodules.vtkRenderingCore import (
+            vtkActor,
+            vtkDataSetMapper,
+            vtkPolyDataMapper,
+            vtkRenderer,
+            vtkRenderWindow,
+            vtkRenderWindowInteractor,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            "VTK is required for the 3D preview. "
+            'Install with: pip install vtk or pip install -e ".[plugin]"'
+        ) from exc
+
+    return SimpleNamespace(
+        VTK_HEXAHEDRON=VTK_HEXAHEDRON,
+        vtkActor=vtkActor,
+        vtkCellArray=vtkCellArray,
+        vtkDataSetMapper=vtkDataSetMapper,
+        vtkHexahedron=vtkHexahedron,
+        vtkNamedColors=vtkNamedColors,
+        vtkPlaneSource=vtkPlaneSource,
+        vtkPoints=vtkPoints,
+        vtkPolyDataMapper=vtkPolyDataMapper,
+        vtkRenderer=vtkRenderer,
+        vtkRenderWindow=vtkRenderWindow,
+        vtkRenderWindowInteractor=vtkRenderWindowInteractor,
+        vtkInteractorStyleTrackballCamera=vtkInteractorStyleTrackballCamera,
+        vtkUnstructuredGrid=vtkUnstructuredGrid,
+    )
+
+
 def _create_board_plane(width: float = 100.0, height: float = 100.0) -> vtkActor:
     """Create a green semi-transparent board plane."""
-    plane = vtkPlaneSource()
+    vtk = _require_vtk()
+    plane = vtk.vtkPlaneSource()
     plane.SetOrigin(-width / 2, -height / 2, 0)
     plane.SetPoint1(width / 2, -height / 2, 0)
     plane.SetPoint2(-width / 2, height / 2, 0)
     plane.SetResolution(1, 1)
 
-    mapper = vtkPolyDataMapper()
+    mapper = vtk.vtkPolyDataMapper()
     mapper.SetInputConnection(plane.GetOutputPort())
 
-    actor = vtkActor()
+    actor = vtk.vtkActor()
     actor.SetMapper(mapper)
-    colors = vtkNamedColors()
+    colors = vtk.vtkNamedColors()
     actor.GetProperty().SetColor(colors.GetColor3d("SeaGreen"))
     actor.GetProperty().SetOpacity(0.4)
     return actor
@@ -60,8 +95,9 @@ def _create_box_actor(
     color_name: str = "Gold",
 ) -> vtkActor:
     """Create a simple hexahedron (box) actor at (cx, cy, cz)."""
+    vtk = _require_vtk()
     half = size / 2.0
-    points = vtkPoints()
+    points = vtk.vtkPoints()
     coords = [
         (cx - half, cy - half, cz - half),
         (cx + half, cy - half, cz - half),
@@ -75,23 +111,23 @@ def _create_box_actor(
     for x, y, z in coords:
         points.InsertNextPoint(x, y, z)
 
-    hexa = vtkHexahedron()
+    hexa = vtk.vtkHexahedron()
     for i in range(8):
         hexa.GetPointIds().SetId(i, i)
 
-    cells = vtkCellArray()
+    cells = vtk.vtkCellArray()
     cells.InsertNextCell(hexa)
 
-    grid = vtkUnstructuredGrid()
+    grid = vtk.vtkUnstructuredGrid()
     grid.SetPoints(points)
-    grid.SetCells(VTK_HEXAHEDRON, cells)
+    grid.SetCells(vtk.VTK_HEXAHEDRON, cells)
 
-    mapper = vtkDataSetMapper()
+    mapper = vtk.vtkDataSetMapper()
     mapper.SetInputData(grid)
 
-    actor = vtkActor()
+    actor = vtk.vtkActor()
     actor.SetMapper(mapper)
-    colors = vtkNamedColors()
+    colors = vtk.vtkNamedColors()
     actor.GetProperty().SetColor(colors.GetColor3d(color_name))
     actor.GetProperty().SetOpacity(0.8)
     return actor
@@ -104,7 +140,8 @@ def build_3d_scene(
     board_height: float = 100.0,
 ) -> vtkRenderer:
     """Build a VTK renderer with board plane and footprint boxes."""
-    renderer = vtkRenderer()
+    vtk = _require_vtk()
+    renderer = vtk.vtkRenderer()
     renderer.SetBackground(0.1, 0.1, 0.15)
 
     # Board plane
@@ -148,14 +185,15 @@ def create_vtk_interactor(
     renderer: vtkRenderer,
 ) -> vtkRenderWindowInteractor:
     """Create a standalone VTK interactor (for testing without Qt)."""
-    render_window = vtkRenderWindow()
+    vtk = _require_vtk()
+    render_window = vtk.vtkRenderWindow()
     render_window.AddRenderer(renderer)
     render_window.SetSize(800, 600)
     render_window.SetWindowName("AI Probe Router 3D Preview")
 
-    interactor = vtkRenderWindowInteractor()
+    interactor = vtk.vtkRenderWindowInteractor()
     interactor.SetRenderWindow(render_window)
-    interactor.SetInteractorStyle(vtkInteractorStyleTrackballCamera())
+    interactor.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
     return interactor
 
 
@@ -170,7 +208,8 @@ class Vtk3DView:
     """
 
     def __init__(self) -> None:
-        self.renderer = vtkRenderer()
+        vtk = _require_vtk()
+        self.renderer = vtk.vtkRenderer()
         self.renderer.SetBackground(0.1, 0.1, 0.15)
         self._board_actor: vtkActor | None = None
         self._footprint_actors: list[vtkActor] = []

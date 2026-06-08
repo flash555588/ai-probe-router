@@ -189,3 +189,33 @@ def test_validate_with_testpoints(runner: CliRunner, tmp_path: Path):
     result = runner.invoke(main, ["validate", str(pcb_path)])
     assert result.exit_code == 0, result.output
     assert "pass constraint checks" in result.output.lower()
+
+
+def test_plugin_shell_no_3d_flag_disables_3d(runner: CliRunner, tmp_path: Path, monkeypatch):
+    from ai_probe_router.ui import plugin_shell
+
+    captured = {}
+
+    class FakeShell:
+        def __init__(self, output_dir, step_path=None, enable_3d=True):
+            captured["output_dir"] = output_dir
+            captured["step_path"] = step_path
+            captured["enable_3d"] = enable_3d
+
+        def load_reports(self):
+            captured["loaded"] = True
+
+        def run(self):
+            captured["ran"] = True
+            return 0
+
+    monkeypatch.setattr(plugin_shell, "KiCadPluginShell", FakeShell)
+
+    result = runner.invoke(main, ["plugin-shell", str(tmp_path), "--no-3d"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["output_dir"] == tmp_path
+    assert captured["step_path"] is None
+    assert captured["enable_3d"] is False
+    assert captured["loaded"]
+    assert captured["ran"]

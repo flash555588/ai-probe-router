@@ -1,6 +1,9 @@
 """Tests for STEP scene loader with fallback rendering."""
 
+import importlib.util
 from pathlib import Path
+
+import pytest
 
 from ai_probe_router.ui.step_scene_loader import (
     LoadedScene,
@@ -26,6 +29,7 @@ class TestStepSceneLoader:
         assert scene.backend == "fallback"
         assert any(i.code == "STEP_FILE_NOT_FOUND" for i in scene.issues)
 
+    @pytest.mark.skipif(importlib.util.find_spec("vtkmodules") is None, reason="vtk not installed")
     def test_fallback_board_builds_actor(self):
         loader = StepSceneLoader()
         scene = loader.build_fallback_board(100.0, 80.0, 1.6)
