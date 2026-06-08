@@ -39,6 +39,16 @@ class ResourceAllocatorConfig:
     connector_allocation_strategy: str = "minimize_spread"
     allow_partial_allocation: bool = False
 
+@dataclass
+class ModuleFootprintPreviewConfig:
+    enable: bool = False
+    mode: str = "preview"          # preview | emit_candidate
+    write_candidate_pcb: bool = False
+    block_on_collision: bool = True
+    block_on_missing_footprint: bool = False
+    block_on_keepout_violation: bool = True
+    candidate_suffix: str = ".module-preview"
+
 
 @dataclass
 class ProjectConfig:
@@ -58,7 +68,12 @@ class ProjectConfig:
     protection: ProtectionRules = field(default_factory=ProtectionRules)
     mcu_profile: McuProfile | None = None
     impedance_control: ImpedanceControl = field(default_factory=ImpedanceControl)
-    resource_allocator: ResourceAllocatorConfig = field(default_factory=ResourceAllocatorConfig)
+    resource_allocator: ResourceAllocatorConfig = field(
+        default_factory=ResourceAllocatorConfig
+    )
+    module_footprint_preview: ModuleFootprintPreviewConfig = field(
+        default_factory=ModuleFootprintPreviewConfig
+    )
     thermal_analysis: ThermalAnalysis = field(default_factory=ThermalAnalysis)
     process_controls: ProcessControls = field(default_factory=ProcessControls)
 
@@ -288,6 +303,21 @@ def load_config(path: str | Path) -> ProjectConfig:
             if isinstance(row, dict)
         ]
 
+    mfp = raw.get("module_footprint_preview", {})
+    if isinstance(mfp, dict):
+        cfg.module_footprint_preview = ModuleFootprintPreviewConfig(
+            enable=bool(mfp.get("enable", False)),
+            mode=str(mfp.get("mode", "preview")),
+            write_candidate_pcb=bool(mfp.get("write_candidate_pcb", False)),
+            block_on_collision=bool(mfp.get("block_on_collision", True)),
+            block_on_missing_footprint=bool(
+                mfp.get("block_on_missing_footprint", False)
+            ),
+            block_on_keepout_violation=bool(
+                mfp.get("block_on_keepout_violation", True)
+            ),
+            candidate_suffix=str(mfp.get("candidate_suffix", ".module-preview")),
+        )
     return cfg
 
 
