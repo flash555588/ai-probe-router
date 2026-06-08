@@ -51,6 +51,12 @@ class ModuleFootprintPreviewConfig:
 
 
 @dataclass
+class PluginShellConfig:
+    step_file: str = ""
+    enable_3d: bool = True
+    fallback_to_2d_board: bool = True
+
+@dataclass
 class ProjectConfig:
     schema_version: int = 1
     eda_tool: str = "kicad"
@@ -76,6 +82,7 @@ class ProjectConfig:
     )
     thermal_analysis: ThermalAnalysis = field(default_factory=ThermalAnalysis)
     process_controls: ProcessControls = field(default_factory=ProcessControls)
+    plugin_shell: PluginShellConfig = field(default_factory=PluginShellConfig)
     dry_run: bool = False
 
 
@@ -318,6 +325,13 @@ def load_config(path: str | Path) -> ProjectConfig:
                 mfp.get("block_on_keepout_violation", True)
             ),
             candidate_suffix=str(mfp.get("candidate_suffix", ".module-preview")),
+        )
+    ps = raw.get("plugin_shell", {})
+    if isinstance(ps, dict):
+        cfg.plugin_shell = PluginShellConfig(
+            step_file=str(ps.get("step_file", "")),
+            enable_3d=bool(ps.get("enable_3d", True)),
+            fallback_to_2d_board=bool(ps.get("fallback_to_2d_board", True)),
         )
     cfg.dry_run = bool(raw.get("dry_run", False))
     return cfg

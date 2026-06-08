@@ -192,3 +192,97 @@ class TestPipelineIntegration:
         x_back, y_back = frame.world_to_pcb(wx, wy)
         assert abs(x_back - 10.0) < 0.001
         assert abs(y_back - 20.0) < 0.001
+
+    def test_plugin_shell_config_from_yaml(self, tmp_path):
+        from ai_probe_router.config import load_config
+
+        cfg_path = tmp_path / "test.yaml"
+        cfg_path.write_text(
+            "project:\n"
+            "  board_file: board.kicad_pcb\n"
+            "nets_to_expose:\n"
+            "  - net: TEST_NET\n"
+            "    style: via\n"
+            "plugin_shell:\n"
+            "  step_file: board.step\n"
+            "  enable_3d: true\n",
+            encoding="utf-8",
+        )
+        cfg = load_config(cfg_path)
+        assert cfg.plugin_shell.step_file == "board.step"
+        assert cfg.plugin_shell.enable_3d is True
+        assert cfg.plugin_shell.fallback_to_2d_board is True
+    def test_plugin_report_model_joins_all_reports(self, tmp_path):
+        fp_data = {
+            "schema_version": 1,
+            "ok": True,
+            "has_warnings": False,
+            "planned_footprints": [
+                {
+                    "module_name": "test_mod",
+                    "reference": "U1",
+                    "footprint": "fp",
+                    "x_mm": 10.0,
+                    "y_mm": 20.0,
+                    "rotation_deg": 0.0,
+                    "side": "top",
+                }
+            ],
+            "issues": [],
+        }
+        ra_data = {
+            "schema_version": 1,
+            "ok": True,
+            "bus_result": {
+                "assignments": [
+                    {
+                        "bus_type": "i2c",
+                        "bus_id": 1,
+                        "module_name": "test_mod",
+                        "instance_id": "U1",
+                        "address": "0x50",
+                    }
+                ]
+            },
+            "power_result": {"domains": []},
+            "warnings": [],
+            "errors": [],
+        }
+        rd_data = {
+            "verdict": "PASS",
+            "run_id": "APR-PIPELINE",
+            "blockers": [],
+            "warnings": [],
+        }
+        _write_json(tmp_path, "footprint_preview_report.json", fp_data)
+        _write_json(tmp_path, "resource_allocation_report.json", ra_data)
+        _write_json(tmp_path, "readiness_report.json", rd_data)
+
+        reports = load_all_reports(tmp_path)
+        from ai_probe_router.ui.report_model import PluginReportModel
+
+        model = PluginReportModel(reports)
+        summary = model.module_summary("test_mod", "U1")
+        assert summary.footprint == "fp"
+        assert summary.reference == "U1"
+        assert len(summary.resource_assignments) == 1
+        assert summary.resource_assignments[0]["bus_type"] == "i2c"
+
+    def test_step_scene_loader_fallback_on_missing_file(self, tmp_path):
+        from ai_probe_router.ui.step_scene_loader import StepSceneLoader
+
+        loader = StepSceneLoader()
+        scene = loader.load(tmp_path / "missing.step")
+        assert not scene.ok
+        assert scene.backend == "fallback"
+        assert any(i.code == "STEP_FILE_NOT_FOUND" for i in scene.issues)
+
+    def test_severity_filter_state_in_pipeline(self):
+        from ai_probe_router.ui.severity_filter import SeverityFilterState
+
+        state = SeverityFilterState(
+            show_error=True, show_warning=False, show_info=False
+        )
+        assert state.allows("error")
+        assert not state.allows("warning")
+        assert not state.allows("info")

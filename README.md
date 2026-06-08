@@ -54,8 +54,14 @@ apr generate examples/full_config.yaml -d examples/minimal_project
 apr validate path/to/board.kicad_pcb
 ```
 
-## Configuration
+### Launch plugin shell (3D preview)
 
+```bash
+apr plugin-shell output/
+apr plugin-shell output/ --step 3D_PCB1.step
+```
+
+## Configuration
 Define your probe requirements in a YAML file:
 
 ```yaml

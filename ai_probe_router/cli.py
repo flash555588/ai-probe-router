@@ -260,5 +260,23 @@ def review(sch_file: str, pcb: str | None, mcu: str | None):
     )
 
 
+@main.command()
+@click.argument("output_dir", type=click.Path(exists=True), default="output")
+@click.option("--step", type=click.Path(exists=False), default=None,
+              help="Optional STEP file for 3D board view")
+@click.option("--no-3d", is_flag=True, default=False,
+              help="Disable 3D view (tables only)")
+def plugin_shell(output_dir: str, step: str | None, no_3d: bool):
+    """Launch the KiCad plugin shell GUI."""
+    from pathlib import Path
+
+    from ai_probe_router.ui.plugin_shell import KiCadPluginShell
+
+    step_path = Path(step) if step else None
+    shell = KiCadPluginShell(Path(output_dir), step_path=step_path)
+    shell.load_reports()
+    return shell.run()
+
+
 if __name__ == "__main__":
     main()

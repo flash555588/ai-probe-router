@@ -250,3 +250,30 @@ class Vtk3DView:
             self.renderer.RemoveActor(actor)
         self._footprint_actors.clear()
         self.actor_metadata.clear()
+
+    def install_picker(self, interactor) -> None:
+        """Install a prop picker on the interactor for click-to-inspect."""
+        from vtkmodules.vtkRenderingCore import vtkPropPicker
+
+        picker = vtkPropPicker()
+        interactor.AddObserver(
+            "LeftButtonPressEvent",
+            lambda obj, event: self._on_pick(obj, event, picker),
+        )
+
+    def _on_pick(self, obj, event, picker) -> None:
+        """Handle pick event: map actor to metadata and invoke callback."""
+        interactor = obj
+        click_pos = interactor.GetEventPosition()
+        picker.Pick(click_pos[0], click_pos[1], 0, self.renderer)
+        actor = picker.GetActor()
+        if actor is None:
+            return
+        meta = self.actor_metadata.get(id(actor))
+        if meta is None:
+            return
+        if self._selection_callback is not None:
+            self._selection_callback(
+                meta.get("module_name", ""),
+                meta.get("reference", ""),
+            )

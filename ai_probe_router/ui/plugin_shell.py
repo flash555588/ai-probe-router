@@ -452,6 +452,9 @@ class KiCadPluginShell:
             self._vtk_widget.GetRenderWindow().AddRenderer(
                 self._vtk_view.get_renderer()
             )
+            self._vtk_view.install_picker(
+                self._vtk_widget.GetRenderWindow().GetInteractor()
+            )
 
         self._vtk_view.clear_overlays()
 
