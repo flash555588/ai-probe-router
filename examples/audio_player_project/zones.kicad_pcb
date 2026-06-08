@@ -1,0 +1,40 @@
+  ;; === Auto-generated placement zones (Digital/Analog split) ===
+  (zone (net 0) (net_name "") (layers "*.Cu") (tstamp "digital_region")
+    (name "Digital_Region")
+    (hatch edge 0.5)
+    (connect_pads no)
+    (min_thickness 0.15)
+    (keepout (tracks not_allowed) (vias not_allowed) (pads not_allowed) (copperpour not_allowed) (footprints not_allowed))
+    (fill yes (thermal_gap 0.5) (thermal_bridge_width 0.5))
+    (polygon
+      (pts
+        (xy 0.0 22.5) (xy 75.0 22.5) (xy 75.0 45.0) (xy 0.0 45.0)
+      )
+    )
+  )
+  (zone (net 0) (net_name "") (layers "*.Cu") (tstamp "analog_region")
+    (name "Analog_Region")
+    (hatch edge 0.5)
+    (connect_pads no)
+    (min_thickness 0.15)
+    (keepout (tracks not_allowed) (vias not_allowed) (pads not_allowed) (copperpour not_allowed) (footprints not_allowed))
+    (fill yes (thermal_gap 0.5) (thermal_bridge_width 0.5))
+    (polygon
+      (pts
+        (xy 0.0 0.0) (xy 75.0 0.0) (xy 75.0 22.5) (xy 0.0 22.5)
+      )
+    )
+  )
+  (zone (net 0) (net_name "") (layers "F.Cu") (tstamp "isolation_gap")
+    (name "Isolation_Gap")
+    (hatch edge 0.5)
+    (connect_pads no)
+    (min_thickness 0.15)
+    (keepout (tracks not_allowed) (vias not_allowed) (pads not_allowed) (copperpour not_allowed) (footprints not_allowed))
+    (fill yes (thermal_gap 0.5) (thermal_bridge_width 0.5))
+    (polygon
+      (pts
+        (xy 0.0 21.0) (xy 75.0 21.0) (xy 75.0 24.0) (xy 0.0 24.0)
+      )
+    )
+  )
