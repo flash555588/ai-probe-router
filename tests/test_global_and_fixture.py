@@ -1,12 +1,15 @@
 """Tests for global placement and fixture design."""
-
 from pathlib import Path
+
+import pytest
 
 from ai_probe_router.models.board import Board, Footprint, Pad
 from ai_probe_router.models.fixture_layout import DutPlacement, FixtureLayout
 from ai_probe_router.models.probe import ProbeConfig, ProbeRequirement
 from ai_probe_router.solvers.fixture_design import design_fixture
 from ai_probe_router.solvers.global_placement import solve_global_placement
+
+_ortools = pytest.importorskip("ortools", reason="ortools not installed")
 
 
 def test_global_placement_basic():

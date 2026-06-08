@@ -1,13 +1,17 @@
 """Verify manufacturing output files are generated correctly."""
-
 import shutil
 from pathlib import Path
 
+import pytest
+
 from ai_probe_router.config import load_config
+from ai_probe_router.eda_adapters.kicad.cli_runner import find_kicad_cli
 from ai_probe_router.engine import run
 
 
 def test_manufacturing_files_generated(tmp_path):
+    if find_kicad_cli() is None:
+        pytest.skip("KiCad CLI not available")
     repo_root = Path(__file__).parent.parent
     examples = repo_root / "examples"
     config_src = examples / "iot_sensor_node_advanced_config.yaml"
