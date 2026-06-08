@@ -29,6 +29,7 @@ from .readiness_report import (
     ReadinessIssue,
     ReadinessReport,
     generate_readiness_report,
+    readiness_exit_code,
 )
 from .report import CoverageReport, NetCoverage
 from .routing_feasibility_report import RoutingFeasibilityReport
@@ -57,6 +58,7 @@ __all__ = [
     "generate_design_process_report",
     "generate_readiness_report",
     "read_prior_manifest",
+    "readiness_exit_code",
     "validate_module_library",
     "write_decision_manifest",
 ]

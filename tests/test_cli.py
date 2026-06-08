@@ -9,6 +9,9 @@ import pytest
 from click.testing import CliRunner
 
 from ai_probe_router.cli import main
+from ai_probe_router.models.net import NetRole
+from ai_probe_router.verification.readiness_report import ReadinessReport
+from ai_probe_router.verification.report import CoverageReport, NetCoverage
 
 
 @pytest.fixture
@@ -89,8 +92,9 @@ nets_to_expose:
     cfg_path.write_text(config, encoding="utf-8")
 
     result = runner.invoke(main, ["generate", str(cfg_path), "-d", str(dst)])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 2, result.output
     assert "Coverage:" in result.output
+    assert "Readiness: PASS_WITH_REVIEW" in result.output
     assert "GND" in result.output
     assert "SWDIO" in result.output
 
@@ -98,6 +102,7 @@ nets_to_expose:
     assert out_dir.exists()
     assert (out_dir / "main.kicad_pcb").exists()
     assert (out_dir / "testpoint_report.txt").exists()
+    assert (out_dir / "readiness_report.json").exists()
 
 
 def test_generate_no_sch(runner: CliRunner, tmp_path: Path):
@@ -131,7 +136,7 @@ nets_to_expose:
     cfg_path.write_text(config, encoding="utf-8")
 
     result = runner.invoke(main, ["generate", str(cfg_path), "-d", str(dst)])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 2, result.output
     assert "Coverage:" in result.output
 
 
@@ -189,3 +194,78 @@ def test_validate_with_testpoints(runner: CliRunner, tmp_path: Path):
     result = runner.invoke(main, ["validate", str(pcb_path)])
     assert result.exit_code == 0, result.output
     assert "pass constraint checks" in result.output.lower()
+
+
+def test_generate_exit_code_matrix(runner: CliRunner, tmp_path: Path, monkeypatch):
+    for verdict, expected in (
+        ("PASS", 0),
+        ("PASS_WITH_REVIEW", 2),
+        ("BLOCKED", 3),
+    ):
+        project = tmp_path / verdict.lower()
+        project.mkdir()
+        cfg_path = project / "config.yaml"
+        cfg_path.write_text(_minimal_config(), encoding="utf-8")
+
+        def fake_run(_cfg, project_dir, verdict=verdict):
+            out_dir = Path(project_dir) / "output"
+            out_dir.mkdir()
+            ReadinessReport(run_id="APR-CLI", verdict=verdict).write_json(
+                out_dir / "readiness_report.json",
+            )
+            coverage = CoverageReport(
+                total_nets_requested=1,
+                covered=1,
+                entries=[
+                    NetCoverage("GND", NetRole.GROUND, True, True),
+                ],
+            )
+            return coverage, None
+
+        monkeypatch.setattr("ai_probe_router.cli.run", fake_run)
+
+        result = runner.invoke(main, ["generate", str(cfg_path), "-d", str(project)])
+
+        assert result.exit_code == expected, result.output
+        assert f"Readiness: {verdict}" in result.output
+
+
+def test_generate_strict_blocks_process_warnings(runner: CliRunner, tmp_path: Path):
+    src_dir = Path(__file__).parent.parent / "examples" / "minimal_project"
+    dst = tmp_path / "project"
+    dst.mkdir()
+    shutil.copy(src_dir / "main.kicad_pcb", dst / "main.kicad_pcb")
+    shutil.copy(src_dir / "main.kicad_sch", dst / "main.kicad_sch")
+
+    cfg_path = dst / "config.yaml"
+    cfg_path.write_text(_minimal_config(), encoding="utf-8")
+
+    result = runner.invoke(main, ["generate", str(cfg_path), "-d", str(dst), "--strict"])
+
+    assert result.exit_code == 3, result.output
+    assert "Strict readiness:" in result.output
+    assert "Readiness: BLOCKED" in result.output
+
+
+def _minimal_config() -> str:
+    return """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: false
+  require_fiducials: false
+  require_tooling_holes: false
+
+nets_to_expose:
+  - net: GND
+    role: ground
+    required: true
+"""

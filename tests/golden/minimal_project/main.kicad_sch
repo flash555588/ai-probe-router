@@ -1,0 +1,460 @@
+(kicad_sch
+  (version 20231120)
+  (generator "eeschema")
+  (generator_version "8.0")
+  (uuid "UUID")
+  (paper "A4")
+  (lib_symbols
+    (symbol "MCU_ST_STM32F1:STM32F103C8Tx"
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "U"
+        (at -10.16 13.97 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "STM32F103C8Tx"
+        (at 0 0 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "STM32F103C8Tx_0_1"
+        (rectangle
+          (start -12.7 15.24)
+          (end 12.7 -15.24)
+          (stroke (width 0.254) (type default))
+          (fill
+            (type background)
+          )
+        )
+      )
+      (symbol "STM32F103C8Tx_1_1"
+        (pin passive line
+          (at -15.24 6.35 0)
+          (length 2.54)
+          (name "NRST"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -15.24 3.81 0)
+          (length 2.54)
+          (name "SWDIO"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "7"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -15.24 1.27 0)
+          (length 2.54)
+          (name "UART_TX"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "8"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at -15.24 -1.27 0)
+          (length 2.54)
+          (name "UART_RX"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "9"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin passive line
+          (at 15.24 3.81 180)
+          (length 2.54)
+          (name "SWCLK"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "34"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 -17.78 90)
+          (length 2.54)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "24"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+        (pin power_in line
+          (at 0 17.78 270)
+          (length 2.54)
+          (name "VDD"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "48"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "power:GND"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "GND"
+        (at 0 -1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "GND_0_1"
+        (polyline
+          (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
+      (symbol "GND_1_1"
+        (pin power_in line
+          (at 0 0 270)
+          (length 0)
+          (name "GND"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "power:+3.3V"
+      (power)
+      (pin_numbers hide)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "#PWR"
+        (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "+3.3V"
+        (at 0 1.27 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (symbol "+3.3V_0_1"
+        (polyline
+          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 0) (xy 0 2.54))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+        (polyline
+          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (stroke (width 0) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
+      (symbol "+3.3V_1_1"
+        (pin power_in line
+          (at 0 0 90)
+          (length 0)
+          (name "+3.3V"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+    (symbol "Connector:TestPoint"
+      (pin_names
+        (offset 0.762) hide
+      )
+      (in_bom yes)
+      (on_board yes)
+      (symbol "TestPoint_0_1"
+        (circle
+          (center 0 -1.27)
+          (radius 0.635)
+          (stroke (width 0.1524) (type default))
+          (fill
+            (type none)
+          )
+        )
+      )
+      (symbol "TestPoint_1_1"
+        (pin passive line
+          (at 0 0 90)
+          (length 0)
+          (name "1"
+            (effects (font (size 1.27 1.27)))
+          )
+          (number "1"
+            (effects (font (size 1.27 1.27)))
+          )
+        )
+      )
+    )
+  )
+  (symbol
+    (lib_id "MCU_ST_STM32F1:STM32F103C8Tx")
+    (at 100 100 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "abc-123-def-456")
+    (property "Reference" "U1"
+      (at 88.9 113.97 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "STM32F103C8Tx"
+      (at 88.9 111.43 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (pin "1"
+      (uuid "UUID")
+    )
+    (pin "7"
+      (uuid "UUID")
+    )
+    (pin "8"
+      (uuid "UUID")
+    )
+    (pin "9"
+      (uuid "UUID")
+    )
+    (pin "24"
+      (uuid "UUID")
+    )
+    (pin "34"
+      (uuid "UUID")
+    )
+    (pin "48"
+      (uuid "UUID")
+    )
+  )
+  (symbol
+    (lib_id "power:GND")
+    (at 100 120 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "gnd-001-0000-0000-000000000001")
+    (property "Reference" "#PWR01"
+      (at 100 123.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND"
+      (at 100 121.27 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid "UUID")
+    )
+  )
+  (symbol
+    (lib_id "power:+3.3V")
+    (at 100 80 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "pwr-001-0000-0000-000000000001")
+    (property "Reference" "#PWR02"
+      (at 100 83.81 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+3.3V"
+      (at 100 78.73 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid "UUID")
+    )
+  )
+  (wire
+    (pts (xy 84.76 106.35) (xy 80 106.35))
+    (stroke (width 0) (type default))
+    (uuid "w0000001-0001-0001-0001-000000000001")
+  )
+  (wire
+    (pts (xy 84.76 103.81) (xy 80 103.81))
+    (stroke (width 0) (type default))
+    (uuid "w0000001-0001-0001-0001-000000000002")
+  )
+  (wire
+    (pts (xy 84.76 101.27) (xy 80 101.27))
+    (stroke (width 0) (type default))
+    (uuid "w0000001-0001-0001-0001-000000000003")
+  )
+  (wire
+    (pts (xy 84.76 98.73) (xy 80 98.73))
+    (stroke (width 0) (type default))
+    (uuid "w0000001-0001-0001-0001-000000000004")
+  )
+  (wire
+    (pts (xy 115.24 103.81) (xy 120 103.81))
+    (stroke (width 0) (type default))
+    (uuid "w0000001-0001-0001-0001-000000000005")
+  )
+  (wire
+    (pts (xy 100 117.78) (xy 100 120))
+    (stroke (width 0) (type default))
+    (uuid "w0000001-0001-0001-0001-000000000006")
+  )
+  (wire
+    (pts (xy 100 82.22) (xy 100 80))
+    (stroke (width 0) (type default))
+    (uuid "w0000001-0001-0001-0001-000000000007")
+  )
+  (global_label "NRST"
+    (shape input)
+    (at 80 106.35 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "gl000001-0001-0001-0001-000000000001")
+  )
+  (global_label "SWDIO"
+    (shape input)
+    (at 80 103.81 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "gl000001-0001-0001-0001-000000000002")
+  )
+  (global_label "UART_TX"
+    (shape input)
+    (at 80 101.27 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "gl000001-0001-0001-0001-000000000003")
+  )
+  (global_label "UART_RX"
+    (shape input)
+    (at 80 98.73 180)
+    (effects (font (size 1.27 1.27)) (justify right))
+    (uuid "gl000001-0001-0001-0001-000000000004")
+  )
+  (global_label "SWCLK"
+    (shape input)
+    (at 120 103.81 0)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid "gl000001-0001-0001-0001-000000000005")
+  )
+  (global_label "GND"
+    (shape input)
+    (at 100 120 270)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid "gl000001-0001-0001-0001-000000000006")
+  )
+  (global_label "3V3"
+    (shape input)
+    (at 100 80 90)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid "gl000001-0001-0001-0001-000000000007")
+  )
+  (symbol
+    (lib_id "Connector:TestPoint")
+    (at 105.08 120.0 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (property "PROBE_ROLE" ground
+      (at 107.62 117.46 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "TEST_REQUIRED" yes
+      (at 107.62 116.19 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "ACCESS_SIDE" top
+      (at 107.62 113.64999999999999 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (uuid "UUID")
+    (property "Reference" "TP1"
+      (at 106.35 118.73 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Value" "TP_GND"
+      (at 106.35 121.27 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid "UUID")
+    )
+  )
+  (wire
+    (pts (xy 105.08 120.0) (xy 105.08 122.54))
+    (stroke (width 0) (type default))
+    (uuid "UUID")
+  )
+  (label "GND"
+    (at 105.08 122.54 0)
+    (effects (font (size 1.27 1.27)))
+    (uuid "UUID")
+  )
+  (symbol
+    (lib_id "Connector:TestPoint")
+    (at 85.08 103.81 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (property "PROBE_ROLE" debug
+      (at 87.62 101.27 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "TEST_REQUIRED" yes
+      (at 87.62 100.0 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "ACCESS_SIDE" top
+      (at 87.62 97.46 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (uuid "UUID")
+    (property "Reference" "TP2"
+      (at 86.35 102.54 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Value" "TP_SWDIO"
+      (at 86.35 105.08 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin "1"
+      (uuid "UUID")
+    )
+  )
+  (wire
+    (pts (xy 85.08 103.81) (xy 85.08 106.35000000000001))
+    (stroke (width 0) (type default))
+    (uuid "UUID")
+  )
+  (label "SWDIO"
+    (at 85.08 106.35000000000001 0)
+    (effects (font (size 1.27 1.27)))
+    (uuid "UUID")
+  )
+)

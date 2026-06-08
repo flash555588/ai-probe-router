@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import click
@@ -27,14 +28,19 @@ def main():
 @click.argument("config_file", type=click.Path(exists=True))
 @click.option("--project-dir", "-d", type=click.Path(exists=True), default=".",
               help="KiCad project directory")
-def generate(config_file: str, project_dir: str):
+@click.option("--strict", is_flag=True, help="Exit 0 only when readiness is PASS")
+def generate(config_file: str, project_dir: str, strict: bool):
     """Generate testpoints from a YAML config."""
     cfg = load_config(config_file)
+    if strict:
+        cfg.process_controls.strict_signoff = True
     console.print(f"[bold]Loading config:[/] {config_file}")
     console.print(f"[bold]Project dir:[/]   {project_dir}")
     console.print(f"[bold]Schematic:[/]     {cfg.schematic_file}")
     console.print(f"[bold]PCB:[/]           {cfg.board_file}")
     console.print(f"[bold]Nets to expose:[/] {len(cfg.nets_to_expose)}")
+    if strict:
+        console.print("[bold]Strict readiness:[/] enabled")
     console.print()
 
     report, pin_report = run(cfg, project_dir)
@@ -100,7 +106,32 @@ def generate(config_file: str, project_dir: str):
         console.print(f"Constraints: {s}")
         for msg in report.constraint_messages:
             console.print(f"  [dim]- {msg}[/]")
-    console.print(f"\nOutput written to: {Path(project_dir) / 'output'}")
+    out_dir = Path(project_dir) / "output"
+    readiness_path = out_dir / "readiness_report.json"
+    exit_code = _read_readiness_exit_code(readiness_path)
+    if readiness_path.exists():
+        verdict = _read_readiness_verdict(readiness_path)
+        console.print(f"Readiness: {verdict}")
+    else:
+        console.print("[red]Readiness JSON was not written.[/]")
+    console.print(f"\nOutput written to: {out_dir}")
+    click.get_current_context().exit(exit_code)
+
+
+def _read_readiness_exit_code(path: Path) -> int:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return int(raw.get("exit_code", 1))
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return 1
+
+
+def _read_readiness_verdict(path: Path) -> str:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return "UNKNOWN"
+    return str(raw.get("verdict", "UNKNOWN"))
 
 
 @main.command()

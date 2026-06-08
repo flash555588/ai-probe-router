@@ -1,0 +1,196 @@
+{
+  "artifacts": [
+    {
+      "path": "design_process_report.txt",
+      "sha1": "SHA1",
+      "size_bytes": 1778
+    },
+    {
+      "path": "design_review_report.txt",
+      "sha1": "SHA1",
+      "size_bytes": 374
+    },
+    {
+      "path": "diff_pair_skew_report.txt",
+      "sha1": "SHA1",
+      "size_bytes": 222
+    },
+    {
+      "path": "main.kicad_pcb",
+      "sha1": "SHA1",
+      "size_bytes": 5017
+    },
+    {
+      "path": "main.kicad_sch",
+      "sha1": "SHA1",
+      "size_bytes": 11857
+    },
+    {
+      "path": "manufacturing_report.txt",
+      "sha1": "SHA1",
+      "size_bytes": 599
+    },
+    {
+      "path": "readiness_report.json",
+      "sha1": "SHA1",
+      "size_bytes": 767
+    },
+    {
+      "path": "readiness_report.txt",
+      "sha1": "SHA1",
+      "size_bytes": 820
+    },
+    {
+      "path": "routing.dsn",
+      "sha1": "SHA1",
+      "size_bytes": 1561
+    },
+    {
+      "path": "testpoint_report.txt",
+      "sha1": "SHA1",
+      "size_bytes": 1115
+    }
+  ],
+  "change_summary": {
+    "previous_run_id": "",
+    "status": "no_prior_manifest"
+  },
+  "coverage": {
+    "coverage_pct": 100.0,
+    "covered": 2,
+    "drc_ok": null,
+    "erc_ok": null,
+    "missing": 0,
+    "requested": 2,
+    "routing_ok": true
+  },
+  "manifest_version": 1,
+  "module_compatibility": {
+    "errors": [],
+    "rows": 0,
+    "warnings": []
+  },
+  "module_selection": {
+    "errors": [],
+    "selected": [],
+    "warnings": []
+  },
+  "modules": [],
+  "process": {
+    "issues": [
+      {
+        "issue_id": "power_scope_basic",
+        "message": "No advanced PI risks found",
+        "recommendation": "",
+        "severity": "info",
+        "source": "power_integrity",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "dfm_exports_advisory",
+        "message": "Manufacturing export completeness is advisory; strict export gate is disabled",
+        "recommendation": "",
+        "severity": "info",
+        "source": "manufacturing_dfm",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "fixture_fiducials_not_required",
+        "message": "Probe fixture alignment fiducials are not required by config",
+        "recommendation": "Require fiducials for repeatable pogo/bed-of-nails alignment.",
+        "severity": "warning",
+        "source": "fixture_realism",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "fixture_tooling_not_required",
+        "message": "Fixture tooling holes are not required by config",
+        "recommendation": "Require tooling holes or document the alternate mechanical datum.",
+        "severity": "warning",
+        "source": "fixture_realism",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "module_library_not_used",
+        "message": "No modules used",
+        "recommendation": "",
+        "severity": "info",
+        "source": "library_governance",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "waiver_registry_empty",
+        "message": "No process waivers were configured for this run",
+        "recommendation": "",
+        "severity": "info",
+        "source": "human_override",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "no_prior_manifest",
+        "message": "No previous decision manifest found; this run becomes the diff baseline",
+        "recommendation": "",
+        "severity": "info",
+        "source": "incremental_diff",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "scalability_budget_ok",
+        "message": "Size thresholds are OK",
+        "recommendation": "",
+        "severity": "info",
+        "source": "scalability",
+        "status": "open",
+        "waiver_id": ""
+      },
+      {
+        "issue_id": "autorouter_feedback_missing",
+        "message": "not available in golden test",
+        "recommendation": "Install/configure FreeRouting or review DSN/SES handoff manually.",
+        "severity": "warning",
+        "source": "autorouter_feedback",
+        "status": "open",
+        "waiver_id": ""
+      }
+    ],
+    "open_errors": 0,
+    "open_warnings": 3,
+    "waived": 0
+  },
+  "project": {
+    "board_file": "main.kicad_pcb",
+    "eda_tool": "kicad",
+    "schema_version": 1,
+    "schematic_file": "main.kicad_sch"
+  },
+  "readiness": {
+    "blockers": 0,
+    "infos": 0,
+    "verdict": "PASS_WITH_REVIEW",
+    "warnings": 3
+  },
+  "routing": {
+    "autorouter": {
+      "dsn_path": "",
+      "duration_sec": 0.0,
+      "error": "not available in golden test",
+      "ok": false,
+      "ses_path": null
+    },
+    "corridors": []
+  },
+  "run_id": "APR-RUNID",
+  "tool_versions": {
+    "ai_probe_router": "1.0.0",
+    "platform": "PLATFORM",
+    "python": "PYTHON"
+  },
+  "waivers": []
+}

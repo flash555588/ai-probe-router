@@ -16,6 +16,7 @@ AI-assisted KiCad probe/test interface designer. Automatically generates testpoi
 - **Net class recommendations** — suggests trace width and clearance per net role
 - **DSN export** — exports Specctra/Electra DSN for FreeRouting autorouter
 - **Schema v2 module planning** - describes higher-level hardware modules such as SWD debug, GPIO expansion, and power monitoring, then selects a valid implementation from module libraries
+- **CI readiness gates** - writes `readiness_report.json` with deterministic `PASS`, `PASS_WITH_REVIEW`, and `BLOCKED` exit semantics
 
 ## Installation
 
@@ -42,11 +43,23 @@ apr inspect examples/minimal_project/main.kicad_pcb
 apr generate examples/sample_config.yaml -d examples/minimal_project
 ```
 
+### Generate with strict readiness gates
+
+```bash
+apr generate examples/sample_config.yaml -d examples/minimal_project --strict
+```
+
 ### Generate with dev board pin mapping
 
 ```bash
 apr generate examples/full_config.yaml -d examples/minimal_project
 ```
+
+## Project Documents
+
+- [Design specification](docs/design_spec.md)
+- [Project log](docs/project_log.md)
+- [Roadmap](docs/roadmap.md)
 
 ### Validate existing testpoints
 
@@ -194,7 +207,7 @@ ai_probe_router/
 
 | Command | Description |
 |---------|-------------|
-| `apr generate <config> [-d dir]` | Full pipeline: parse, place, generate, verify |
+| `apr generate <config> [-d dir] [--strict]` | Full pipeline: parse, place, generate, verify, and exit with readiness status |
 | `apr inspect <pcb_file>` | List nets with roles and pad counts |
 | `apr inspect-sch <sch_file>` | List components, labels, wires |
 | `apr validate <pcb_file>` | Validate existing testpoint placement |
@@ -226,6 +239,7 @@ Text reports, `bom_report.csv`, and generated module sheets include a determinis
 | `manufacturing_report.txt` | Manufacturing readiness summary |
 | `design_process_report.txt` | Process gaps, waivers, signoff coverage, and next actions |
 | `readiness_report.txt` | Top-level PASS, PASS_WITH_REVIEW, or BLOCKED verdict |
+| `readiness_report.json` | Machine-readable readiness verdict, issue counts, issues, run ID, and CLI exit code |
 | `decision_manifest.json` | Run ID, tool versions, decisions, waivers, artifact hashes, and diff summary |
 | `routing.dsn` | Specctra DSN for FreeRouting autorouter |
 

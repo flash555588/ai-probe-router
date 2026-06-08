@@ -162,7 +162,10 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         )
         mfg_report.write(out_dir / "manufacturing_report.txt")
         artifacts = collect_artifact_manifest(out_dir)
-        planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
+        planned_artifacts = artifact_paths(artifacts) | {
+            "decision_manifest.json",
+            "readiness_report.json",
+        }
         process_report = generate_design_process_report(
             cfg,
             run_id=run_id,
@@ -191,6 +194,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             process_report=process_report,
         )
         readiness.write(out_dir / "readiness_report.txt")
+        readiness.write_json(out_dir / "readiness_report.json")
         coverage.write(out_dir / "testpoint_report.txt")
         artifacts = collect_artifact_manifest(out_dir)
         write_decision_manifest(
@@ -358,7 +362,10 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             coverage.notes.append("Pick&Place file exported")
 
     artifacts = collect_artifact_manifest(out_dir)
-    planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
+    planned_artifacts = artifact_paths(artifacts) | {
+        "decision_manifest.json",
+        "readiness_report.json",
+    }
     process_report = generate_design_process_report(
         cfg,
         run_id=run_id,
@@ -391,6 +398,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         process_report=process_report,
     )
     readiness.write(out_dir / "readiness_report.txt")
+    readiness.write_json(out_dir / "readiness_report.json")
     artifacts = collect_artifact_manifest(out_dir)
     write_decision_manifest(
         out_dir / "decision_manifest.json",

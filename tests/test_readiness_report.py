@@ -1,7 +1,12 @@
+import json
+
 from ai_probe_router.models.module_graph import ModuleGraphResult
 from ai_probe_router.models.net import NetRole
 from ai_probe_router.verification.manufacturing_report import ManufacturingReport
-from ai_probe_router.verification.readiness_report import generate_readiness_report
+from ai_probe_router.verification.readiness_report import (
+    generate_readiness_report,
+    readiness_exit_code,
+)
 from ai_probe_router.verification.report import CoverageReport, NetCoverage
 
 
@@ -36,6 +41,35 @@ def test_readiness_accepts_explicit_run_id():
     text = report.summary_text()
     assert report.run_id == "APR-EXPLICIT"
     assert "APR-EXPLICIT" in text
+
+
+def test_readiness_json_shape_and_exit_code(tmp_path):
+    coverage = CoverageReport(run_id="APR-JSON")
+    graph = ModuleGraphResult(errors=["graph failed"])
+
+    report = generate_readiness_report(coverage, module_graph_result=graph)
+    data = report.to_dict()
+    path = tmp_path / "readiness_report.json"
+    report.write_json(path)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert data["run_id"] == "APR-JSON"
+    assert data["verdict"] == "BLOCKED"
+    assert data["counts"]["blockers"] == 1
+    assert data["issues"][0]["source"] == "module_graph"
+    assert payload["run_id"] == "APR-JSON"
+    assert payload["verdict"] == "BLOCKED"
+    assert "Verdict:   BLOCKED" in report.summary_text()
+    assert payload["counts"]["blockers"] == 1
+    assert payload["issues"][0]["source"] == "module_graph"
+    assert payload["exit_code"] == 3
+
+
+def test_readiness_exit_code_mapping():
+    assert readiness_exit_code("PASS") == 0
+    assert readiness_exit_code("PASS_WITH_REVIEW") == 2
+    assert readiness_exit_code("BLOCKED") == 3
+    assert readiness_exit_code("SOMETHING_ELSE") == 1
 
 
 def test_readiness_blocks_module_graph_error():

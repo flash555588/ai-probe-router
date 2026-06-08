@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -72,6 +73,43 @@ class ReadinessReport:
 
     def write(self, path: str | Path) -> None:
         Path(path).write_text(self.summary_text(), encoding="utf-8")
+
+    def to_dict(self) -> dict:
+        return {
+            "run_id": self.run_id,
+            "verdict": self.verdict,
+            "counts": {
+                "blockers": len(self.blockers),
+                "warnings": len(self.warnings),
+                "infos": len(self.infos),
+                "issues": len(self.issues),
+            },
+            "issues": [
+                {
+                    "severity": issue.severity,
+                    "source": issue.source,
+                    "message": issue.message,
+                }
+                for issue in self.issues
+            ],
+            "exit_code": readiness_exit_code(self.verdict),
+        }
+
+    def write_json(self, path: str | Path) -> None:
+        Path(path).write_text(
+            json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+
+def readiness_exit_code(verdict: str) -> int:
+    if verdict == "PASS":
+        return 0
+    if verdict == "PASS_WITH_REVIEW":
+        return 2
+    if verdict == "BLOCKED":
+        return 3
+    return 1
 
 
 def generate_readiness_report(

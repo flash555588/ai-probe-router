@@ -1,0 +1,28 @@
+{
+  "counts": {
+    "blockers": 0,
+    "infos": 0,
+    "issues": 3,
+    "warnings": 3
+  },
+  "exit_code": 2,
+  "issues": [
+    {
+      "message": "fixture_fiducials_not_required: Probe fixture alignment fiducials are not required by config",
+      "severity": "warning",
+      "source": "process:fixture_realism"
+    },
+    {
+      "message": "fixture_tooling_not_required: Fixture tooling holes are not required by config",
+      "severity": "warning",
+      "source": "process:fixture_realism"
+    },
+    {
+      "message": "autorouter_feedback_missing: not available in golden test",
+      "severity": "warning",
+      "source": "process:autorouter_feedback"
+    }
+  ],
+  "run_id": "APR-RUNID",
+  "verdict": "PASS_WITH_REVIEW"
+}

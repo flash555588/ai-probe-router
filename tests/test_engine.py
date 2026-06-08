@@ -250,6 +250,7 @@ functional_modules:
     assert (tmp_path / "output" / "routing_feasibility_report.txt").exists()
     assert (tmp_path / "output" / "module_placement_report.txt").exists()
     assert (tmp_path / "output" / "readiness_report.txt").exists()
+    assert (tmp_path / "output" / "readiness_report.json").exists()
     assert (tmp_path / "output" / "design_process_report.txt").exists()
     manifest = tmp_path / "output" / "decision_manifest.json"
     assert manifest.exists()
@@ -311,6 +312,8 @@ nets_to_expose:
     ).read_text(encoding="utf-8")
     readiness = (out_dir / "readiness_report.txt").read_text(encoding="utf-8")
     assert "Verdict:   BLOCKED" in readiness
+    readiness_json = (out_dir / "readiness_report.json").read_text(encoding="utf-8")
+    assert '"verdict": "BLOCKED"' in readiness_json
     assert not (out_dir / "main.kicad_pcb").exists()
     assert not (out_dir / "main.kicad_sch").exists()
 
@@ -358,5 +361,7 @@ nets_to_expose:
     readiness = (out_dir / "readiness_report.txt").read_text(encoding="utf-8")
     assert "Verdict:   BLOCKED" in readiness
     assert "module_library_preflight" in readiness
+    readiness_json = (out_dir / "readiness_report.json").read_text(encoding="utf-8")
+    assert '"exit_code": 3' in readiness_json
     assert not (out_dir / "module_report.txt").exists()
     assert not (out_dir / "main.kicad_pcb").exists()
