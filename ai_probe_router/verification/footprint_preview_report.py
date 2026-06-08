@@ -37,6 +37,7 @@ def generate_footprint_preview_text(result: FootprintPreviewResult) -> str:
 
 def generate_footprint_preview_json(result: FootprintPreviewResult) -> str:
     data = {
+        "schema_version": 1,
         "ok": result.ok,
         "has_warnings": result.has_warnings,
         "planned_footprints": [

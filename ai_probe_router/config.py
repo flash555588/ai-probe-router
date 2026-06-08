@@ -76,6 +76,7 @@ class ProjectConfig:
     )
     thermal_analysis: ThermalAnalysis = field(default_factory=ThermalAnalysis)
     process_controls: ProcessControls = field(default_factory=ProcessControls)
+    dry_run: bool = False
 
 
 def load_config(path: str | Path) -> ProjectConfig:
@@ -318,6 +319,7 @@ def load_config(path: str | Path) -> ProjectConfig:
             ),
             candidate_suffix=str(mfp.get("candidate_suffix", ".module-preview")),
         )
+    cfg.dry_run = bool(raw.get("dry_run", False))
     return cfg
 
 
