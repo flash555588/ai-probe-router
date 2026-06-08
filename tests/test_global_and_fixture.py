@@ -1,5 +1,4 @@
 """Tests for global placement and fixture design."""
-from pathlib import Path
 
 import pytest
 
@@ -37,7 +36,7 @@ def test_global_placement_basic():
     assert result.placements[0].net_name == "NET1"
 
 
-def test_fixture_design_grid():
+def test_fixture_design_grid(tmp_path):
     board = Board(footprints=[], nets={})
     layout = FixtureLayout(
         dut_count=4,
@@ -45,7 +44,8 @@ def test_fixture_design_grid():
         dut_spacing_y_mm=60.0,
         fixture_width_mm=200.0,
     )
-    result = design_fixture(board, layout, Path("/tmp"))
+    result = design_fixture(board, layout, tmp_path)
+    assert result.ok
     assert len(result.fixture_layout.dut_placements) == 4
     assert result.fixture_layout.dut_placements[0].x_mm == 30.0
     assert result.fixture_layout.dut_placements[0].y_mm == 30.0
@@ -57,7 +57,26 @@ def test_fixture_design_grid():
     assert result.fixture_layout.dut_placements[2].y_mm == 30.0
     assert result.fixture_layout.dut_placements[1].x_mm == 90.0
     assert result.fixture_layout.dut_placements[1].y_mm == 30.0
+    layout_csv = tmp_path / "fixture_layout.csv"
+    assert layout_csv.exists()
+    assert "dut_index,x_mm,y_mm" in layout_csv.read_text(encoding="utf-8")
 
+
+def test_fixture_design_reports_grid_overflow(tmp_path):
+    board = Board(footprints=[], nets={})
+    layout = FixtureLayout(
+        dut_count=5,
+        dut_spacing_x_mm=60.0,
+        dut_spacing_y_mm=60.0,
+        fixture_width_mm=120.0,
+        fixture_height_mm=100.0,
+    )
+
+    result = design_fixture(board, layout, tmp_path)
+
+    assert result.ok
+    assert result.warnings
+    assert "exceeds fixture bounds" in result.warnings[0]
 
 
 def test_fixture_layout_model():

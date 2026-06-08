@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import math
@@ -161,6 +162,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         )
         mfg_report.write(out_dir / "manufacturing_report.txt")
         artifacts = collect_artifact_manifest(out_dir)
+        planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
         process_report = generate_design_process_report(
             cfg,
             run_id=run_id,
@@ -172,7 +174,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             manufacturing_report=mfg_report,
             autoroute_result=autoroute_result,
             prior_manifest=prior_manifest,
-            generated_artifacts=artifact_paths(artifacts),
+            generated_artifacts=planned_artifacts,
         )
         process_report.write(out_dir / "design_process_report.txt")
         readiness = generate_readiness_report(
@@ -333,23 +335,8 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
                 f"Auto-route skipped: {autoroute_result.error}"
             )
 
-    # Thermal analysis export (placeholder)
     if cfg.thermal_analysis.enabled and board is not None:
-        thermal_path = out_dir / f"thermal_simulation.{cfg.thermal_analysis.output_format}"
-        lines = ["ref,x,y,net_name,role,current_ma"]
-        for fp in board.footprints:
-            if not fp.pads:
-                continue
-            pad = fp.pads[0]
-            current = 0.0
-            role_str = ""
-            for req in cfg.nets_to_expose:
-                if req.net_name == pad.net_name:
-                    current = req.current_ma
-                    role_str = req.role
-                    break
-            lines.append(f'{fp.ref},{pad.x:.2f},{pad.y:.2f},{pad.net_name},{role_str},{current}')
-        thermal_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        thermal_path = _write_thermal_analysis_export(board, cfg, out_dir)
         coverage.notes.append(
             f"Thermal simulation export: {thermal_path.name}"
         )
@@ -371,6 +358,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             coverage.notes.append("Pick&Place file exported")
 
     artifacts = collect_artifact_manifest(out_dir)
+    planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
     process_report = generate_design_process_report(
         cfg,
         run_id=run_id,
@@ -383,7 +371,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         diff_pair_report=dp_report,
         autoroute_result=autoroute_result,
         prior_manifest=prior_manifest,
-        generated_artifacts=artifact_paths(artifacts),
+        generated_artifacts=planned_artifacts,
     )
     process_report.write(out_dir / "design_process_report.txt")
     coverage.write(out_dir / "testpoint_report.txt")
@@ -421,6 +409,97 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     )
 
     return coverage, pin_report
+
+
+_THERMAL_FIELDS = [
+    "ref",
+    "pad",
+    "x",
+    "y",
+    "net_name",
+    "role",
+    "current_ma",
+    "voltage_v",
+    "estimated_power_mw",
+    "risk",
+]
+
+
+def _write_thermal_analysis_export(
+    board: Board,
+    cfg: ProjectConfig,
+    out_dir: Path,
+) -> Path:
+    output_format = cfg.thermal_analysis.output_format.lower().lstrip(".")
+    if output_format not in {"csv", "json"}:
+        output_format = "csv"
+    rows = _thermal_export_rows(board, cfg)
+    path = out_dir / f"thermal_simulation.{output_format}"
+    if output_format == "json":
+        payload = {
+            "thermal_analysis": cfg.thermal_analysis.to_dict(),
+            "rows": rows,
+        }
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    else:
+        with path.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=_THERMAL_FIELDS)
+            writer.writeheader()
+            writer.writerows(rows)
+    return path
+
+
+def _thermal_export_rows(
+    board: Board,
+    cfg: ProjectConfig,
+) -> list[dict[str, object]]:
+    reqs_by_net = {req.net_name: req for req in cfg.nets_to_expose}
+    rows: list[dict[str, object]] = []
+    for fp in board.footprints:
+        for pad in fp.pads:
+            req = reqs_by_net.get(pad.net_name)
+            current_ma = float(req.current_ma) if req is not None else 0.0
+            voltage_v = _thermal_voltage_for_net(pad.net_name, cfg)
+            estimated_power_mw = current_ma * voltage_v
+            rows.append({
+                "ref": fp.ref,
+                "pad": pad.number,
+                "x": round(pad.x, 3),
+                "y": round(pad.y, 3),
+                "net_name": pad.net_name,
+                "role": str(req.role) if req is not None else "",
+                "current_ma": round(current_ma, 3),
+                "voltage_v": round(voltage_v, 3),
+                "estimated_power_mw": round(estimated_power_mw, 3),
+                "risk": _thermal_risk(current_ma, estimated_power_mw),
+            })
+    return rows
+
+
+def _thermal_voltage_for_net(net_name: str, cfg: ProjectConfig) -> float:
+    domains = cfg.hardware_platform.target_voltage_domains
+    if not domains:
+        return 3.3
+    normalized_net = net_name.lower()
+    for domain in domains:
+        normalized_domain = domain.name.lower()
+        if normalized_domain and (
+            normalized_domain == normalized_net
+            or normalized_domain in normalized_net
+        ):
+            return domain.voltage
+    return domains[0].voltage
+
+
+def _thermal_risk(current_ma: float, estimated_power_mw: float) -> str:
+    if current_ma >= 1000.0 or estimated_power_mw >= 1000.0:
+        return "high"
+    if current_ma >= 200.0 or estimated_power_mw >= 500.0:
+        return "medium"
+    return "low"
 
 
 def _build_run_id(cfg: ProjectConfig, base: Path) -> str:

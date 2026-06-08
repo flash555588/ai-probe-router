@@ -1,5 +1,6 @@
 """Integration test: full engine pipeline."""
 
+import json
 import shutil
 from pathlib import Path
 
@@ -167,6 +168,53 @@ protection:
     assert "PROBE_SWDIO" in out_pcb
     assert "PROBE_NRST" in out_pcb
     assert "PROBE_GND" not in out_pcb
+
+
+def test_engine_writes_json_thermal_export(tmp_path):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+
+    config_yaml = """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+hardware_platform:
+  target_voltage_domains:
+    - name: 3V3
+      voltage: 3.3
+
+probe_interface:
+  type: test_pad
+
+nets_to_expose:
+  - net: 3V3
+    role: power
+    current_ma: 250
+
+thermal_analysis:
+  enabled: true
+  output_format: json
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+    cfg = load_config(tmp_path / "config.yaml")
+
+    run(cfg, tmp_path)
+
+    thermal_path = tmp_path / "output" / "thermal_simulation.json"
+    payload = json.loads(thermal_path.read_text(encoding="utf-8"))
+    assert payload["thermal_analysis"]["enabled"]
+    assert any(row["net_name"] == "3V3" for row in payload["rows"])
+    row = next(row for row in payload["rows"] if row["net_name"] == "3V3")
+    assert row["estimated_power_mw"] == 825.0
+    assert row["risk"] == "medium"
 
 
 def test_engine_writes_module_report_for_schema_v2(tmp_path):
