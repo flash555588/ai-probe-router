@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-
+from functools import cached_property
 
 @dataclass
 class Pad:
@@ -21,6 +21,11 @@ class Pad:
     local_y: float = 0.0
     rotation: float = 0.0
 
+    @cached_property
+    def bounds(self) -> BoundingBox:
+        """Cached bounding box of this pad in board coordinates."""
+        return _pad_bounds(self)
+
 
 @dataclass
 class Footprint:
@@ -33,6 +38,19 @@ class Footprint:
     layer: str = "F.Cu"
     pads: list[Pad] = field(default_factory=list)
     uuid: str = ""
+
+    @cached_property
+    def bounds(self) -> BoundingBox:
+        """Cached bounding box of this footprint (union of all pad bounds)."""
+        if not self.pads:
+            return BoundingBox(self.x - 1, self.y - 1, self.x + 1, self.y + 1)
+        boxes = [p.bounds for p in self.pads]
+        return BoundingBox(
+            min(b.min_x for b in boxes),
+            min(b.min_y for b in boxes),
+            max(b.max_x for b in boxes),
+            max(b.max_y for b in boxes),
+        )
 
 
 @dataclass
@@ -103,15 +121,25 @@ class Board:
     def board_bounds(self) -> BoundingBox | None:
         if not self.edges:
             return None
-        xs = []
-        ys = []
-        for e in self.edges:
-            xs.extend([e.x1, e.x2])
-            ys.extend([e.y1, e.y2])
-        return BoundingBox(min(xs), min(ys), max(xs), max(ys))
+        if not hasattr(self, "_board_bounds_cache"):
+            xs = []
+            ys = []
+            for e in self.edges:
+                xs.extend([e.x1, e.x2])
+                ys.extend([e.y1, e.y2])
+            self._board_bounds_cache = BoundingBox(min(xs), min(ys), max(xs), max(ys))
+        return self._board_bounds_cache
 
     def outline_loops(self, tolerance: float = 1e-6) -> list[list[tuple[float, float]]]:
         """Return ordered Edge.Cuts loops, largest area first."""
+        cache_key = f"_outline_loops_{tolerance}"
+        if hasattr(self, cache_key):
+            return getattr(self, cache_key)
+        result = self._compute_outline_loops(tolerance)
+        setattr(self, cache_key, result)
+        return result
+
+    def _compute_outline_loops(self, tolerance: float = 1e-6) -> list[list[tuple[float, float]]]:
         if len(self.edges) < 3:
             return []
 
@@ -206,15 +234,8 @@ class Board:
         )
 
     def footprint_bounds(self, fp: Footprint) -> BoundingBox:
-        if not fp.pads:
-            return BoundingBox(fp.x - 1, fp.y - 1, fp.x + 1, fp.y + 1)
-        boxes = [_pad_bounds(p) for p in fp.pads]
-        return BoundingBox(
-            min(b.min_x for b in boxes),
-            min(b.min_y for b in boxes),
-            max(b.max_x for b in boxes),
-            max(b.max_y for b in boxes),
-        )
+        """Return cached footprint bounds."""
+        return fp.bounds
 
     def all_pad_positions(self) -> list[tuple[float, float, str]]:
         result = []

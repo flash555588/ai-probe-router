@@ -6,7 +6,7 @@ import heapq
 import math
 from dataclasses import dataclass
 
-from ..models.board import Board, Pad
+from ..models.board import Board, Pad, _pad_bounds
 
 
 @dataclass
@@ -241,7 +241,19 @@ def _segment_clear(
         if board.distance_to_outline(x, y) < width / 2:
             return False
 
+    # Quick bounding-box rejection before expensive per-point clearance
+    seg_min_x = min(start[0], end[0])
+    seg_max_x = max(start[0], end[0])
+    seg_min_y = min(start[1], end[1])
+    seg_max_y = max(start[1], end[1])
     for pad in pads:
+        pb = _pad_bounds(pad.pad)
+        # Expand segment bbox by keepout radius; skip if no overlap
+        r = pad.radius
+        if pb.max_x < seg_min_x - r or pb.min_x > seg_max_x + r:
+            continue
+        if pb.max_y < seg_min_y - r or pb.min_y > seg_max_y + r:
+            continue
         if _segment_to_pad_clearance(start, end, pad.pad, grid) < pad.radius:
             return False
     for track in tracks:
