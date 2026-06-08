@@ -294,5 +294,44 @@ def review(sch_file: str, pcb: str | None, mcu: str | None):
     )
 
 
+@main.group()
+def library():
+    """Library management commands."""
+
+
+@library.command("check")
+@click.argument("library_dir", type=click.Path(exists=True))
+@click.option("--format", "output_format", type=click.Choice(["text", "json"]),
+              default="text", help="Output format")
+@click.option("--strict", is_flag=True,
+              help="Upgrade warnings to errors")
+@click.option("--include-experimental", is_flag=True, default=True,
+              help="Include experimental modules")
+def library_check(
+    library_dir: str,
+    output_format: str,
+    strict: bool,
+    include_experimental: bool,
+) -> None:
+    """Validate chip, module, and dev-board libraries."""
+    from .library.checker import LibraryChecker
+    from .library.report import LibraryCheckReport
+
+    checker = LibraryChecker(
+        library_dir,
+        strict=strict,
+        include_experimental=include_experimental,
+    )
+    issues = checker.check_all()
+    report = LibraryCheckReport(issues=issues)
+
+    if output_format == "json":
+        console.print(report.to_json())
+    else:
+        console.print(report.to_text())
+
+    ctx = click.get_current_context()
+    ctx.exit(report.exit_code)
+
 if __name__ == "__main__":
     main()
