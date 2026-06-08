@@ -11,9 +11,8 @@ from rich.table import Table
 
 from .config import load_config
 from .eda_adapters.kicad.pcb_parser import parse_pcb
-from .eda_adapters.kicad.pcb_writer import write_pcb
 from .engine import run
-from .routing.ses_import import import_ses
+from .routing.route_import_transaction import import_ses_transactional
 
 console = Console()
 
@@ -187,14 +186,18 @@ def inspect_sch(sch_file: str):
 @click.argument("ses_file", type=click.Path(exists=True))
 def route(pcb_file: str, ses_file: str):
     """Import FreeRouting SES result into a KiCad PCB."""
-    board = parse_pcb(pcb_file)
-    import_ses(board, ses_file)
-    out_path = Path(pcb_file).with_suffix(".routed.kicad_pcb")
-    write_pcb(board, out_path)
-    console.print(f"[green]Routed PCB written to:[/] {out_path}")
-    segs = sum(1 for n in board.raw if isinstance(n, list) and n[0] == "segment")
-    vias = sum(1 for n in board.raw if isinstance(n, list) and n[0] == "via")
-    console.print(f"Segments: {segs}, Vias: {vias}")
+    result = import_ses_transactional(pcb_file, ses_file, Path(pcb_file).parent)
+    report_path = Path(pcb_file).with_name("routing_import_report.txt")
+    result.write_report(report_path)
+    if not result.ok:
+        console.print("[red]Route import blocked.[/]")
+        console.print(f"Report: {report_path}")
+        click.get_current_context().exit(3)
+    console.print(f"[green]Routed PCB written to:[/] {result.final_path}")
+    console.print(
+        f"Segments: {len(result.session.segments) if result.session else 0}, "
+        f"Vias: {len(result.session.vias) if result.session else 0}",
+    )
 
 
 @main.command()

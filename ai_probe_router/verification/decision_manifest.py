@@ -188,6 +188,20 @@ def _routing(routing_feasibility, autoroute_result) -> dict[str, Any]:
             "error": autoroute_result.error,
             "duration_sec": autoroute_result.duration_sec,
         }
+        validation = getattr(autoroute_result, "route_import_validation", None)
+        if validation is not None:
+            autoroute["route_import"] = {
+                "ok": validation.ok,
+                "issues": [
+                    {
+                        "severity": issue.severity,
+                        "code": issue.code,
+                        "message": issue.message,
+                        "net_name": issue.net_name,
+                    }
+                    for issue in validation.issues
+                ],
+            }
     return {"corridors": corridors, "autorouter": autoroute}
 
 

@@ -1,0 +1,8 @@
+(session "valid_gnd"
+  (route
+    (net "GND"
+      (wire (path TOP 150 0 0 10000 0))
+      (via (via_via TOP BOTTOM) (xy 10000 0))
+    )
+  )
+)

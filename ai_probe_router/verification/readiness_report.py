@@ -9,6 +9,7 @@ from pathlib import Path
 from ..models.module_compatibility import ModuleCompatibilityResult
 from ..models.module_library_preflight import ModuleLibraryPreflightResult
 from ..routing.module_corridor import RoutingFeasibilityResult
+from ..routing.routing_validation import RoutingValidationResult
 from ..solvers.module_selector import ModuleSelectionResult
 from ..solvers.pin_mapper import MappingResult
 from ..synthesis.module_instantiator import ModuleInstantiationResult
@@ -127,6 +128,8 @@ def generate_readiness_report(
     manufacturing_report: ManufacturingReport | None = None,
     diff_pair_report: DiffPairSkewReport | None = None,
     process_report: DesignProcessReport | None = None,
+    autoroute_result=None,
+    route_import_validation: RoutingValidationResult | None = None,
 ) -> ReadinessReport:
     report = ReadinessReport(run_id=run_id or coverage.run_id)
 
@@ -137,6 +140,7 @@ def generate_readiness_report(
     _add_module_placement(report, module_placement_result)
     _add_module_instantiation(report, module_instantiation_result)
     _add_routing_feasibility(report, routing_feasibility)
+    _add_route_import(report, autoroute_result, route_import_validation)
     _add_pin_mapping(report, pin_mapping_result)
     _add_coverage(report, coverage)
     _add_manufacturing(report, manufacturing_report)
@@ -262,6 +266,34 @@ def _add_routing_feasibility(
                 f"{corridor.source_id}->{corridor.target_id}: {corridor.message}",
             )
     _add_many(report, "warning", "routing_feasibility", result.warnings)
+
+
+def _add_route_import(
+    report: ReadinessReport,
+    autoroute_result,
+    validation: RoutingValidationResult | None,
+) -> None:
+    route_validation = validation
+    if route_validation is None and autoroute_result is not None:
+        route_validation = getattr(autoroute_result, "route_import_validation", None)
+    if route_validation is None:
+        return
+
+    for issue in route_validation.issues:
+        _add_issue(
+            report,
+            issue.severity,
+            "route_import",
+            f"{issue.code}: {issue.message}",
+        )
+    if route_validation.ok:
+        _add_issue(
+            report,
+            "warning",
+            "route_import",
+            "ROUTING_IMPORTED_BUT_NOT_MANUALLY_REVIEWED: "
+            "Imported autorouter geometry requires manual layout review",
+        )
 
 
 def _add_pin_mapping(

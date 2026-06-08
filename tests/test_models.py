@@ -190,6 +190,18 @@ routing_strategy:
   via_weight: 6
   length_weight: 1.5
   sensitive_net_spacing_mm: 7
+
+autoroute:
+  enabled: true
+  import_policy:
+    transactional: true
+    reject_unknown_nets: true
+    reject_net_zero: true
+    reject_unmapped_layers: true
+    keep_candidate_on_failure: false
+  validation:
+    require_post_import_connectivity_check: true
+    require_post_import_drc: false
 """
     cfg_path = tmp_path / "config.yaml"
     cfg_path.write_text(config, encoding="utf-8")
@@ -205,6 +217,12 @@ routing_strategy:
     assert not module.ai_hints[1].supported
     assert cfg.routing_strategy.coarse_grid_mm == 4
     assert cfg.routing_strategy.sensitive_net_spacing_mm == 7
+    assert cfg.autoroute.enabled
+    assert cfg.autoroute.import_policy.transactional
+    assert cfg.autoroute.import_policy.reject_net_zero
+    assert not cfg.autoroute.import_policy.keep_candidate_on_failure
+    assert cfg.autoroute.validation.require_post_import_connectivity_check
+    assert not cfg.autoroute.validation.require_post_import_drc
 
 
 def test_load_process_controls_and_waivers(tmp_path):

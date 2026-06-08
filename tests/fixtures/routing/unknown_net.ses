@@ -1,0 +1,7 @@
+(session "unknown_net"
+  (route
+    (net "UNKNOWN"
+      (wire (path TOP 150 0 0 10000 0))
+    )
+  )
+)

@@ -5,7 +5,7 @@ from ai_probe_router.routing.ses_import import import_ses
 
 
 def _make_board() -> Board:
-    return Board(raw=["kicad_pcb"], nets={}, footprints=[], edges=[])
+    return Board(raw=["kicad_pcb"], nets={"": 0, "GND": 1, "SIG": 2}, footprints=[], edges=[])
 
 
 def test_ses_import_wire(tmp_path):
@@ -26,6 +26,8 @@ def test_ses_import_wire(tmp_path):
     seg = segs[0]
     assert ["start", "10.0", "10.0"] in seg
     assert ["end", "20.0", "10.0"] in seg
+    assert ["net", "1"] in seg
+    assert ["net", "0"] not in seg
 
 
 def test_ses_import_no_file(tmp_path):
@@ -51,7 +53,9 @@ def test_ses_import_layer_mapping(tmp_path):
     import_ses(board, path)
     seg = [n for n in board.raw if n[0] == "segment"][0]
     layer_node = [c for c in seg if c[0] == "layer"][0]
+    net_node = [c for c in seg if c[0] == "net"][0]
     assert layer_node[1] == "B.Cu"
+    assert net_node[1] == "2"
 
 
 def test_ses_import_multi_path_wire(tmp_path):
@@ -91,5 +95,7 @@ def test_ses_import_via_reordered_attrs(tmp_path):
     assert at[1] == "30.0"
     assert at[2] == "40.0"
     layers = [c for c in vias[0] if c[0] == "layers"][0]
+    net_node = [c for c in vias[0] if c[0] == "net"][0]
     assert "F.Cu" in layers
     assert "B.Cu" in layers
+    assert net_node[1] == "2"

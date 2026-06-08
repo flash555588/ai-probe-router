@@ -192,6 +192,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             routing_feasibility=routing_feasibility,
             manufacturing_report=mfg_report,
             process_report=process_report,
+            autoroute_result=autoroute_result,
         )
         readiness.write(out_dir / "readiness_report.txt")
         readiness.write_json(out_dir / "readiness_report.json")
@@ -326,7 +327,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
                 f"{review.warning_count} warnings"
             )
 
-    if board is not None:
+    if board is not None and cfg.autoroute.enabled:
         dsn_path = out_dir / "routing.dsn"
         export_dsn(board, dsn_path)
         autoroute_result = run_freerouting_route(board, dsn_path, out_dir, timeout_sec=60)
@@ -338,6 +339,8 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             coverage.notes.append(
                 f"Auto-route skipped: {autoroute_result.error}"
             )
+    elif board is not None:
+        coverage.notes.append("Auto-route disabled by config")
 
     if cfg.thermal_analysis.enabled and board is not None:
         thermal_path = _write_thermal_analysis_export(board, cfg, out_dir)
@@ -396,6 +399,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         manufacturing_report=mfg_report,
         diff_pair_report=dp_report,
         process_report=process_report,
+        autoroute_result=autoroute_result,
     )
     readiness.write(out_dir / "readiness_report.txt")
     readiness.write_json(out_dir / "readiness_report.json")

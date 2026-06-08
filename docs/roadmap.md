@@ -10,6 +10,8 @@ Add a safe route-import workflow before any richer routing automation:
 - Add a route-import report with accepted routes, rejected routes, warnings, and rollback notes.
 - Add tests for malformed SES files, wrong-net tracks, keepout violations, layer mismatches, and safe no-op behavior.
 
+Status: started in `pr2-route-import-safety`. Core net-aware SES parsing, validation, transactional import, readiness integration, and focused tests are implemented.
+
 ## PR3 Deterministic Resource Allocation
 
 Strengthen deterministic planning before adding heavier optimization:

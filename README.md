@@ -60,6 +60,7 @@ apr generate examples/full_config.yaml -d examples/minimal_project
 - [Design specification](docs/design_spec.md)
 - [Project log](docs/project_log.md)
 - [Roadmap](docs/roadmap.md)
+- [Route import safety](docs/route_import_safety.md)
 
 ### Validate existing testpoints
 

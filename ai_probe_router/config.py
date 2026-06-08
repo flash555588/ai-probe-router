@@ -32,6 +32,28 @@ from .solvers.pin_mapper import load_dev_board
 
 
 @dataclass
+class AutorouteImportPolicy:
+    transactional: bool = True
+    reject_unknown_nets: bool = True
+    reject_net_zero: bool = True
+    reject_unmapped_layers: bool = True
+    keep_candidate_on_failure: bool = True
+
+
+@dataclass
+class AutorouteValidation:
+    require_post_import_connectivity_check: bool = True
+    require_post_import_drc: bool = False
+
+
+@dataclass
+class AutorouteConfig:
+    enabled: bool = True
+    import_policy: AutorouteImportPolicy = field(default_factory=AutorouteImportPolicy)
+    validation: AutorouteValidation = field(default_factory=AutorouteValidation)
+
+
+@dataclass
 class ProjectConfig:
     schema_version: int = 1
     eda_tool: str = "kicad"
@@ -42,6 +64,7 @@ class ProjectConfig:
     functional_modules: list[FunctionalModule] = field(default_factory=list)
     module_placement: ModulePlacementRules = field(default_factory=ModulePlacementRules)
     routing_strategy: RoutingStrategy = field(default_factory=RoutingStrategy)
+    autoroute: AutorouteConfig = field(default_factory=AutorouteConfig)
     probe: ProbeConfig = field(default_factory=ProbeConfig)
     nets_to_expose: list[ProbeRequirement] = field(default_factory=list)
     constraints: Constraints = field(default_factory=Constraints)
@@ -114,6 +137,28 @@ def load_config(path: str | Path) -> ProjectConfig:
             rs.get("sensitive_net_spacing_mm", 5.0) or 5.0,
         ),
     )
+    ar = raw.get("autoroute", {})
+    if isinstance(ar, dict):
+        policy = ar.get("import_policy", {})
+        validation = ar.get("validation", {})
+        cfg.autoroute = AutorouteConfig(
+            enabled=bool(ar.get("enabled", True)),
+            import_policy=AutorouteImportPolicy(
+                transactional=bool(policy.get("transactional", True)),
+                reject_unknown_nets=bool(policy.get("reject_unknown_nets", True)),
+                reject_net_zero=bool(policy.get("reject_net_zero", True)),
+                reject_unmapped_layers=bool(policy.get("reject_unmapped_layers", True)),
+                keep_candidate_on_failure=bool(policy.get("keep_candidate_on_failure", True)),
+            ),
+            validation=AutorouteValidation(
+                require_post_import_connectivity_check=bool(
+                    validation.get("require_post_import_connectivity_check", True),
+                ),
+                require_post_import_drc=bool(
+                    validation.get("require_post_import_drc", False),
+                ),
+            ),
+        )
     pi = raw.get("probe_interface", {})
     style_map = {"test_pad": ProbeStyle.TEST_PAD, "pogo_pad_array": ProbeStyle.POGO_PAD,
                  "connector": ProbeStyle.CONNECTOR}

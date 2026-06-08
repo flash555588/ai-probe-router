@@ -19,6 +19,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from .routing_validation import RoutingValidationResult
+
 
 @dataclass
 class RoutingResult:
@@ -29,6 +31,7 @@ class RoutingResult:
     stderr: str = ""
     error: str = ""
     duration_sec: float = 0.0
+    route_import_validation: RoutingValidationResult | None = None
 
 
 def find_freerouting() -> str | None:
@@ -162,5 +165,11 @@ def route_board(
     export_dsn(board, dsn_path)
     result = run_freerouting(dsn_path, output_dir, timeout_sec)
     if result.ses_path:
-        import_ses(board, result.ses_path)
+        validation = import_ses(board, result.ses_path)
+        result.route_import_validation = validation
+        if not validation.ok:
+            result.ok = False
+            result.error = "SES import failed: " + "; ".join(
+                f"{issue.code}: {issue.message}" for issue in validation.errors
+            )
     return result

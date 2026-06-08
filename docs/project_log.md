@@ -64,3 +64,44 @@ Results:
 
 - `pytest` - 328 passed in 75.63s.
 - `ruff check .` - all checks passed.
+
+## PR2 Route Import Safety
+
+Date: 2026-06-08
+
+### Scope
+
+PR2 protects imported autorouter geometry. The importer now parses SES route data into net-aware objects, validates nets/layers/geometry before mutation, and uses a transactional file workflow for `apr route`.
+
+### Changes
+
+- Added SES route object parsing in `ai_probe_router/routing/ses_net_resolver.py`.
+- Added structured route validation in `ai_probe_router/routing/routing_validation.py`.
+- Reworked `ai_probe_router/routing/ses_import.py` so parsing and validation happen before any board mutation.
+- Added transactional file import in `ai_probe_router/routing/route_import_transaction.py`.
+- Updated `apr route` to write a candidate board, promote a final routed board only after validation, and write `routing_import_report.txt`.
+- Updated the FreeRouting bridge so imported SES validation is attached to `RoutingResult`.
+- Updated readiness and decision manifest plumbing so route-import validation issues are machine-readable.
+- Added optional `autoroute.import_policy` and `autoroute.validation` config parsing with safe defaults.
+- Added route-import safety documentation in `docs/route_import_safety.md`.
+
+### Verification
+
+Focused checks completed during implementation:
+
+```bash
+pytest tests\test_ses_net_resolver.py tests\test_ses_import.py tests\test_route_import_safety.py tests\test_cli.py::test_route tests\test_readiness_report.py tests\test_freerouting_bridge.py tests\test_models.py::test_load_schema_v2_module_graph_fields
+ruff check ai_probe_router\config.py ai_probe_router\engine.py ai_probe_router\routing\ses_net_resolver.py ai_probe_router\routing\routing_validation.py ai_probe_router\routing\ses_import.py ai_probe_router\routing\route_import_transaction.py ai_probe_router\routing\freerouting_bridge.py ai_probe_router\routing\__init__.py ai_probe_router\cli.py ai_probe_router\verification\readiness_report.py ai_probe_router\verification\decision_manifest.py tests\test_ses_net_resolver.py tests\test_ses_import.py tests\test_route_import_safety.py tests\test_models.py
+```
+
+Final PR2 verification commands:
+
+```bash
+pytest
+ruff check .
+```
+
+Results:
+
+- `pytest` - 341 passed in 75.85s.
+- `ruff check .` - all checks passed.
