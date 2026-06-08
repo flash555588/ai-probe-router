@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Module Definition",
+  "description": "Schema for module definition YAML files in libraries/modules/",
+  "type": "object",
+  "required": ["module", "provides", "implementations"],
+  "additionalProperties": false,
+  "properties": {
+    "module": {
+      "type": "object",
+      "required": ["name", "type", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "lifecycle": {
+          "type": "string",
+          "enum": ["experimental", "alpha", "beta", "stable", "deprecated", "obsolete"]
+        }
+      }
+    },
+    "provides": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "implementations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "version", "components"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 },
+          "interfaces": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "features": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "components": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["type", "count"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "type": "string", "minLength": 1 },
+                "count": { "type": "integer", "minimum": 1 },
+                "chip": { "type": "string", "minLength": 1 },
+                "chip_version": { "type": "string" },
+                "package_options": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "footprint_version": { "type": "string", "minLength": 1 },
+                "alternate_chips": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "alternate_footprints": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "value": { "type": "string" }
+              }
+            }
+          },
+          "area_mm2": { "type": "number", "minimum": 0 },
+          "bom_cost": { "type": "number", "minimum": 0 },
+          "constraints": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chip Definition",
+  "description": "Schema for chip definition YAML files in libraries/chips/",
+  "type": "object",
+  "required": ["chip", "pins"],
+  "additionalProperties": false,
+  "properties": {
+    "chip": {
+      "type": "object",
+      "required": ["mpn", "category", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "mpn": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": [
+            "communication",
+            "expansion",
+            "measurement",
+            "power",
+            "protection",
+            "memory",
+            "sensor"
+          ]
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "symbol": { "type": "string" }
+      }
+    },
+    "package_options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "footprint"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "footprint": { "type": "string", "minLength": 1 },
+          "area_mm2": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "power": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "voltage_min", "voltage_max"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "voltage_min": { "type": "number" },
+              "voltage_max": { "type": "number" },
+              "current_typ_ma": { "type": "number", "minimum": 0 },
+              "current_max_ma": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "pins"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "minLength": 1 },
+          "pins": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "pins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "direction", "capabilities", "voltage_domain"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "direction": {
+            "type": "string",
+            "enum": ["input", "output", "bidirectional"]
+          },
+          "capabilities": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "voltage_domain": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object"
+    }
+  }
+}

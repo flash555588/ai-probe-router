@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Project Configuration",
+  "description": "Schema for APR project configuration YAML files",
+  "type": "object",
+  "required": ["project", "nets_to_expose"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": ["eda_tool", "board_file", "schematic_file"],
+      "properties": {
+        "eda_tool": {
+          "type": "string",
+          "enum": ["kicad", "altium", "easyeda"]
+        },
+        "board_file": { "type": "string", "minLength": 1 },
+        "schematic_file": { "type": "string", "minLength": 1 }
+      }
+    },
+    "probe_interface": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["test_pad", "pogo_pin", "header", "edge_connector"]
+        },
+        "side": {
+          "type": "string",
+          "enum": ["top", "bottom", "both"]
+        },
+        "pad_diameter_mm": { "type": "number", "minimum": 0 },
+        "min_probe_spacing_mm": { "type": "number", "minimum": 0 },
+        "preferred_grid_mm": { "type": "number", "minimum": 0 },
+        "require_silkscreen_labels": { "type": "boolean" },
+        "require_fiducials": { "type": "boolean" },
+        "require_tooling_holes": { "type": "boolean" }
+      }
+    },
+    "nets_to_expose": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["net", "role", "required"],
+        "properties": {
+          "net": { "type": "string", "minLength": 1 },
+          "role": {
+            "type": "string",
+            "enum": [
+              "debug",
+              "digital",
+              "analog",
+              "communication",
+              "power",
+              "ground",
+              "reset",
+              "clock",
+              "differential"
+            ]
+          },
+          "required": { "type": "boolean" },
+          "current_ma": { "type": "number", "minimum": 0 },
+          "duplicate_probe_count": { "type": "integer", "minimum": 1 },
+          "preferred_devboard_pins": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "pair_net_name": { "type": "string" }
+        }
+      }
+    },
+    "routing_rules": {
+      "type": "object",
+      "properties": {
+        "default_trace_width_mm": { "type": "number", "minimum": 0 },
+        "power_trace_width_mm": { "type": "number", "minimum": 0 },
+        "min_clearance_mm": { "type": "number", "minimum": 0 },
+        "max_vias_per_signal": { "type": "integer", "minimum": 0 },
+        "avoid_under_components": { "type": "boolean" }
+      }
+    },
+    "placement_rules": {
+      "type": "object",
+      "properties": {
+        "keep_probe_pads_on_grid": { "type": "boolean" },
+        "avoid_tall_components": { "type": "boolean" },
+        "min_distance_from_board_edge_mm": { "type": "number", "minimum": 0 },
+        "group_by_function": { "type": "boolean" }
+      }
+    },
+    "development_board": {
+      "type": "object",
+      "properties": {
+        "pin_database": { "type": "string", "minLength": 1 }
+      }
+    },
+    "protection": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "debug": { "$ref": "#/definitions/protection_rule" },
+        "reset": { "$ref": "#/definitions/protection_rule" },
+        "power": { "$ref": "#/definitions/protection_rule" },
+        "digital": { "$ref": "#/definitions/protection_rule" },
+        "analog": { "$ref": "#/definitions/protection_rule" }
+      }
+    },
+    "pin_mapper": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["greedy", "cp_sat", "compare"]
+        },
+        "fallback_to_greedy": { "type": "boolean" },
+        "require_ortools": { "type": "boolean" },
+        "selected_output": {
+          "type": "string",
+          "enum": ["greedy", "cp_sat"]
+        },
+        "objective_weights": {
+          "type": "object",
+          "properties": {
+            "preferred_pin": { "type": "integer" },
+            "capability_match": { "type": "integer" },
+            "current_margin": { "type": "integer" },
+            "preserve_spare_pins": { "type": "integer" },
+            "route_length": { "type": "integer" }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "protection_rule": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "value": { "type": "string" },
+        "package": { "type": "string" },
+        "ref_prefix": { "type": "string" }
+      }
+    }
+  }
+}

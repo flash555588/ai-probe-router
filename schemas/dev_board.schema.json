@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Development Board Definition",
+  "description": "Schema for development board YAML files in libraries/dev_boards/",
+  "type": "object",
+  "required": ["board", "pins"],
+  "additionalProperties": false,
+  "properties": {
+    "board": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "connector": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": { "type": "string", "minLength": 1 },
+            "pitch_mm": { "type": "number", "minimum": 0 },
+            "rows": { "type": "integer", "minimum": 1 },
+            "pins_per_row": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "pins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "capabilities", "current_ma"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "capabilities": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "current_ma": { "type": "number", "minimum": 0 },
+          "fixed": { "type": "boolean" },
+          "is_power": { "type": "boolean" },
+          "is_ground": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}
