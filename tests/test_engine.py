@@ -233,9 +233,18 @@ def test_engine_records_manufacturing_export_failures_in_soft_mode(
     _write_export_contract_config(tmp_path, "")
 
     failed = CheckResult(ok=None, error="kicad-cli not found")
-    monkeypatch.setattr("ai_probe_router.engine.export_gerbers", lambda *args: failed)
-    monkeypatch.setattr("ai_probe_router.engine.export_drill", lambda *args: failed)
-    monkeypatch.setattr("ai_probe_router.engine.export_pos", lambda *args: failed)
+    monkeypatch.setattr(
+        "ai_probe_router.pipeline.native_tools.export_gerbers",
+        lambda *args: failed,
+    )
+    monkeypatch.setattr(
+        "ai_probe_router.pipeline.native_tools.export_drill",
+        lambda *args: failed,
+    )
+    monkeypatch.setattr(
+        "ai_probe_router.pipeline.native_tools.export_pos",
+        lambda *args: failed,
+    )
 
     report, _ = run(load_config(tmp_path / "config.yaml"), tmp_path)
 
@@ -259,7 +268,7 @@ def test_engine_strict_signoff_blocks_manufacturing_export_failure(
     _write_export_contract_config(tmp_path, "  strict_signoff: true\n")
 
     monkeypatch.setattr(
-        "ai_probe_router.engine.export_gerbers",
+        "ai_probe_router.pipeline.native_tools.export_gerbers",
         lambda *args: CheckResult(ok=False, error="gerber failed"),
     )
 
@@ -289,7 +298,7 @@ def test_engine_required_manufacturing_exports_block_failure(
     )
 
     monkeypatch.setattr(
-        "ai_probe_router.engine.export_gerbers",
+        "ai_probe_router.pipeline.native_tools.export_gerbers",
         lambda *args: CheckResult(ok=False, error="gerber failed"),
     )
 

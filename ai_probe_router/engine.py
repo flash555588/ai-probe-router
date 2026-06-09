@@ -12,13 +12,6 @@ from .ai.design_review import run_design_review
 from .ai.net_classifier import classify_net, classify_net_detailed
 from .ai.rule_generator import generate_rules
 from .config import ProjectConfig
-from .eda_adapters.kicad.cli_runner import (
-    export_drill,
-    export_gerbers,
-    export_pos,
-    run_drc,
-    run_erc,
-)
 from .eda_adapters.kicad.pcb_parser import parse_pcb
 from .eda_adapters.kicad.pcb_writer import (
     add_connector_footprint,
@@ -42,6 +35,11 @@ from .models.board import Board, BoundingBox, Schematic, _pad_bounds
 from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
+from .pipeline.native_tools import (
+    apply_native_validation,
+    run_manufacturing_exports,
+    run_native_validation,
+)
 from .routing.dsn_export import export_dsn
 from .routing.freerouting_bridge import route_board as run_freerouting_route
 from .routing.module_corridor import analyze_routing_feasibility
@@ -297,15 +295,12 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         out_sch = out_dir / sch_path.name
         write_schematic(sch, out_sch)
 
-    if board is not None and (out_dir / pcb_path.name).exists():
-        drc = run_drc(out_dir / pcb_path.name, out_dir)
-        coverage.drc_ok = drc.ok
-        coverage.drc_violations = len(drc.violations)
-
-    if sch is not None and (out_dir / sch_path.name).exists():
-        erc = run_erc(out_dir / sch_path.name, out_dir)
-        coverage.erc_ok = erc.ok
-        coverage.erc_violations = len(erc.violations)
+    out_pcb_path = out_dir / pcb_path.name if board is not None else None
+    out_sch_path = out_dir / sch_path.name if sch is not None else None
+    apply_native_validation(
+        coverage,
+        run_native_validation(out_pcb_path, out_sch_path, out_dir),
+    )
 
     _write_module_planning_reports(
         out_dir,
@@ -364,36 +359,9 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             f"Thermal simulation export: {thermal_path.name}"
         )
 
-    # Manufacturing exports (Gerber, Drill, Pick&Place)
     mfg_dir = out_dir / "manufacturing"
-    mfg_dir.mkdir(exist_ok=True)
-    out_pcb_for_export = out_dir / pcb_path.name
-    if out_pcb_for_export.exists():
-        gerber_result = export_gerbers(out_pcb_for_export, mfg_dir)
-        _record_manufacturing_export(
-            cfg,
-            coverage,
-            gerber_result,
-            "Gerber",
-            "Gerber files exported",
-        )
-        drill_result = export_drill(out_pcb_for_export, mfg_dir)
-        _record_manufacturing_export(
-            cfg,
-            coverage,
-            drill_result,
-            "Drill",
-            "Drill files exported",
-        )
-        pos_file = mfg_dir / "placement.csv"
-        pos_result = export_pos(out_pcb_for_export, pos_file)
-        _record_manufacturing_export(
-            cfg,
-            coverage,
-            pos_result,
-            "Pick&Place",
-            "Pick&Place file exported",
-        )
+    if out_pcb_path is not None:
+        run_manufacturing_exports(cfg, coverage, out_pcb_path, mfg_dir)
 
     artifacts = collect_artifact_manifest(out_dir)
     planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
@@ -490,26 +458,6 @@ def _write_thermal_analysis_export(
             writer.writeheader()
             writer.writerows(rows)
     return path
-
-
-def _record_manufacturing_export(
-    cfg: ProjectConfig,
-    coverage: CoverageReport,
-    result,
-    label: str,
-    success_note: str,
-) -> None:
-    if result.ok:
-        coverage.notes.append(success_note)
-        return
-    reason = result.error or "unknown error"
-    message = f"{label} export failed: {reason}"
-    coverage.notes.append(message)
-    if (
-        cfg.process_controls.strict_signoff
-        or cfg.process_controls.require_manufacturing_exports
-    ):
-        raise RuntimeError(message)
 
 
 def _thermal_export_rows(
