@@ -19,5 +19,9 @@ def test_plugin_manual_signoff_checklist_documents_native_evidence():
     assert "AI Probe Router action plugin is visible" in checklist
     assert "Running the action plugin on a saved board creates an `output/` directory" in checklist
     assert "captured stdout or\n  stderr" in checklist
+    assert "plugin_signoff.json" in checklist
+    assert "python scripts/plugin_signoff_validate.py plugin_signoff.json --require-signoff" in (
+        checklist
+    )
     assert "Headless plugin fallback tests pass in CI" in checklist
     assert "kicad_plugin_manual_signoff.md" in plugin_docs

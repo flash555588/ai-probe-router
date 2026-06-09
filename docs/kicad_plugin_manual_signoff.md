@@ -38,6 +38,30 @@ Record the following evidence in the release notes or PR comment:
 - On CLI failure, the plugin shows KiCad's error dialog with captured stdout or
   stderr.
 
+For release signoff, record the same evidence in `plugin_signoff.json`:
+
+```json
+{
+  "os": "Windows 11",
+  "kicad_version": "8.0.0",
+  "evidence_link": "https://example.invalid/release-signoff",
+  "plugin_shell_no_3d_opened": true,
+  "report_tabs_rendered": true,
+  "three_d_view_checked": true,
+  "action_plugin_visible": true,
+  "action_plugin_generates_output": true,
+  "temporary_config_selects_nontrivial_nets": true,
+  "error_dialog_captures_cli_failure": true,
+  "notes": []
+}
+```
+
+Validate it with:
+
+```bash
+python scripts/plugin_signoff_validate.py plugin_signoff.json --require-signoff
+```
+
 Release wording:
 
 ```text
