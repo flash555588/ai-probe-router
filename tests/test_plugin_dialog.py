@@ -7,8 +7,11 @@ exercised manually inside KiCad.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock
+
+import yaml
 
 # Mock pcbnew before importing the plugin (not available outside KiCad)
 pcbnew_mock = ModuleType("pcbnew")
@@ -29,14 +32,18 @@ from ai_probe_router.eda_adapters.kicad.plugin.action_plugin import (  # noqa: E
 
 
 class FakeBoard:
-    def __init__(self, nets: list[str]):
+    def __init__(self, nets: list[str], filename: str = ""):
         self._nets = nets
+        self._filename = filename
 
     def GetNetInfo(self):
         return self
 
     def NetsByName(self):
         return {n: _FakeNet(n) for n in self._nets}
+
+    def GetFileName(self):
+        return self._filename
 
 
 class _FakeNet:
@@ -72,3 +79,38 @@ def test_plugin_defaults():
     plugin.defaults()
     assert plugin.name == "AI Probe Router"
     assert plugin.show_toolbar_button is True
+
+
+def test_plugin_run_builds_temp_config_and_invokes_cli(tmp_path, monkeypatch):
+    pcb_path = tmp_path / "main.kicad_pcb"
+    sch_path = tmp_path / "main.kicad_sch"
+    pcb_path.write_text("(kicad_pcb)", encoding="utf-8")
+    sch_path.write_text("(kicad_sch)", encoding="utf-8")
+    pcbnew_mock.GetBoard.return_value = FakeBoard(
+        ["GND", "3V3", "SWDIO", "Net-(U1-Pad1)"],
+        filename=str(pcb_path),
+    )
+
+    captured: dict[str, object] = {}
+
+    def fake_run_cli(self, config_path, project_dir):
+        config_file = Path(config_path)
+        captured["project_dir"] = Path(project_dir)
+        captured["config"] = yaml.safe_load(config_file.read_text(encoding="utf-8"))
+        captured["config_exists_during_run"] = config_file.exists()
+
+    monkeypatch.setattr(AiProbeRouterActionPlugin, "_run_cli", fake_run_cli)
+
+    plugin = AiProbeRouterActionPlugin()
+    plugin.run()
+
+    assert captured["project_dir"] == tmp_path
+    assert captured["config_exists_during_run"] is True
+    config = captured["config"]
+    assert config["project"] == {
+        "eda_tool": "kicad",
+        "board_file": "main.kicad_pcb",
+        "schematic_file": "main.kicad_sch",
+    }
+    assert [row["net"] for row in config["nets_to_expose"]] == ["GND", "3V3", "SWDIO"]
+    assert not list(tmp_path.glob("*.yaml"))

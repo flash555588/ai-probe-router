@@ -144,3 +144,9 @@ All heavy dependencies (PyQt6, vtk) are imported **lazily** so the core library 
 - It only reads JSON report files from the output directory
 - No KiCad plugin registration required for the prototype
 - Fallback rendering ensures the GUI is functional even without STEP files or VTK installed
+
+## Release Signoff
+
+Headless CI covers the fallback plugin code path and report loading. Before a
+release, complete the native KiCad/manual GUI checklist in
+[`docs/kicad_plugin_manual_signoff.md`](kicad_plugin_manual_signoff.md).
