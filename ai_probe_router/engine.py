@@ -39,6 +39,7 @@ from .eda_adapters.kicad.sch_writer import (
     write_schematic,
 )
 from .models.board import Board, BoundingBox, Schematic, _pad_bounds
+from .models.circuit_spec import build_circuit_spec
 from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
@@ -55,6 +56,7 @@ from .solvers.placement_solver import find_placement, place_pogo_array
 from .synthesis.module_instantiator import instantiate_module_sheets
 from .verification.bom_report import BomReport
 from .verification.bus_report import BusReport
+from .verification.circuit_spec_report import validate_circuit_spec
 from .verification.decision_manifest import (
     artifact_paths,
     collect_artifact_manifest,
@@ -63,6 +65,7 @@ from .verification.decision_manifest import (
 )
 from .verification.design_process_report import generate_design_process_report
 from .verification.diff_pair_skew_report import generate_diff_pair_skew_report
+from .verification.erc_report import run_preflight_erc
 from .verification.manufacturing_report import generate_manufacturing_report
 from .verification.module_compatibility_report import (
     ModuleCompatibilityReport,
@@ -100,6 +103,12 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     out_dir = base / "output"
     out_dir.mkdir(exist_ok=True)
     prior_manifest = read_prior_manifest(out_dir / "decision_manifest.json")
+    schematic_net_names = sch.net_names() if sch is not None else set()
+    circuit_spec = build_circuit_spec(cfg, schematic_net_names=schematic_net_names)
+    circuit_spec_report = validate_circuit_spec(circuit_spec)
+    circuit_spec_report.write(out_dir / "circuit_spec_report.txt")
+    erc_preflight_report = run_preflight_erc(circuit_spec)
+    erc_preflight_report.write(out_dir / "erc_preflight_report.txt")
 
     module_selection = None
     module_graph_result = None
@@ -165,6 +174,18 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         coverage.notes.append(
             "Module planning blocked generation; no PCB or schematic changes were written"
         )
+        if circuit_spec_report.issues:
+            coverage.notes.append(
+                "CircuitSpec validation: "
+                f"{len(circuit_spec_report.errors)} errors, "
+                f"{len(circuit_spec_report.warnings)} warnings"
+            )
+        if erc_preflight_report.findings:
+            coverage.notes.append(
+                "ERC preflight: "
+                f"{len(erc_preflight_report.errors)} errors, "
+                f"{len(erc_preflight_report.warnings)} warnings"
+            )
         mfg_report = generate_manufacturing_report(board, coverage)
         _write_module_planning_reports(
             out_dir,
@@ -236,6 +257,18 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
 
     coverage = _run_phase1(cfg, board, sch)
     coverage.run_id = run_id
+    if circuit_spec_report.issues:
+        coverage.notes.append(
+            "CircuitSpec validation: "
+            f"{len(circuit_spec_report.errors)} errors, "
+            f"{len(circuit_spec_report.warnings)} warnings"
+        )
+    if erc_preflight_report.findings:
+        coverage.notes.append(
+            "ERC preflight: "
+            f"{len(erc_preflight_report.errors)} errors, "
+            f"{len(erc_preflight_report.warnings)} warnings"
+        )
 
     if module_graph_result is not None:
         module_instantiation_result = instantiate_module_sheets(

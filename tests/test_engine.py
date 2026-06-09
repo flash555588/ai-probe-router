@@ -32,6 +32,8 @@ def test_engine_phase1(tmp_path):
     assert (out_dir / "main.kicad_pcb").exists()
     assert (out_dir / "main.kicad_sch").exists()
     assert (out_dir / "testpoint_report.txt").exists()
+    assert (out_dir / "circuit_spec_report.txt").exists()
+    assert (out_dir / "erc_preflight_report.txt").exists()
 
 
 def test_engine_phase1_coverage_100(tmp_path):
