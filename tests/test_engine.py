@@ -5,6 +5,7 @@ import shutil
 from pathlib import Path
 
 from ai_probe_router.config import load_config
+from ai_probe_router.eda_adapters.kicad.cli_runner import CheckResult
 from ai_probe_router.engine import run
 
 
@@ -217,6 +218,89 @@ thermal_analysis:
     assert row["risk"] == "medium"
 
 
+def test_engine_records_manufacturing_export_failures_in_soft_mode(
+    tmp_path,
+    monkeypatch,
+):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+    _write_export_contract_config(tmp_path, "")
+
+    failed = CheckResult(ok=None, error="kicad-cli not found")
+    monkeypatch.setattr("ai_probe_router.engine.export_gerbers", lambda *args: failed)
+    monkeypatch.setattr("ai_probe_router.engine.export_drill", lambda *args: failed)
+    monkeypatch.setattr("ai_probe_router.engine.export_pos", lambda *args: failed)
+
+    report, _ = run(load_config(tmp_path / "config.yaml"), tmp_path)
+
+    assert any("Gerber export failed: kicad-cli not found" in note for note in report.notes)
+    assert any("Drill export failed: kicad-cli not found" in note for note in report.notes)
+    assert any("Pick&Place export failed: kicad-cli not found" in note for note in report.notes)
+
+
+def test_engine_strict_signoff_blocks_manufacturing_export_failure(
+    tmp_path,
+    monkeypatch,
+):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+    _write_export_contract_config(tmp_path, "  strict_signoff: true\n")
+
+    monkeypatch.setattr(
+        "ai_probe_router.engine.export_gerbers",
+        lambda *args: CheckResult(ok=False, error="gerber failed"),
+    )
+
+    try:
+        run(load_config(tmp_path / "config.yaml"), tmp_path)
+    except RuntimeError as exc:
+        assert "Gerber export failed: gerber failed" in str(exc)
+    else:
+        raise AssertionError("strict_signoff should block failed Gerber export")
+
+
+def test_engine_required_manufacturing_exports_block_failure(
+    tmp_path,
+    monkeypatch,
+):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+    _write_export_contract_config(
+        tmp_path,
+        "  require_manufacturing_exports: true\n",
+    )
+
+    monkeypatch.setattr(
+        "ai_probe_router.engine.export_gerbers",
+        lambda *args: CheckResult(ok=False, error="gerber failed"),
+    )
+
+    try:
+        run(load_config(tmp_path / "config.yaml"), tmp_path)
+    except RuntimeError as exc:
+        assert "Gerber export failed: gerber failed" in str(exc)
+    else:
+        raise AssertionError("required manufacturing exports should block failed export")
+
+
 def test_engine_writes_module_report_for_schema_v2(tmp_path):
     config_yaml = """\
 schema_version: 2
@@ -365,3 +449,31 @@ nets_to_expose:
     assert "module_library_preflight" in readiness
     assert not (out_dir / "module_report.txt").exists()
     assert not (out_dir / "main.kicad_pcb").exists()
+
+
+def _write_export_contract_config(tmp_path: Path, process_controls: str) -> None:
+    config_yaml = f"""\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: false
+  require_fiducials: false
+  require_tooling_holes: false
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+
+process_controls:
+{process_controls or "  strict_signoff: false\n"}
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")

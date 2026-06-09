@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -31,7 +32,29 @@ jobs:
         run: ruff check .
 
       - name: Test
-        run: pytest --tb=short -q
+        run: pytest --tb=short -ra -q
 
       - name: Optional native KiCad validation
         run: python scripts/kicad_native_validate.py examples/audio_player_project
+
+  native-kicad:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    container: ghcr.io/inti-cmnb/kicad8_auto:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv pip install -e ".[dev]" --system
+
+      - name: Required native KiCad validation
+        run: python scripts/kicad_native_validate.py examples/audio_player_project --require-kicad

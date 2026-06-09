@@ -24,9 +24,29 @@ AI-assisted KiCad probe/test interface designer. Automatically generates testpoi
 git clone https://github.com/flash555588/ai-probe-router.git
 cd ai-probe-router
 
-# Install (requires Python 3.12+)
+# Core CLI + development checks (requires Python 3.12+)
 uv pip install -e ".[dev]"
+
+# Plugin shell GUI
+uv pip install -e ".[plugin]"
+
+# Optional CP-SAT solver support
+uv pip install -e ".[solver]"
+
+# Everything Python-side
+uv pip install -e ".[all]"
 ```
+
+### Capability Matrix
+
+| Capability | Python extra | System dependency |
+|------------|--------------|-------------------|
+| Core CLI, reports, tests | `.[dev]` | none |
+| Plugin shell GUI | `.[plugin]` | desktop display environment |
+| 3D plugin preview | `.[plugin]` | `vtk` from the plugin extra |
+| CP-SAT pin mapping | `.[solver]` | none |
+| Native KiCad ERC/DRC/export | any | `kicad-cli` |
+| FreeRouting bridge | any | Java + FreeRouting |
 
 ## Quick Start
 
@@ -55,6 +75,8 @@ apr validate path/to/board.kicad_pcb
 ```
 
 ### Launch plugin shell (3D preview)
+
+Requires `uv pip install -e ".[plugin]"`.
 
 ```bash
 apr plugin-shell output/

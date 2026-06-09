@@ -219,3 +219,24 @@ def test_plugin_shell_no_3d_flag_disables_3d(runner: CliRunner, tmp_path: Path, 
     assert captured["enable_3d"] is False
     assert captured["loaded"]
     assert captured["ran"]
+
+
+def test_plugin_shell_missing_dependency_has_install_hint(
+    runner: CliRunner,
+    tmp_path: Path,
+    monkeypatch,
+):
+    from ai_probe_router.ui import plugin_shell
+
+    monkeypatch.setattr(
+        plugin_shell,
+        "KiCadPluginShell",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            ImportError("PyQt6 is required for the plugin shell")
+        ),
+    )
+
+    result = runner.invoke(main, ["plugin-shell", str(tmp_path)])
+
+    assert result.exit_code != 0
+    assert 'Install with: uv pip install -e ".[plugin]"' in result.output

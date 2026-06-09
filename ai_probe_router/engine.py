@@ -370,15 +370,30 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     out_pcb_for_export = out_dir / pcb_path.name
     if out_pcb_for_export.exists():
         gerber_result = export_gerbers(out_pcb_for_export, mfg_dir)
-        if gerber_result.ok:
-            coverage.notes.append("Gerber files exported")
+        _record_manufacturing_export(
+            cfg,
+            coverage,
+            gerber_result,
+            "Gerber",
+            "Gerber files exported",
+        )
         drill_result = export_drill(out_pcb_for_export, mfg_dir)
-        if drill_result.ok:
-            coverage.notes.append("Drill files exported")
+        _record_manufacturing_export(
+            cfg,
+            coverage,
+            drill_result,
+            "Drill",
+            "Drill files exported",
+        )
         pos_file = mfg_dir / "placement.csv"
         pos_result = export_pos(out_pcb_for_export, pos_file)
-        if pos_result.ok:
-            coverage.notes.append("Pick&Place file exported")
+        _record_manufacturing_export(
+            cfg,
+            coverage,
+            pos_result,
+            "Pick&Place",
+            "Pick&Place file exported",
+        )
 
     artifacts = collect_artifact_manifest(out_dir)
     planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
@@ -475,6 +490,26 @@ def _write_thermal_analysis_export(
             writer.writeheader()
             writer.writerows(rows)
     return path
+
+
+def _record_manufacturing_export(
+    cfg: ProjectConfig,
+    coverage: CoverageReport,
+    result,
+    label: str,
+    success_note: str,
+) -> None:
+    if result.ok:
+        coverage.notes.append(success_note)
+        return
+    reason = result.error or "unknown error"
+    message = f"{label} export failed: {reason}"
+    coverage.notes.append(message)
+    if (
+        cfg.process_controls.strict_signoff
+        or cfg.process_controls.require_manufacturing_exports
+    ):
+        raise RuntimeError(message)
 
 
 def _thermal_export_rows(

@@ -270,12 +270,21 @@ def plugin_shell(output_dir: str, step: str | None, no_3d: bool):
     """Launch the KiCad plugin shell GUI."""
     from pathlib import Path
 
-    from ai_probe_router.ui.plugin_shell import KiCadPluginShell
+    try:
+        from ai_probe_router.ui.plugin_shell import KiCadPluginShell
 
-    step_path = Path(step) if step else None
-    shell = KiCadPluginShell(Path(output_dir), step_path=step_path, enable_3d=not no_3d)
-    shell.load_reports()
-    return shell.run()
+        step_path = Path(step) if step else None
+        shell = KiCadPluginShell(
+            Path(output_dir),
+            step_path=step_path,
+            enable_3d=not no_3d,
+        )
+        shell.load_reports()
+        return shell.run()
+    except ImportError as exc:
+        raise click.ClickException(
+            f'{exc}. Install with: uv pip install -e ".[plugin]"'
+        ) from exc
 
 
 if __name__ == "__main__":
