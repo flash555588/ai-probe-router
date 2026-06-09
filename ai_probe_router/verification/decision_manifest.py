@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -67,6 +68,7 @@ def write_decision_manifest(
         "manifest_version": 1,
         "run_id": run_id,
         "tool_versions": _tool_versions(),
+        "native_tools": _native_tools(),
         "project": {
             "schema_version": cfg.schema_version,
             "eda_tool": cfg.eda_tool,
@@ -110,6 +112,22 @@ def _tool_versions() -> dict[str, str]:
         "ai_probe_router": __version__,
         "python": sys.version.split()[0],
         "platform": platform.platform(),
+    }
+
+
+def _native_tools() -> dict[str, dict[str, str | bool]]:
+    return {
+        "kicad_cli": _tool_presence("kicad-cli"),
+        "java": _tool_presence("java"),
+        "freerouting": _tool_presence("freerouting"),
+    }
+
+
+def _tool_presence(name: str) -> dict[str, str | bool]:
+    path = shutil.which(name)
+    return {
+        "available": path is not None,
+        "path": path or "",
     }
 
 
