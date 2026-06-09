@@ -33,6 +33,25 @@ def test_run_freerouting_missing_freerouting(tmp_path: Path):
     assert "FreeRouting not found" in result.error or result.error.startswith("exit")
 
 
+def test_run_freerouting_reports_missing_java_for_jar(tmp_path: Path, monkeypatch):
+    dsn = tmp_path / "board.dsn"
+    dsn.write_text("(pcb \"test\")")
+
+    monkeypatch.setattr(
+        "ai_probe_router.routing.freerouting_bridge.find_freerouting",
+        lambda: str(tmp_path / "freerouting.jar"),
+    )
+    monkeypatch.setattr(
+        "ai_probe_router.routing.freerouting_bridge.shutil.which",
+        lambda name: None if name == "java" else "unused",
+    )
+
+    result = run_freerouting(dsn)
+
+    assert not result.ok
+    assert result.error == "java not found in PATH (required for FreeRouting JAR)."
+
+
 def test_routing_result_dataclass():
     r = RoutingResult(ok=True, dsn_path="a.dsn", ses_path="a.ses", duration_sec=1.2)
     assert r.ok

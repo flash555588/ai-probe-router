@@ -349,9 +349,11 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
                 f"Auto-routed in {autoroute_result.duration_sec:.1f}s"
             )
         else:
-            coverage.notes.append(
-                f"Auto-route skipped: {autoroute_result.error}"
-            )
+            reason = autoroute_result.error or "external autorouter did not complete"
+            message = f"Auto-route failed: {reason}"
+            coverage.notes.append(message)
+            if cfg.process_controls.require_autorouter_feedback:
+                raise RuntimeError(message)
 
     if cfg.thermal_analysis.enabled and board is not None:
         thermal_path = _write_thermal_analysis_export(board, cfg, out_dir)

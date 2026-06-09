@@ -8,6 +8,7 @@ from pathlib import Path
 from ai_probe_router.config import load_config
 from ai_probe_router.eda_adapters.kicad.cli_runner import CheckResult
 from ai_probe_router.engine import run
+from ai_probe_router.routing.freerouting_bridge import RoutingResult
 
 
 def test_engine_phase1(tmp_path):
@@ -354,6 +355,55 @@ def test_engine_required_manufacturing_exports_block_failure(
         assert "Gerber export failed: gerber failed" in str(exc)
     else:
         raise AssertionError("required manufacturing exports should block failed export")
+
+
+def test_engine_records_autorouter_failure_in_soft_mode(tmp_path, monkeypatch):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+    _write_export_contract_config(tmp_path, "  require_autorouter_feedback: false\n")
+
+    monkeypatch.setattr(
+        "ai_probe_router.engine.run_freerouting_route",
+        lambda *args, **kwargs: RoutingResult(error="FreeRouting not found"),
+    )
+
+    report, _ = run(load_config(tmp_path / "config.yaml"), tmp_path)
+
+    assert any("Auto-route failed: FreeRouting not found" in note for note in report.notes)
+    process = (tmp_path / "output" / "design_process_report.txt").read_text(
+        encoding="utf-8",
+    )
+    assert "autorouter_feedback_missing" in process
+
+
+def test_engine_required_autorouter_feedback_blocks_failure(tmp_path, monkeypatch):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+    _write_export_contract_config(tmp_path, "  require_autorouter_feedback: true\n")
+
+    monkeypatch.setattr(
+        "ai_probe_router.engine.run_freerouting_route",
+        lambda *args, **kwargs: RoutingResult(error="FreeRouting failed"),
+    )
+
+    try:
+        run(load_config(tmp_path / "config.yaml"), tmp_path)
+    except RuntimeError as exc:
+        assert "Auto-route failed: FreeRouting failed" in str(exc)
+    else:
+        raise AssertionError("required autorouter feedback should block failed autoroute")
 
 
 def test_engine_writes_module_report_for_schema_v2(tmp_path):
