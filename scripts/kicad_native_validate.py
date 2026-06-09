@@ -12,9 +12,16 @@ import argparse
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from ai_probe_router.eda_adapters.kicad.sch_health import healthcheck_schematic
+
+
+@dataclass(frozen=True)
+class NativeCommand:
+    label: str
+    command: list[str]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -41,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         print("kicad-cli not installed; skipping native KiCad validation")
         return 1 if args.require_kicad else 0
 
-    project_dir = args.project_dir
+    project_dir = args.project_dir.resolve()
     schematic = project_dir / args.schematic
     pcb = project_dir / args.pcb
     build_dir = project_dir / args.build_dir
@@ -55,46 +62,59 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     commands = [
-        [kicad_cli, "version"],
-        [
-            kicad_cli,
-            "sch",
-            "export",
-            "netlist",
-            "--output",
-            str(build_dir / "main.net"),
-            "--format",
-            "kicadsexpr",
-            str(schematic),
-        ],
-        [
-            kicad_cli,
-            "sch",
-            "erc",
-            "--output",
-            str(build_dir / "erc.json"),
-            "--format",
-            "json",
-            "--exit-code-violations",
-            str(schematic),
-        ],
-        [
-            kicad_cli,
-            "pcb",
-            "drc",
-            "--output",
-            str(build_dir / "drc.json"),
-            "--format",
-            "json",
-            "--schematic-parity",
-            "--exit-code-violations",
-            str(pcb),
-        ],
+        NativeCommand("version", [kicad_cli, "version"]),
+        NativeCommand(
+            "schematic netlist export",
+            [
+                kicad_cli,
+                "sch",
+                "export",
+                "netlist",
+                "--output",
+                str(build_dir / "main.net"),
+                "--format",
+                "kicadsexpr",
+                str(schematic),
+            ],
+        ),
+        NativeCommand(
+            "schematic ERC",
+            [
+                kicad_cli,
+                "sch",
+                "erc",
+                "--output",
+                str(build_dir / "erc.json"),
+                "--format",
+                "json",
+                "--exit-code-violations",
+                str(schematic),
+            ],
+        ),
+        NativeCommand(
+            "PCB DRC",
+            [
+                kicad_cli,
+                "pcb",
+                "drc",
+                "--output",
+                str(build_dir / "drc.json"),
+                "--format",
+                "json",
+                "--schematic-parity",
+                "--exit-code-violations",
+                str(pcb),
+            ],
+        ),
     ]
+    failed = False
     for command in commands:
-        print("+ " + " ".join(command))
-        subprocess.run(command, cwd=project_dir, check=True)
-    return 0
+        print("+ " + " ".join(command.command))
+        completed = subprocess.run(command.command, cwd=project_dir, check=False)
+        if completed.returncode != 0:
+            print(f"{command.label} failed with exit code {completed.returncode}")
+            failed = True
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

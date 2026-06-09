@@ -3,7 +3,7 @@
 This script creates a KiCad .kicad_pcb constraint file with:
 - Design rules (clearance, track width, via sizes)
 - Impedance-controlled net classes
-- Digital/Analog zone separation
+- Digital/Analog guidance regions
 - Differential pair rules
 - Power net classes
 
@@ -310,30 +310,50 @@ def _netclass_to_kicad(nc: NetClass) -> str:
 
 
 def _zone_to_kicad(z: KeepoutZone) -> str:
+    if not z.keepout:
+        return _guidance_region_to_kicad(z)
     pts = " ".join(f"(xy {x} {y})" for x, y in z.polygon_mm)
-    keepout = ""
-    if z.keepout:
-        keepout = (
-            "    (keepout (tracks not_allowed) (vias not_allowed) "
-            "(pads not_allowed) (copperpour not_allowed) "
-            "(footprints not_allowed))\n"
-        )
-    connect_pads = "no" if z.keepout else "yes"
-    fill = "no" if not z.keepout else "yes"
     return (
         f'  (zone (net 0) (net_name "") (layers "{z.layer}") '
         f'(uuid "{uuid.uuid4()}")\n'
         f'    (name "{z.name}")\n'
         f'    (hatch edge 0.5)\n'
-        f'    (connect_pads {connect_pads})\n'
+        f'    (connect_pads no)\n'
         f'    (min_thickness 0.15)\n'
-        f'{keepout}'
-        f'    (fill {fill} (thermal_gap 0.5) (thermal_bridge_width 0.5))\n'
+        f'    (keepout (tracks not_allowed) (vias not_allowed) '
+        f'(pads not_allowed) (copperpour not_allowed) '
+        f'(footprints not_allowed))\n'
+        f'    (fill yes (thermal_gap 0.5) (thermal_bridge_width 0.5))\n'
         f'    (polygon\n'
         f'      (pts\n'
         f'        {pts}\n'
         f'      )\n'
         f'    )\n'
+        f'  )'
+    )
+
+
+def _guidance_region_to_kicad(z: KeepoutZone) -> str:
+    xs = [x for x, _y in z.polygon_mm]
+    ys = [y for _x, y in z.polygon_mm]
+    min_x = min(xs)
+    max_x = max(xs)
+    min_y = min(ys)
+    max_y = max(ys)
+    return (
+        f'  (gr_rect\n'
+        f'    (start {min_x} {min_y})\n'
+        f'    (end {max_x} {max_y})\n'
+        f'    (stroke (width 0.15) (type dash))\n'
+        f'    (fill none)\n'
+        f'    (layer "{z.layer}")\n'
+        f'    (uuid "{uuid.uuid4()}")\n'
+        f'  )\n'
+        f'  (gr_text "{z.name}"\n'
+        f'    (at {min_x + 1.0} {max_y - 1.0} 0)\n'
+        f'    (layer "{z.layer}")\n'
+        f'    (effects (font (size 1.5 1.5)) (justify left bottom))\n'
+        f'    (uuid "{uuid.uuid4()}")\n'
         f'  )'
     )
 

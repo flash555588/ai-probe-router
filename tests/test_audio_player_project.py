@@ -23,12 +23,12 @@ def test_audio_regions_are_not_real_keepouts():
 
     text = generate_full_pcb_skeleton()
 
-    digital = _zone_block(text, "Digital_Region")
-    analog = _zone_block(text, "Analog_Region")
     isolation = _zone_block(text, "Isolation_Gap")
 
-    assert "(keepout" not in digital
-    assert "(keepout" not in analog
+    assert '(gr_text "Digital_Region"' in text
+    assert '(gr_text "Analog_Region"' in text
+    assert '(name "Digital_Region")' not in text
+    assert '(name "Analog_Region")' not in text
     assert "(keepout" in isolation
 
 
