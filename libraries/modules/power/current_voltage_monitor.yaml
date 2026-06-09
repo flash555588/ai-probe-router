@@ -1,6 +1,7 @@
 module:
   name: i2c_current_voltage_monitor
   type: current_voltage_monitor
+  version: "1.0.0"
 
 provides:
   - POWER_TELEMETRY
@@ -9,6 +10,7 @@ provides:
 
 implementations:
   - name: i2c_current_monitor_with_sense_resistor
+    version: "1.0.0"
     interfaces: [i2c]
     features:
       - CURRENT_SENSE
@@ -18,9 +20,11 @@ implementations:
       - type: current_monitor
         count: 1
         chip: generic_i2c_current_monitor
+        chip_version: "1.0.0"
       - type: sense_resistor
         count: 2
         package_options: ["0805", "1206"]
+        footprint_version: "kicad-8"
       - type: rc_filter
         count: 2
       - type: decoupling_capacitor
@@ -32,6 +36,7 @@ implementations:
       human_review_required: false
 
   - name: protected_power_monitor_with_efuse
+    version: "1.0.0"
     interfaces: [i2c]
     features:
       - CURRENT_SENSE
@@ -41,6 +46,7 @@ implementations:
       - type: current_monitor
         count: 1
         chip: generic_i2c_current_monitor
+        chip_version: "1.0.0"
       - type: sense_resistor
         count: 2
       - type: efuse
@@ -55,4 +61,3 @@ implementations:
       kelvin_route_sense_resistor: true
       keep_near_power_input: true
       human_review_required: false
-

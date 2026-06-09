@@ -1,6 +1,7 @@
 module:
   name: protected_swd_debug
   type: debug_swd
+  version: "1.0.0"
 
 provides:
   - DEBUG_SWD
@@ -18,6 +19,7 @@ requires:
 
 implementations:
   - name: direct_testpads
+    version: "1.0.0"
     features:
       - DIRECT_TESTPAD
     components:
@@ -25,6 +27,7 @@ implementations:
         count: 3
         value_options: ["22", "33", "47", "100"]
         package_options: ["0402", "0603"]
+        footprint_version: "kicad-8"
       - type: testpad
         count: 5
     area_mm2: 35
@@ -35,6 +38,7 @@ implementations:
       human_review_required: false
 
   - name: protected_pogo
+    version: "1.0.0"
     features:
       - ESD_PROTECTION
     components:
@@ -42,9 +46,11 @@ implementations:
         count: 3
         value_options: ["22", "33", "47", "100"]
         package_options: ["0402", "0603"]
+        footprint_version: "kicad-8"
       - type: esd_array
         count: 1
         chip: generic_gpio_esd_array
+        chip_version: "1.0.0"
       - type: testpad
         count: 5
     area_mm2: 55
@@ -55,21 +61,23 @@ implementations:
       human_review_required: false
 
   - name: connectorized_swd
+    version: "1.0.0"
     features:
       - ESD_PROTECTION
     components:
       - type: connector
         count: 1
         package_options: ["1x05_2.54mm", "2x05_1.27mm"]
+        footprint_version: "kicad-8"
       - type: series_resistor
         count: 3
       - type: esd_array
         count: 1
         chip: generic_gpio_esd_array
+        chip_version: "1.0.0"
     area_mm2: 110
     bom_cost: 0.25
     constraints:
       place_near_board_edge: true
       require_silkscreen_pin1: true
       human_review_required: false
-

@@ -1,6 +1,7 @@
 module:
   name: mixed_voltage_gpio_expansion
   type: gpio_expansion
+  version: "1.0.0"
 
 provides:
   - GPIO_EXPANSION
@@ -9,6 +10,7 @@ provides:
 
 implementations:
   - name: i2c_gpio_expander_16_level_shifted
+    version: "1.0.0"
     interfaces: [i2c]
     features:
       - LEVEL_SHIFT
@@ -18,11 +20,13 @@ implementations:
       - type: gpio_expander
         count: 1
         chip: generic_i2c_gpio_expander_16
+        chip_version: "1.0.0"
       - type: level_shifter
         count: 2
       - type: esd_array
         count: 2
         chip: generic_gpio_esd_array
+        chip_version: "1.0.0"
       - type: pullup_resistor
         count: 2
     area_mm2: 125
@@ -32,6 +36,7 @@ implementations:
       human_review_required: false
 
   - name: spi_gpio_expander_16_protected
+    version: "1.0.0"
     interfaces: [spi]
     features:
       - ESD_PROTECTION
@@ -40,17 +45,20 @@ implementations:
       - type: gpio_expander
         count: 1
         chip: generic_spi_gpio_expander_16
+        chip_version: "1.0.0"
       - type: resistor_array
         count: 2
       - type: esd_array
         count: 2
         chip: generic_gpio_esd_array
+        chip_version: "1.0.0"
     area_mm2: 115
     bom_cost: 1.15
     constraints:
       human_review_required: false
 
   - name: native_mcu_gpio_level_shifted
+    version: "1.0.0"
     features:
       - LEVEL_SHIFT
       - ESD_PROTECTION
@@ -63,9 +71,9 @@ implementations:
       - type: esd_array
         count: 1
         chip: generic_gpio_esd_array
+        chip_version: "1.0.0"
     area_mm2: 65
     bom_cost: 0.75
     constraints:
       consumes_native_mcu_pins: true
       human_review_required: false
-
