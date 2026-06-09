@@ -16,6 +16,7 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
     assert "actions/checkout@v4" not in workflow
     assert "actions/setup-python@v5" not in workflow
     assert "astral-sh/setup-uv@v4" not in workflow
+    assert "actions/upload-artifact@v6" in workflow
     assert "dependency-audit:" in workflow
     assert 'uv pip install -e ".[dev]" --system' in workflow
     assert "pip-audit --progress-spinner off" in workflow
@@ -26,3 +27,7 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
         "python scripts/kicad_native_validate.py "
         "examples/audio_player_project --require-kicad"
     ) in workflow
+    assert "if: always()" in workflow
+    assert "name: native-kicad-reports" in workflow
+    assert "path: examples/audio_player_project/build/kicad/" in workflow
+    assert "if-no-files-found: warn" in workflow

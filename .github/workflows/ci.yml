@@ -81,3 +81,11 @@ jobs:
 
       - name: Required native KiCad validation
         run: python scripts/kicad_native_validate.py examples/audio_player_project --require-kicad
+
+      - name: Upload native KiCad reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-kicad-reports
+          path: examples/audio_player_project/build/kicad/
+          if-no-files-found: warn

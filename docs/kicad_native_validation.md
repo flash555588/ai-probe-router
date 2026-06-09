@@ -26,6 +26,11 @@ kicad-cli sch erc --output build/kicad/erc.json --format json main.kicad_sch
 kicad-cli pcb drc --output build/kicad/drc.json --format json --schematic-parity main.kicad_pcb
 ```
 
+On `push` to `main` and manual workflow dispatch, CI uploads
+`examples/audio_player_project/build/kicad/` as the `native-kicad-reports`
+artifact even when the native job fails. That artifact should contain the
+generated netlist plus ERC/DRC JSON reports when KiCad reaches those stages.
+
 Interpretation:
 
 - Hard gate: schematic healthcheck and netlist export must pass.
