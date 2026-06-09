@@ -405,10 +405,12 @@ def test_engine_records_autorouter_failure_in_soft_mode(tmp_path, monkeypatch):
     shutil.copy(sch_src, tmp_path / "main.kicad_sch")
     _write_export_contract_config(tmp_path, "  require_autorouter_feedback: false\n")
 
-    monkeypatch.setattr(
-        "ai_probe_router.engine.run_freerouting_route",
-        lambda *args, **kwargs: RoutingResult(error="FreeRouting not found"),
-    )
+    def fake_autorouter(cfg, coverage, *_args, **_kwargs):
+        result = RoutingResult(error="FreeRouting not found")
+        coverage.notes.append("Auto-route failed: FreeRouting not found")
+        return result
+
+    monkeypatch.setattr("ai_probe_router.engine.run_autorouter", fake_autorouter)
 
     report, _ = run(load_config(tmp_path / "config.yaml"), tmp_path)
 
@@ -430,10 +432,10 @@ def test_engine_required_autorouter_feedback_blocks_failure(tmp_path, monkeypatc
     shutil.copy(sch_src, tmp_path / "main.kicad_sch")
     _write_export_contract_config(tmp_path, "  require_autorouter_feedback: true\n")
 
-    monkeypatch.setattr(
-        "ai_probe_router.engine.run_freerouting_route",
-        lambda *args, **kwargs: RoutingResult(error="FreeRouting failed"),
-    )
+    def fake_autorouter(*_args, **_kwargs):
+        raise RuntimeError("Auto-route failed: FreeRouting failed")
+
+    monkeypatch.setattr("ai_probe_router.engine.run_autorouter", fake_autorouter)
 
     try:
         run(load_config(tmp_path / "config.yaml"), tmp_path)

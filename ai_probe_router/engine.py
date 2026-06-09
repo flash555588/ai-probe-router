@@ -35,13 +35,12 @@ from .models.board import Board, BoundingBox, Schematic, _pad_bounds
 from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
+from .pipeline.autorouter import run_autorouter
 from .pipeline.native_tools import (
     apply_native_validation,
     run_manufacturing_exports,
     run_native_validation,
 )
-from .routing.dsn_export import export_dsn
-from .routing.freerouting_bridge import route_board as run_freerouting_route
 from .routing.module_corridor import analyze_routing_feasibility
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.grid_router import RouteResult, route_grid
@@ -341,20 +340,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
                 f"{review.warning_count} warnings"
             )
 
-    if board is not None:
-        dsn_path = out_dir / "routing.dsn"
-        export_dsn(board, dsn_path)
-        autoroute_result = run_freerouting_route(board, dsn_path, out_dir, timeout_sec=60)
-        if autoroute_result.ok:
-            coverage.notes.append(
-                f"Auto-routed in {autoroute_result.duration_sec:.1f}s"
-            )
-        else:
-            reason = autoroute_result.error or "external autorouter did not complete"
-            message = f"Auto-route failed: {reason}"
-            coverage.notes.append(message)
-            if cfg.process_controls.require_autorouter_feedback:
-                raise RuntimeError(message)
+    autoroute_result = run_autorouter(cfg, coverage, board, out_dir)
 
     if cfg.thermal_analysis.enabled and board is not None:
         thermal_path = _write_thermal_analysis_export(board, cfg, out_dir)
