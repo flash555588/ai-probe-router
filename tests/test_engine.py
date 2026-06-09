@@ -382,6 +382,13 @@ def test_engine_required_manufacturing_exports_block_failure(
     )
 
     monkeypatch.setattr(
+        "ai_probe_router.engine.run_native_validation",
+        lambda *args: NativeValidationResult(
+            drc=CheckResult(ok=True),
+            erc=CheckResult(ok=True),
+        ),
+    )
+    monkeypatch.setattr(
         "ai_probe_router.pipeline.native_tools.export_gerbers",
         lambda *args: CheckResult(ok=False, error="gerber failed"),
     )

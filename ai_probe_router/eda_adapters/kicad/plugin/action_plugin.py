@@ -130,6 +130,8 @@ class AiProbeRouterActionPlugin(pcbnew.ActionPlugin):
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=300,
                 cwd=str(project_dir),
             )

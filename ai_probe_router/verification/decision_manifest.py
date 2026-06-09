@@ -194,6 +194,8 @@ def _probe_version(
             cmd,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, OSError) as exc:

@@ -348,6 +348,8 @@ def _run_version(
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     output = (completed.stdout or completed.stderr or "").strip()
     _write_text(report_dir / "kicad-version.txt", output + ("\n" if output else ""))
@@ -375,6 +377,8 @@ def _run_native_command(
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     _write_text(stdout_path, completed.stdout)
     _write_text(stderr_path, completed.stderr)
@@ -936,9 +940,9 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _write_text(path: Path, text: str) -> None:
+def _write_text(path: Path, text: str | None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text or "", encoding="utf-8")
 
 
 def _emit(emit: Callable[[str], None] | None, message: str) -> None:

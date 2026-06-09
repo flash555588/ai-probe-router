@@ -7,12 +7,14 @@ import shutil
 from pathlib import Path
 
 from ai_probe_router.config import load_config
+from ai_probe_router.eda_adapters.kicad.cli_runner import CheckResult
 from ai_probe_router.eda_adapters.kicad.pcb_parser import parse_pcb
 from ai_probe_router.engine import run
 from ai_probe_router.models.net import NetRole
+from ai_probe_router.pipeline.native_tools import NativeValidationResult
 
 
-def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path):
+def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path, monkeypatch):
     repo_root = Path(__file__).parent.parent
     examples = repo_root / "examples"
     project_src = examples / "minimal_project"
@@ -21,6 +23,16 @@ def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path):
     shutil.copy(project_src / "main.kicad_pcb", tmp_path / "main.kicad_pcb")
     shutil.copy(project_src / "main.kicad_sch", tmp_path / "main.kicad_sch")
     shutil.copy(config_src, tmp_path / "config.yaml")
+
+    # Keep the verdict deterministic regardless of whether a real kicad-cli is
+    # installed locally; native validation is exercised by dedicated tests.
+    monkeypatch.setattr(
+        "ai_probe_router.engine.run_native_validation",
+        lambda *args: NativeValidationResult(
+            drc=CheckResult(ok=True),
+            erc=CheckResult(ok=True),
+        ),
+    )
 
     cfg = load_config(tmp_path / "config.yaml")
     coverage, _ = run(cfg, tmp_path)
