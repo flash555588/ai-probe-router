@@ -1,0 +1,40 @@
+module:
+  name: high_fidelity_audio_dac
+  type: audio_dac
+  version: "1.0.0"
+
+provides:
+  - I2S_AUDIO_DAC
+  - AUDIO_CLOCK_DOMAIN
+
+implementations:
+  - name: i2s_stereo_dac
+    version: "1.0.0"
+    interfaces: [i2s, i2c]
+    features:
+      - LOW_NOISE_ANALOG
+      - DIFFERENTIAL_OUTPUT
+    channels: 2
+    components:
+      - type: audio_dac
+        count: 1
+        chip: generic_i2s_dac
+        chip_version: "1.0.0"
+        package_options: ["QFN-32", "TSSOP-28"]
+        footprint_version: "kicad-8"
+      - type: crystal
+        count: 1
+        package_options: ["SMD_3225"]
+        footprint_version: "kicad-8"
+      - type: decoupling_capacitor
+        count: 6
+        value: "100nF"
+        footprint_version: "0402"
+      - type: output_coupling_capacitor
+        count: 2
+        value: "10uF"
+        footprint_version: "0603"
+    area_mm2: 70
+    bom_cost: 4.20
+    constraints:
+      human_review_required: true

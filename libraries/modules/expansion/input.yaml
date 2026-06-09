@@ -1,0 +1,30 @@
+module:
+  name: generic_user_input
+  type: input
+  version: "1.0.0"
+
+provides:
+  - GPIO_INPUT
+  - ADC_INPUT
+
+implementations:
+  - name: protected_input_connector
+    version: "1.0.0"
+    interfaces: [adc, gpio, i2c]
+    features:
+      - ESD_PROTECTION
+    components:
+      - type: connector
+        count: 1
+        package_options: ["FPC_5P", "PinHeader_1x05"]
+        footprint_version: "kicad-8"
+      - type: rc_filter
+        count: 2
+        footprint_version: "0402"
+      - type: esd_array
+        count: 1
+        footprint_version: "SOT-23-6"
+    area_mm2: 24
+    bom_cost: 0.35
+    constraints:
+      human_review_required: false

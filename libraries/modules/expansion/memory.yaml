@@ -1,0 +1,35 @@
+module:
+  name: serial_flash_memory
+  type: memory
+  version: "1.0.0"
+
+provides:
+  - SPI_FLASH
+  - QUAD_SPI_FLASH
+
+implementations:
+  - name: qspi_nor_flash
+    version: "1.0.0"
+    interfaces: [spi, spi_quad]
+    features:
+      - NON_VOLATILE_STORAGE
+      - QUAD_SPI
+    components:
+      - type: eeprom
+        count: 1
+        chip: w25q128
+        chip_version: "1.0.0"
+        package_options: ["SOIC-8", "WSON-8"]
+        footprint_version: "kicad-8"
+      - type: decoupling_capacitor
+        count: 1
+        value: "100nF"
+        footprint_version: "0402"
+      - type: series_resistor
+        count: 4
+        value: "22"
+        footprint_version: "0402"
+    area_mm2: 28
+    bom_cost: 0.90
+    constraints:
+      human_review_required: false

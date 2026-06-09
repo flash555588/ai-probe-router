@@ -1,0 +1,41 @@
+module:
+  name: generic_microcontroller_core
+  type: mcu
+  version: "1.0.0"
+
+provides:
+  - MCU_CORE
+  - DEBUG_ACCESS
+  - MIXED_SIGNAL_IO
+
+implementations:
+  - name: lqfp_mcu_core
+    version: "1.0.0"
+    interfaces: [adc, gpio, i2c, i2s, sdio, spi, swd, usb_fs]
+    features:
+      - DEBUG_SWD
+      - USB_FS
+      - MIXED_SIGNAL_IO
+    components:
+      - type: wifi_mcu
+        count: 1
+        chip: generic_arm_mcu
+        chip_version: "1.0.0"
+        package_options: ["LQFP-64", "LQFP-100"]
+        footprint_version: "kicad-8"
+      - type: crystal
+        count: 1
+        package_options: ["SMD_3225"]
+        footprint_version: "kicad-8"
+      - type: decoupling_capacitor
+        count: 8
+        value: "100nF"
+        footprint_version: "0402"
+      - type: series_resistor
+        count: 2
+        value: "22"
+        footprint_version: "0402"
+    area_mm2: 120
+    bom_cost: 6.50
+    constraints:
+      human_review_required: true

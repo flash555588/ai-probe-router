@@ -1,0 +1,32 @@
+module:
+  name: generic_display_interface
+  type: display
+  version: "1.0.0"
+
+provides:
+  - DISPLAY_CONNECTOR
+  - BACKLIGHT_INTERFACE
+
+implementations:
+  - name: fpc_display_connector
+    version: "1.0.0"
+    interfaces: [rgb_parallel, i2c, spi]
+    features:
+      - FPC_CONNECTOR
+      - BACKLIGHT_ENABLE
+    components:
+      - type: connector
+        count: 1
+        package_options: ["FPC_12P", "FPC_24P"]
+        footprint_version: "kicad-8"
+      - type: esd_array
+        count: 1
+        footprint_version: "SOT-23-6"
+      - type: series_resistor
+        count: 8
+        value: "33"
+        footprint_version: "0402"
+    area_mm2: 50
+    bom_cost: 0.80
+    constraints:
+      human_review_required: true

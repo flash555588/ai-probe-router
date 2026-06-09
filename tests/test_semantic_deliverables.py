@@ -72,6 +72,44 @@ def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path):
     assert "manufacturing" in readiness
 
 
+def test_audio_player_generation_reaches_semantic_module_planning(tmp_path: Path):
+    repo_root = Path(__file__).parent.parent
+    project_src = repo_root / "examples" / "audio_player_project"
+
+    shutil.copy(project_src / "main.kicad_pcb", tmp_path / "main.kicad_pcb")
+    shutil.copy(project_src / "main.kicad_sch", tmp_path / "main.kicad_sch")
+    shutil.copy(project_src / "audio_player_config.yaml", tmp_path / "config.yaml")
+
+    cfg = load_config(tmp_path / "config.yaml")
+    coverage, pin_report = run(cfg, tmp_path)
+
+    out_dir = tmp_path / "output"
+    manifest = json.loads((out_dir / "decision_manifest.json").read_text(encoding="utf-8"))
+    preflight = (out_dir / "module_library_preflight_report.txt").read_text(
+        encoding="utf-8",
+    )
+    resource = json.loads((out_dir / "resource_allocation_report.json").read_text(
+        encoding="utf-8",
+    ))
+
+    expected_modules = {module.name for module in cfg.functional_modules}
+    planned_modules = {module["name"] for module in manifest["modules"]}
+
+    assert pin_report is None
+    assert coverage.notes == [
+        "Module planning blocked generation; no PCB or schematic changes were written",
+    ]
+    assert "requested module type" not in preflight
+    assert expected_modules == planned_modules
+    assert manifest["readiness"]["verdict"] == "BLOCKED"
+    assert manifest["readiness"]["blockers"] > 0
+    assert manifest["coverage"]["notes"] == coverage.notes
+    assert manifest["routing"]["corridors"] == []
+    assert not resource["ok"]
+    assert "POWER_DOMAIN_OVERLOAD" in resource["errors"]
+    assert not (out_dir / "main.kicad_pcb").exists()
+
+
 def test_decision_manifest_records_native_tool_presence(tmp_path: Path, monkeypatch):
     from ai_probe_router.verification import decision_manifest
     from ai_probe_router.verification.decision_manifest import write_decision_manifest

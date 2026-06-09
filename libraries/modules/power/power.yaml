@@ -1,0 +1,35 @@
+module:
+  name: generic_power_input
+  type: power
+  version: "1.0.0"
+
+provides:
+  - POWER_INPUT
+  - BATTERY_INPUT
+
+implementations:
+  - name: protected_power_connector
+    version: "1.0.0"
+    interfaces: [power]
+    features:
+      - INPUT_PROTECTION
+      - ESD_PROTECTION
+    components:
+      - type: connector
+        count: 1
+        package_options: ["JST_PH_2P", "JST_PH_3P"]
+        footprint_version: "kicad-8"
+      - type: fuse
+        count: 1
+        footprint_version: "1206"
+      - type: tvs_diode
+        count: 1
+        footprint_version: "SMB"
+      - type: current_sense_resistor
+        count: 1
+        value: "0.05"
+        footprint_version: "1206"
+    area_mm2: 30
+    bom_cost: 0.70
+    constraints:
+      human_review_required: true

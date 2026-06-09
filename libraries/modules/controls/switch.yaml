@@ -1,0 +1,30 @@
+module:
+  name: generic_user_switch
+  type: switch
+  version: "1.0.0"
+
+provides:
+  - USER_SWITCH
+  - RESET_SWITCH
+
+implementations:
+  - name: esd_protected_switch
+    version: "1.0.0"
+    interfaces: [gpio]
+    features:
+      - ESD_PROTECTION
+    components:
+      - type: connector
+        count: 1
+        package_options: ["Tactile_Switch", "Slide_Switch"]
+        footprint_version: "kicad-8"
+      - type: rc_filter
+        count: 1
+        footprint_version: "0402"
+      - type: tvs_diode
+        count: 1
+        footprint_version: "SOD-323"
+    area_mm2: 12
+    bom_cost: 0.25
+    constraints:
+      human_review_required: false

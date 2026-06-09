@@ -1,0 +1,36 @@
+module:
+  name: generic_audio_amplifier
+  type: audio_amp
+  version: "1.0.0"
+
+provides:
+  - HEADPHONE_AMPLIFIER
+  - CLASS_D_SPEAKER_AMPLIFIER
+
+implementations:
+  - name: selectable_audio_amplifier
+    version: "1.0.0"
+    interfaces: [analog_diff, i2s]
+    features:
+      - LOW_NOISE_ANALOG
+      - SPEAKER_OUTPUT
+    channels: 2
+    components:
+      - type: audio_codec
+        count: 1
+        chip: generic_audio_amp
+        chip_version: "1.0.0"
+        package_options: ["QFN-16", "WLCSP"]
+        footprint_version: "kicad-8"
+      - type: decoupling_capacitor
+        count: 4
+        value: "100nF"
+        footprint_version: "0402"
+      - type: output_coupling_capacitor
+        count: 2
+        value: "10uF"
+        footprint_version: "0603"
+    area_mm2: 32
+    bom_cost: 1.80
+    constraints:
+      human_review_required: true

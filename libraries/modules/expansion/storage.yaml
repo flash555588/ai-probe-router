@@ -1,0 +1,36 @@
+module:
+  name: removable_storage_interface
+  type: storage
+  version: "1.0.0"
+
+provides:
+  - SDIO_STORAGE
+  - SPI_STORAGE
+
+implementations:
+  - name: microsd_sdio_slot
+    version: "1.0.0"
+    interfaces: [sdio, spi]
+    features:
+      - REMOVABLE_MEDIA
+      - ESD_PROTECTION
+    components:
+      - type: sd_card_connector
+        count: 1
+        package_options: ["microSD_push_push"]
+        footprint_version: "kicad-8"
+      - type: esd_array
+        count: 1
+        footprint_version: "SOT-23-6"
+      - type: pullup_resistor
+        count: 6
+        value: "10k"
+        footprint_version: "0402"
+      - type: series_resistor
+        count: 6
+        value: "22"
+        footprint_version: "0402"
+    area_mm2: 150
+    bom_cost: 1.20
+    constraints:
+      human_review_required: false

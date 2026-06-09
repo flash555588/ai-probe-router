@@ -1,0 +1,30 @@
+module:
+  name: generic_external_connector
+  type: connector
+  version: "1.0.0"
+
+provides:
+  - BOARD_CONNECTOR
+  - USER_PORT
+
+implementations:
+  - name: protected_edge_connector
+    version: "1.0.0"
+    interfaces: [analog_diff, gpio, i2c, usb_fs]
+    features:
+      - ESD_PROTECTION
+    components:
+      - type: connector
+        count: 1
+        package_options: ["USB_C_16P", "TRRS_3.5mm", "PinHeader"]
+        footprint_version: "kicad-8"
+      - type: esd_array
+        count: 1
+        footprint_version: "SOT-23-6"
+      - type: common_mode_choke
+        count: 1
+        footprint_version: "0603"
+    area_mm2: 35
+    bom_cost: 1.00
+    constraints:
+      human_review_required: true
