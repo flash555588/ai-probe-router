@@ -36,6 +36,7 @@ from .models.dev_board import DevelopmentBoard
 from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
 from .pipeline.autorouter import run_autorouter
+from .pipeline.delivery_artifacts import write_delivery_artifacts
 from .pipeline.native_tools import (
     apply_native_validation,
     run_manufacturing_exports,
@@ -352,57 +353,26 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     if out_pcb_path is not None:
         run_manufacturing_exports(cfg, coverage, out_pcb_path, mfg_dir)
 
-    artifacts = collect_artifact_manifest(out_dir)
-    planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
-    process_report = generate_design_process_report(
-        cfg,
+    write_delivery_artifacts(
+        out_dir=out_dir,
+        cfg=cfg,
         run_id=run_id,
         board=board,
         coverage=coverage,
-        module_graph_result=module_graph_result,
-        module_compatibility_result=module_compatibility_result,
-        routing_feasibility=routing_feasibility,
         manufacturing_report=mfg_report,
-        diff_pair_report=dp_report,
-        autoroute_result=autoroute_result,
         prior_manifest=prior_manifest,
-        generated_artifacts=planned_artifacts,
-    )
-    process_report.write(out_dir / "design_process_report.txt")
-    coverage.write(out_dir / "testpoint_report.txt")
-    readiness = generate_readiness_report(
-        coverage,
-        run_id=run_id,
-        module_library_preflight=module_library_preflight_result,
+        module_library_preflight_result=module_library_preflight_result,
         module_selection=module_selection,
         module_graph_result=module_graph_result,
         module_compatibility_result=module_compatibility_result,
         module_placement_result=module_placement_result,
         module_instantiation_result=module_instantiation_result,
         routing_feasibility=routing_feasibility,
-        pin_mapping_result=pin_report.result if pin_report is not None else None,
-        manufacturing_report=mfg_report,
+        pin_report=pin_report,
         diff_pair_report=dp_report,
-        process_report=process_report,
+        autoroute_result=autoroute_result,
         resource_allocation_result=resource_allocation_result,
         footprint_preview_result=footprint_preview_result,
-    )
-    readiness.write(out_dir / "readiness_report.txt")
-    artifacts = collect_artifact_manifest(out_dir)
-    write_decision_manifest(
-        out_dir / "decision_manifest.json",
-        run_id=run_id,
-        cfg=cfg,
-        coverage=coverage,
-        readiness_report=readiness,
-        process_report=process_report,
-        module_selection=module_selection,
-        module_graph_result=module_graph_result,
-        module_compatibility_result=module_compatibility_result,
-        routing_feasibility=routing_feasibility,
-        autoroute_result=autoroute_result,
-        prior_manifest=prior_manifest,
-        artifacts=artifacts,
     )
 
     return coverage, pin_report
