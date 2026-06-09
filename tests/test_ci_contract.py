@@ -21,8 +21,12 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
     assert 'uv pip install -e ".[dev]" --system' in workflow
     assert "pip-audit --progress-spinner off" in workflow
     assert "native-kicad:" in workflow
+    native_job = workflow.split("native-kicad:", 1)[1]
+    assert "if: github.event_name == 'push'" not in native_job
     assert "workflow_dispatch:" in workflow
-    assert "ghcr.io/inti-cmnb/kicad8_auto:latest" in workflow
+    assert "ghcr.io/inti-cmnb/kicad9_auto:1.8.5" in workflow
+    assert "kicad8_auto:latest" not in workflow
+    assert "kicad9_auto:latest" not in workflow
     assert (
         "python scripts/kicad_native_validate.py "
         "examples/audio_player_project --require-kicad"

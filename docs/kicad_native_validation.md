@@ -11,7 +11,7 @@ python scripts/kicad_native_validate.py examples/audio_player_project
 ```
 
 By default, the wrapper skips gracefully when `kicad-cli` is missing. For
-release CI where KiCad is installed and required:
+PR/release CI where KiCad is installed and required:
 
 ```bash
 python scripts/kicad_native_validate.py examples/audio_player_project --require-kicad
@@ -26,10 +26,16 @@ kicad-cli sch erc --output build/kicad/erc.json --format json main.kicad_sch
 kicad-cli pcb drc --output build/kicad/drc.json --format json --schematic-parity main.kicad_pcb
 ```
 
-On `push` to `main` and manual workflow dispatch, CI uploads
-`examples/audio_player_project/build/kicad/` as the `native-kicad-reports`
-artifact even when the native job fails. That artifact should contain the
-generated netlist plus ERC/DRC JSON reports when KiCad reaches those stages.
+The `native-kicad` CI job runs on pull requests, pushes to `main`, and manual
+workflow dispatch. It uses the pinned KiCad 9 container
+`ghcr.io/inti-cmnb/kicad9_auto:1.8.5` so PR review and main-branch validation
+share one native-tool baseline. Local verification has also been run against
+KiCad CLI 9.0.2 from the official macOS bundle.
+
+CI uploads `examples/audio_player_project/build/kicad/` as the
+`native-kicad-reports` artifact even when the native job fails. That artifact
+should contain the generated netlist plus ERC/DRC JSON reports when KiCad
+reaches those stages.
 
 Interpretation:
 
