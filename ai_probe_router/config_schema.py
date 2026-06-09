@@ -85,6 +85,12 @@ _FUNCTIONAL_MODULE_KEYS = {
     "version",
     "voltage_domains",
 }
+_AI_HINT_KEYS = {
+    "params",
+    "target",
+    "type",
+    "value",
+}
 _MODULE_PLACEMENT_KEYS = {
     "group_by_module",
     "keep_analog_modules_away_from_switching_power",
@@ -380,6 +386,7 @@ def _validate_ai_hints(raw: Any, path: str) -> None:
         if isinstance(hint, str):
             continue
         hint = _require_mapping(hint, hint_path)
+        _reject_unknown_keys(hint, _AI_HINT_KEYS, hint_path)
         _optional_text(hint, "type", f"{hint_path}.type")
         _optional_text(hint, "target", f"{hint_path}.target")
         _optional_text(hint, "value", f"{hint_path}.value")

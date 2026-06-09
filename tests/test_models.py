@@ -387,6 +387,30 @@ routing_strategy:
     assert cfg.routing_strategy.sensitive_net_spacing_mm == 7
 
 
+def test_load_config_rejects_unknown_ai_hint_key(tmp_path):
+    config = """\
+schema_version: 2
+
+project:
+  eda_tool: kicad
+
+functional_modules:
+  - name: analog_probe
+    type: analog_measurement
+    ai_hints:
+      - type: sensitive_route
+        targte: analog_probe
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(
+        ConfigValidationError,
+        match=r"Unsupported config key: functional_modules\[0\]\.ai_hints\[0\]\.targte",
+    ):
+        load_config(cfg_path)
+
+
 def test_load_schema_v2_module_params_and_constraints_are_explicit(tmp_path):
     config = """\
 schema_version: 2
