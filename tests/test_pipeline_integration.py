@@ -246,7 +246,7 @@ class TestPipelineIntegration:
             "  board_file: board.kicad_pcb\n"
             "nets_to_expose:\n"
             "  - net: TEST_NET\n"
-            "    style: via\n"
+            "    role: debug\n"
             "plugin_shell:\n"
             "  step_file: board.step\n"
             "  enable_3d: true\n",

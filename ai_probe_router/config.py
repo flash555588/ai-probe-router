@@ -297,17 +297,7 @@ def load_config(path: str | Path) -> ProjectConfig:
             scalability_net_warning_threshold=int(
                 pc.get("scalability_net_warning_threshold", 200) or 200,
             ),
-            params={
-                k: v for k, v in pc.items()
-                if k not in {
-                    "waivers",
-                    "strict_signoff",
-                    "require_autorouter_feedback",
-                    "require_manufacturing_exports",
-                    "scalability_module_warning_threshold",
-                    "scalability_net_warning_threshold",
-                }
-            },
+            params=dict(pc.get("params", {})),
         )
     elif raw.get("waivers"):
         cfg.process_controls.waivers = [
@@ -319,7 +309,7 @@ def load_config(path: str | Path) -> ProjectConfig:
     mfp = raw.get("module_footprint_preview", {})
     if isinstance(mfp, dict):
         cfg.module_footprint_preview = ModuleFootprintPreviewConfig(
-            enable=bool(mfp.get("enable", False)),
+            enable=bool(mfp.get("enable", mfp.get("enabled", False))),
             mode=str(mfp.get("mode", "preview")),
             write_candidate_pcb=bool(mfp.get("write_candidate_pcb", False)),
             block_on_collision=bool(mfp.get("block_on_collision", True)),

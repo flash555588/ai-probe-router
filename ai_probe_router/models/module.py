@@ -96,29 +96,10 @@ class SelectedModule:
 
 
 def parse_functional_module(raw: dict[str, Any]) -> FunctionalModule:
-    known_keys = {
-        "name",
-        "type",
-        "required",
-        "priority",
-        "target_nets",
-        "depends_on",
-        "channels",
-        "voltage_domains",
-        "allowed_implementations",
-        "allowed_interfaces",
-        "rails",
-        "telemetry_bus",
-        "resolution_bits_min",
-        "budget_area_mm2",
-        "preferred_region",
-        "version",
-        "ai_hints",
-        "require_level_shift",
-        "require_esd",
-        "require_input_protection",
-        "require_mux",
-    }
+    raw_params = raw.get("params", {})
+    params = dict(raw_params) if isinstance(raw_params, dict) else {}
+    if "constraints" in raw:
+        params["constraints"] = raw["constraints"]
     return FunctionalModule(
         name=str(raw.get("name", "")),
         type=str(raw.get("type", "")),
@@ -144,7 +125,7 @@ def parse_functional_module(raw: dict[str, Any]) -> FunctionalModule:
         require_esd=bool(raw.get("require_esd", False)),
         require_input_protection=bool(raw.get("require_input_protection", False)),
         require_mux=bool(raw.get("require_mux", False)),
-        params={k: v for k, v in raw.items() if k not in known_keys},
+        params=params,
     )
 
 

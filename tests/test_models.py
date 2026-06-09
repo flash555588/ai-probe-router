@@ -228,6 +228,79 @@ nets_to_expose:
         load_config(cfg_path)
 
 
+def test_load_config_rejects_unknown_top_level_key(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: SWDIO
+mystery_section: {}
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(
+        ConfigValidationError,
+        match=r"Unsupported config key: config\.mystery_section",
+    ):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_unknown_project_key(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+  boarad_file: main.kicad_pcb
+nets_to_expose:
+  - net: SWDIO
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(
+        ConfigValidationError,
+        match=r"Unsupported config key: project\.boarad_file",
+    ):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_unknown_net_key(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: USB_DP
+    pairwith: USB_DM
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(
+        ConfigValidationError,
+        match=r"Unsupported config key: nets_to_expose\[0\]\.pairwith",
+    ):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_unknown_process_control_key(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: SWDIO
+process_controls:
+  strict_signof: true
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(
+        ConfigValidationError,
+        match=r"Unsupported config key: process_controls\.strict_signof",
+    ):
+        load_config(cfg_path)
+
+
 def test_load_schema_v2_functional_modules_without_nets(tmp_path):
     config = """\
 schema_version: 2
@@ -314,6 +387,32 @@ routing_strategy:
     assert cfg.routing_strategy.sensitive_net_spacing_mm == 7
 
 
+def test_load_schema_v2_module_params_and_constraints_are_explicit(tmp_path):
+    config = """\
+schema_version: 2
+
+project:
+  eda_tool: kicad
+
+functional_modules:
+  - name: flash_storage
+    type: memory
+    params:
+      interface: spi_quad
+    constraints:
+      max_freq_mhz: 80
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+    module = cfg.functional_modules[0]
+
+    assert module.params["interface"] == "spi_quad"
+    assert module.params["constraints"] == {"max_freq_mhz": 80}
+    assert "params" not in module.params
+
+
 def test_load_process_controls_and_waivers(tmp_path):
     config = """\
 project:
@@ -350,6 +449,56 @@ process_controls:
     assert cfg.process_controls.scalability_net_warning_threshold == 4
     assert cfg.process_controls.waivers[0].waiver_id == "WV-1"
     assert cfg.process_controls.waivers[0].complete
+
+
+def test_load_process_control_params_are_explicit(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: SWDIO
+process_controls:
+  params:
+    release_track: prototype
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+
+    assert cfg.process_controls.params == {"release_track": "prototype"}
+
+
+def test_load_module_footprint_preview_enabled_alias(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: SWDIO
+module_footprint_preview:
+  enabled: true
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    cfg = load_config(cfg_path)
+
+    assert cfg.module_footprint_preview.enable
+
+
+def test_load_audio_player_config_with_strict_schema():
+    from pathlib import Path
+
+    cfg = load_config(
+        Path(__file__).parent.parent
+        / "examples"
+        / "audio_player_project"
+        / "audio_player_config.yaml"
+    )
+
+    flash = next(module for module in cfg.functional_modules if module.name == "flash_storage")
+    assert flash.params["interface"] == "spi_quad"
+    assert cfg.module_footprint_preview.enable
 
 
 def test_load_config_expanded_protection_type(tmp_path):
