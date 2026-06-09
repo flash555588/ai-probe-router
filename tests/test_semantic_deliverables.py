@@ -31,6 +31,7 @@ def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path):
     generated_sch = (out_dir / "main.kicad_sch").read_text(encoding="utf-8")
     manifest = json.loads((out_dir / "decision_manifest.json").read_text(encoding="utf-8"))
     readiness = (out_dir / "readiness_report.txt").read_text(encoding="utf-8")
+    testpoint_report = (out_dir / "testpoint_report.txt").read_text(encoding="utf-8")
 
     expected_nets = {req.net_name for req in cfg.nets_to_expose}
     required_nets = {req.net_name for req in cfg.nets_to_expose if req.required}
@@ -47,6 +48,11 @@ def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path):
     assert "path" in manifest["native_tools"]["kicad_cli"]
     assert "version" in manifest["native_tools"]["kicad_cli"]
     assert "version_error" in manifest["native_tools"]["kicad_cli"]
+    assert isinstance(manifest["coverage"]["notes"], list)
+    for note in manifest["coverage"]["notes"]:
+        assert note in testpoint_report
+    if manifest["coverage"]["notes"]:
+        assert "Notes:" in testpoint_report
 
     for net_name in covered_nets:
         assert net_name in board.nets
@@ -90,7 +96,12 @@ def test_decision_manifest_records_native_tool_presence(tmp_path: Path, monkeypa
         path,
         run_id="APR-TEST",
         cfg=load_config(Path(__file__).parent.parent / "examples" / "sample_config.yaml"),
-        coverage=CoverageReport(total_nets_requested=0, covered=0, missing=0),
+        coverage=CoverageReport(
+            total_nets_requested=0,
+            covered=0,
+            missing=0,
+            notes=["DRC validation skipped: kicad-cli not found"],
+        ),
         readiness_report=ReadinessReport(run_id="APR-TEST"),
         process_report=DesignProcessReport(run_id="APR-TEST"),
         artifacts=[],
@@ -105,6 +116,9 @@ def test_decision_manifest_records_native_tool_presence(tmp_path: Path, monkeypa
     assert manifest["native_tools"]["freerouting"]["available"] is False
     assert manifest["native_tools"]["freerouting"]["path"] == ""
     assert "version" in manifest["native_tools"]["freerouting"]
+    assert manifest["coverage"]["notes"] == [
+        "DRC validation skipped: kicad-cli not found",
+    ]
 
 
 def test_decision_manifest_records_freerouting_jar_java_dependency(

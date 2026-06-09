@@ -99,6 +99,12 @@ class CoverageReport:
                 lines.append(f"    - {msg}")
         lines.append("")
 
+        if self.notes:
+            lines.append("  Notes:")
+            for note in self.notes:
+                lines.append(f"    - {note}")
+            lines.append("")
+
         review_nets = [e.net_name for e in self.entries if e.review_required]
         if review_nets:
             lines.append("  Human review required:")

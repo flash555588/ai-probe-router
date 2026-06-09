@@ -91,6 +91,7 @@ def write_decision_manifest(
             "routing_ok": coverage.routing_ok,
             "drc_ok": coverage.drc_ok,
             "erc_ok": coverage.erc_ok,
+            "notes": list(coverage.notes),
         },
         "modules": _modules(module_graph_result),
         "module_selection": _module_selection(module_selection),

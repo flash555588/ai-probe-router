@@ -44,6 +44,24 @@ def test_coverage_report_with_constraints():
     assert "too close to edge" in text
 
 
+def test_coverage_report_includes_delivery_notes():
+    report = CoverageReport(
+        total_nets_requested=1,
+        covered=1,
+        missing=0,
+        notes=[
+            "DRC validation skipped: kicad-cli not found",
+            "Gerber export failed: kicad-cli not found",
+        ],
+    )
+
+    text = report.summary_text()
+
+    assert "Notes:" in text
+    assert "DRC validation skipped: kicad-cli not found" in text
+    assert "Gerber export failed: kicad-cli not found" in text
+
+
 def test_coverage_report_separates_placement_from_routing():
     report = CoverageReport(
         total_nets_requested=1,
