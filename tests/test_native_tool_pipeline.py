@@ -34,6 +34,56 @@ def test_run_native_validation_records_available_artifacts(tmp_path: Path, monke
     assert coverage.drc_violations == 1
     assert coverage.erc_ok is True
     assert coverage.erc_violations == 0
+    assert coverage.notes == ["DRC validation failed: 1 violation(s)"]
+
+
+def test_native_validation_records_missing_tool_as_soft_note():
+    coverage = CoverageReport()
+    result = native_tools.NativeValidationResult(
+        drc=CheckResult(ok=None, error="kicad-cli not found"),
+        erc=CheckResult(ok=None, error="kicad-cli not found"),
+    )
+
+    apply_native_validation(coverage, result, ProjectConfig())
+
+    assert coverage.drc_ok is None
+    assert coverage.erc_ok is None
+    assert coverage.notes == [
+        "DRC validation skipped: kicad-cli not found",
+        "ERC validation skipped: kicad-cli not found",
+    ]
+
+
+def test_native_validation_strict_signoff_blocks_drc_failure():
+    cfg = ProjectConfig()
+    cfg.process_controls.strict_signoff = True
+    coverage = CoverageReport()
+    result = native_tools.NativeValidationResult(
+        drc=CheckResult(ok=False, error="drc failed"),
+    )
+
+    try:
+        apply_native_validation(coverage, result, cfg)
+    except RuntimeError as exc:
+        assert "DRC validation failed: drc failed" in str(exc)
+    else:
+        raise AssertionError("strict_signoff should block failed DRC validation")
+
+
+def test_native_validation_strict_signoff_blocks_missing_kicad():
+    cfg = ProjectConfig()
+    cfg.process_controls.strict_signoff = True
+    coverage = CoverageReport()
+    result = native_tools.NativeValidationResult(
+        erc=CheckResult(ok=None, error="kicad-cli not found"),
+    )
+
+    try:
+        apply_native_validation(coverage, result, cfg)
+    except RuntimeError as exc:
+        assert "ERC validation skipped: kicad-cli not found" in str(exc)
+    else:
+        raise AssertionError("strict_signoff should block missing native KiCad")
 
 
 def test_run_native_validation_skips_missing_artifacts(tmp_path: Path, monkeypatch):

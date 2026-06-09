@@ -8,6 +8,7 @@ from pathlib import Path
 from ai_probe_router.config import load_config
 from ai_probe_router.eda_adapters.kicad.cli_runner import CheckResult
 from ai_probe_router.engine import run
+from ai_probe_router.pipeline.native_tools import NativeValidationResult
 from ai_probe_router.routing.freerouting_bridge import RoutingResult
 
 
@@ -315,6 +316,13 @@ def test_engine_strict_signoff_blocks_manufacturing_export_failure(
     _write_export_contract_config(tmp_path, "  strict_signoff: true\n")
 
     monkeypatch.setattr(
+        "ai_probe_router.engine.run_native_validation",
+        lambda *args: NativeValidationResult(
+            drc=CheckResult(ok=True),
+            erc=CheckResult(ok=True),
+        ),
+    )
+    monkeypatch.setattr(
         "ai_probe_router.pipeline.native_tools.export_gerbers",
         lambda *args: CheckResult(ok=False, error="gerber failed"),
     )
@@ -325,6 +333,35 @@ def test_engine_strict_signoff_blocks_manufacturing_export_failure(
         assert "Gerber export failed: gerber failed" in str(exc)
     else:
         raise AssertionError("strict_signoff should block failed Gerber export")
+
+
+def test_engine_strict_signoff_blocks_native_validation_failure(
+    tmp_path,
+    monkeypatch,
+):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+    _write_export_contract_config(tmp_path, "  strict_signoff: true\n")
+
+    monkeypatch.setattr(
+        "ai_probe_router.engine.run_native_validation",
+        lambda *args: NativeValidationResult(
+            drc=CheckResult(ok=False, error="native DRC failed"),
+        ),
+    )
+
+    try:
+        run(load_config(tmp_path / "config.yaml"), tmp_path)
+    except RuntimeError as exc:
+        assert "DRC validation failed: native DRC failed" in str(exc)
+    else:
+        raise AssertionError("strict_signoff should block failed native validation")
 
 
 def test_engine_required_manufacturing_exports_block_failure(

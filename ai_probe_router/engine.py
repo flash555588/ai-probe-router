@@ -300,6 +300,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     apply_native_validation(
         coverage,
         run_native_validation(out_pcb_path, out_sch_path, out_dir),
+        cfg,
     )
 
     _write_module_planning_reports(

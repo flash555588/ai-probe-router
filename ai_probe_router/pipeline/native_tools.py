@@ -47,13 +47,36 @@ def run_native_validation(
 def apply_native_validation(
     coverage: CoverageReport,
     result: NativeValidationResult,
+    cfg: ProjectConfig | None = None,
 ) -> None:
     if result.drc is not None:
         coverage.drc_ok = result.drc.ok
         coverage.drc_violations = len(result.drc.violations)
+        _record_native_validation_result(coverage, result.drc, "DRC", cfg)
     if result.erc is not None:
         coverage.erc_ok = result.erc.ok
         coverage.erc_violations = len(result.erc.violations)
+        _record_native_validation_result(coverage, result.erc, "ERC", cfg)
+
+
+def _record_native_validation_result(
+    coverage: CoverageReport,
+    result: CheckResult,
+    label: str,
+    cfg: ProjectConfig | None,
+) -> None:
+    if result.ok is True:
+        return
+
+    if result.ok is None:
+        reason = result.error or "native KiCad validation skipped"
+        message = f"{label} validation skipped: {reason}"
+    else:
+        reason = result.error or f"{len(result.violations)} violation(s)"
+        message = f"{label} validation failed: {reason}"
+    coverage.notes.append(message)
+    if cfg is not None and cfg.process_controls.strict_signoff:
+        raise RuntimeError(message)
 
 
 def run_manufacturing_exports(
