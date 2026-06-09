@@ -1,4 +1,4 @@
-"""Load and parse JSON reports from PR2/PR5/PR6 for the plugin shell.
+"""Load and parse JSON reports from PR2/PR5/PR6/PR8 for the plugin shell.
 
 All functions are safe to call even when the report files are missing.
 """
@@ -64,6 +64,27 @@ class ResourceAllocationData:
     errors: list[str]
     buses: list[ResourceBusEntry]
     power: list[ResourcePowerEntry]
+
+
+@dataclass
+class ResourceRecommendationEntry:
+    recommendation_id: str
+    severity: str
+    category: str
+    scope: str
+    recommendation: str
+    module_name: str
+    applies_to: list[str]
+    current_assignment: str
+    expected_impact: str
+    safe_to_apply_automatically: bool
+
+
+@dataclass
+class ResourceOptimizationData:
+    ok: bool
+    recommendations: list[ResourceRecommendationEntry]
+    notes: list[str]
 
 
 @dataclass
@@ -163,6 +184,38 @@ def load_resource_allocation(path: Path) -> ResourceAllocationData | None:
         errors=raw.get("errors", []),
         buses=buses,
         power=power,
+    )
+
+
+def load_resource_optimization(path: Path) -> ResourceOptimizationData | None:
+    if not path.exists():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    recommendations = [
+        ResourceRecommendationEntry(
+            recommendation_id=rec.get("recommendation_id", ""),
+            severity=rec.get("severity", "info"),
+            category=rec.get("category", ""),
+            scope=rec.get("scope", ""),
+            module_name=rec.get("module_name", ""),
+            applies_to=[str(v) for v in rec.get("applies_to", [])],
+            current_assignment=rec.get("current_assignment", ""),
+            recommendation=rec.get("recommendation", ""),
+            expected_impact=rec.get("expected_impact", ""),
+            safe_to_apply_automatically=bool(
+                rec.get("safe_to_apply_automatically", False)
+            ),
+        )
+        for rec in raw.get("recommendations", [])
+    ]
+    return ResourceOptimizationData(
+        ok=raw.get("ok", True),
+        recommendations=recommendations,
+        notes=[str(note) for note in raw.get("notes", [])],
     )
 
 

@@ -1,8 +1,9 @@
 """KiCad Plugin Shell — PyQt6 GUI for ai-probe-router reports.
 
 Displays footprint preview, resource allocation, route import status,
-and a 3D VTK view.  All heavy dependencies are imported lazily so the
-module can be parsed without PyQt6 or vtk installed.
+resource optimization recommendations, and a 3D VTK view.  All heavy
+dependencies are imported lazily so the module can be parsed without
+PyQt6 or vtk installed.
 
 Run standalone:
     python -m ai_probe_router.ui.plugin_shell <output_dir>
@@ -61,6 +62,7 @@ class KiCadPluginShell:
         self.enable_3d = enable_3d
         self.footprint_data = None
         self.resource_data = None
+        self.resource_optimization_data = None
         self.readiness_data = None
         self._window: "QtWidgets.QMainWindow | None" = None
         self._vtk_view = None
@@ -75,6 +77,7 @@ class KiCadPluginShell:
             load_footprint_preview,
             load_readiness,
             load_resource_allocation,
+            load_resource_optimization,
         )
 
         self.footprint_data = load_footprint_preview(
@@ -82,6 +85,9 @@ class KiCadPluginShell:
         )
         self.resource_data = load_resource_allocation(
             self.output_dir / "resource_allocation_report.json"
+        )
+        self.resource_optimization_data = load_resource_optimization(
+            self.output_dir / "resource_optimization_report.json"
         )
         self.readiness_data = load_readiness(
             self.output_dir / "readiness_report.json"
@@ -218,6 +224,20 @@ class KiCadPluginShell:
         power_group.setLayout(power_layout)
         layout.addWidget(power_group, stretch=1)
 
+        # Recommendations
+        recommendations_group = QtWidgets.QGroupBox("Optimization Recommendations")
+        recommendations_table = QtWidgets.QTableWidget()
+        recommendations_table.setColumnCount(5)
+        recommendations_table.setHorizontalHeaderLabels(
+            ["Severity", "Category", "Scope", "Recommendation", "Auto Apply"]
+        )
+        recommendations_table.horizontalHeader().setStretchLastSection(True)
+        self._resource_recommendations_table = recommendations_table
+        recommendations_layout = QtWidgets.QVBoxLayout()
+        recommendations_layout.addWidget(recommendations_table)
+        recommendations_group.setLayout(recommendations_layout)
+        layout.addWidget(recommendations_group, stretch=1)
+
         widget.setLayout(layout)
         self._refresh_resource_tab()
         return widget
@@ -337,6 +357,15 @@ class KiCadPluginShell:
             lines.append("\nResource issues:")
             for issue in summary.resource_issues:
                 lines.append(f"  {issue.get('message')}")
+        if summary.resource_recommendations:
+            lines.append("\nOptimization recommendations:")
+            for rec in summary.resource_recommendations:
+                lines.append(
+                    f"  [{rec.get('severity')}] {rec.get('id')}: "
+                    f"{rec.get('message')}"
+                )
+                if rec.get("expected_impact"):
+                    lines.append(f"    Impact: {rec.get('expected_impact')}")
         if summary.route_import_issues:
             lines.append("\nRoute/import issues:")
             for issue in summary.route_import_issues:
@@ -421,6 +450,21 @@ class KiCadPluginShell:
             self._power_table.setItem(
                 row, 4, self._item(f"{domain.headroom_percent:.1f}")
             )
+
+        opt = self.resource_optimization_data
+        if opt is None:
+            self._resource_recommendations_table.setRowCount(0)
+            return
+        self._resource_recommendations_table.setRowCount(len(opt.recommendations))
+        for row, rec in enumerate(opt.recommendations):
+            self._resource_recommendations_table.setItem(row, 0, self._item(rec.severity))
+            self._resource_recommendations_table.setItem(row, 1, self._item(rec.category))
+            self._resource_recommendations_table.setItem(row, 2, self._item(rec.scope))
+            self._resource_recommendations_table.setItem(
+                row, 3, self._item(rec.recommendation)
+            )
+            auto_apply = "yes" if rec.safe_to_apply_automatically else "no"
+            self._resource_recommendations_table.setItem(row, 4, self._item(auto_apply))
 
     def _refresh_route_tab(self) -> None:
         data = self.readiness_data

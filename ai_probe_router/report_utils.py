@@ -13,9 +13,11 @@ from .ui.report_loader import (
     FootprintPreviewData,
     ReadinessData,
     ResourceAllocationData,
+    ResourceOptimizationData,
     load_footprint_preview,
     load_readiness,
     load_resource_allocation,
+    load_resource_optimization,
 )
 
 
@@ -26,12 +28,18 @@ class UnifiedReports:
     output_dir: Path
     footprint_preview: FootprintPreviewData | None = None
     resource_allocation: ResourceAllocationData | None = None
+    resource_optimization: ResourceOptimizationData | None = None
     readiness: ReadinessData | None = None
 
     @property
     def has_any(self) -> bool:
         return any(
-            (self.footprint_preview, self.resource_allocation, self.readiness)
+            (
+                self.footprint_preview,
+                self.resource_allocation,
+                self.resource_optimization,
+                self.readiness,
+            )
         )
 
     @property
@@ -42,6 +50,7 @@ class UnifiedReports:
             for r in (
                 self.footprint_preview,
                 self.resource_allocation,
+                self.resource_optimization,
             )
         ) and (self.readiness is None or self.readiness.verdict != "BLOCKED")
 
@@ -54,6 +63,12 @@ class UnifiedReports:
             )
         if self.resource_allocation:
             count += len(self.resource_allocation.errors)
+        if self.resource_optimization:
+            count += sum(
+                1
+                for rec in self.resource_optimization.recommendations
+                if rec.severity == "error"
+            )
         if self.readiness:
             count += len(self.readiness.blockers)
         return count
@@ -67,6 +82,12 @@ class UnifiedReports:
             )
         if self.resource_allocation:
             count += len(self.resource_allocation.warnings)
+        if self.resource_optimization:
+            count += sum(
+                1
+                for rec in self.resource_optimization.recommendations
+                if rec.severity == "warning"
+            )
         if self.readiness:
             count += len(self.readiness.warnings)
         return count
@@ -85,6 +106,9 @@ def load_all_reports(output_dir: str | Path) -> UnifiedReports:
         ),
         resource_allocation=load_resource_allocation(
             out / "resource_allocation_report.json"
+        ),
+        resource_optimization=load_resource_optimization(
+            out / "resource_optimization_report.json"
         ),
         readiness=load_readiness(out / "readiness_report.json"),
     )

@@ -9,6 +9,8 @@ from ai_probe_router.ui.report_loader import (
     ReadinessIssue,
     ResourceAllocationData,
     ResourceBusEntry,
+    ResourceOptimizationData,
+    ResourceRecommendationEntry,
 )
 from ai_probe_router.ui.report_model import PluginReportModel
 
@@ -66,10 +68,29 @@ def _make_reports() -> UnifiedReports:
             )
         ],
     )
+    ropt = ResourceOptimizationData(
+        ok=True,
+        notes=[],
+        recommendations=[
+            ResourceRecommendationEntry(
+                recommendation_id="ROPT-BUS-SPLIT-I2C-1",
+                severity="warning",
+                category="bus",
+                scope="I2C-1",
+                recommendation="Move lower-priority modules to I2C-2.",
+                module_name="",
+                applies_to=["power_monitor"],
+                current_assignment="I2C-1 has 5 modules",
+                expected_impact="Reduces bus fanout.",
+                safe_to_apply_automatically=False,
+            )
+        ],
+    )
     return UnifiedReports(
         output_dir=None,
         footprint_preview=fp,
         resource_allocation=ra,
+        resource_optimization=ropt,
         readiness=rd,
     )
 
@@ -94,6 +115,12 @@ class TestPluginReportModel:
         summary = model.module_summary("power_monitor", "U101")
         assert len(summary.resource_assignments) == 1
         assert summary.resource_assignments[0]["bus_type"] == "i2c"
+
+    def test_module_summary_resource_recommendations(self):
+        model = PluginReportModel(_make_reports())
+        summary = model.module_summary("power_monitor", "U101")
+        assert len(summary.resource_recommendations) == 1
+        assert summary.resource_recommendations[0]["id"] == "ROPT-BUS-SPLIT-I2C-1"
 
     def test_module_summary_readiness_codes(self):
         model = PluginReportModel(_make_reports())

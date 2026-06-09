@@ -176,6 +176,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             module_placement_result,
             module_instantiation_result,
             routing_feasibility,
+            resource_allocation_result,
             footprint_preview_result,
         )
         mfg_report.write(out_dir / "manufacturing_report.txt")
@@ -316,6 +317,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         module_placement_result,
         module_instantiation_result,
         routing_feasibility,
+        resource_allocation_result,
         footprint_preview_result,
     )
     if pin_report is not None:
@@ -726,6 +728,7 @@ def _write_module_planning_reports(
     module_placement_result,
     module_instantiation_result,
     routing_feasibility,
+    resource_allocation_result=None,
     footprint_preview_result=None,
 ) -> None:
     if module_library_preflight_result is not None:
@@ -755,6 +758,10 @@ def _write_module_planning_reports(
         RoutingFeasibilityReport(routing_feasibility).write(
             out_dir / "routing_feasibility_report.txt",
         )
+    if resource_allocation_result is not None:
+        from .solvers.resource_allocator_report import write_resource_allocation_report
+
+        write_resource_allocation_report(resource_allocation_result, out_dir)
     if footprint_preview_result is not None:
         from .verification.footprint_preview_report import write_footprint_preview_report
         write_footprint_preview_report(footprint_preview_result, out_dir)

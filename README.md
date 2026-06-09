@@ -222,6 +222,8 @@ Text reports, `bom_report.csv`, and generated module sheets include a determinis
 | `module_library_preflight_report.txt` | Module library YAML structure, metadata, duplicate, and request coverage checks |
 | `module_graph_report.txt` | Module instances, dependencies, generated resources, graph diagnostics |
 | `module_compatibility_report.txt` | Module, implementation, chip, footprint, and alternate compatibility matrix |
+| `resource_allocation_report.json` | Deterministic bus and power allocation data for schema-v2 modules |
+| `resource_optimization_report.json` | Advisory bus/rail optimization recommendations with no automatic mutation |
 | `bus_report.txt` | Module bus grouping, I2C address conflicts, pull-up coverage |
 | `power_report.txt` | Module voltage-domain and rail usage |
 | `routing_feasibility_report.txt` | Coarse module corridor, congestion, and sensitivity analysis |

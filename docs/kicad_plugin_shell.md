@@ -118,6 +118,7 @@ VTK-based 3D visualization with three-panel layout:
 |--------|------|-----------|
 | Footprint Preview | `footprint_preview_report.json` | PR6 |
 | Resource Allocation | `resource_allocation_report.json` | PR5 |
+| Resource Optimization | `resource_optimization_report.json` | PR8 |
 | Readiness | `readiness_report.json` | PR2 |
 
 ## Architecture
@@ -139,6 +140,7 @@ All heavy dependencies (PyQt6, vtk) are imported **lazily** so the core library 
 ## Safety
 
 - Plugin shell is **standalone** — it never modifies source PCB files
+- Resource optimization recommendations are shown as advisory actions only
 - It only reads JSON report files from the output directory
 - No KiCad plugin registration required for the prototype
 - Fallback rendering ensures the GUI is functional even without STEP files or VTK installed

@@ -12,8 +12,17 @@ resource_allocator:
   bus_allocation_strategy: first_fit    # first_fit | best_fit
   power_allocation_strategy: max_headroom
   connector_allocation_strategy: minimize_spread
-  allow_partial_allocation: false
+allow_partial_allocation: false
 ```
+
+When enabled, generation writes two JSON artifacts:
+
+- `resource_allocation_report.json` records the deterministic bus and rail allocation.
+- `resource_optimization_report.json` records read-only recommendations for overloaded
+  rails, near-limit rails, crowded buses, and unresolved bus/address conflicts.
+
+Optimization recommendations are advisory only. They are designed for an interactive UI
+or human review flow and do not mutate KiCad files or project YAML.
 
 ## Allocation layers
 
@@ -52,3 +61,5 @@ When enabled, the resource allocator feeds into the readiness report:
 - If `allow_partial_allocation: false`, any error blocks the module plan.
 - If `allow_partial_allocation: true`, errors are reported but planning continues if any buses are assigned.
 - The existing greedy module selector remains the default entry point.
+- Optimization recommendations always set `safe_to_apply_automatically: false`
+  until an explicit edit/apply workflow exists.

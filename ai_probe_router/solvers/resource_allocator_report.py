@@ -6,6 +6,10 @@ import json
 from pathlib import Path
 
 from .resource_allocator import ResourceAllocationResult
+from .resource_optimizer import (
+    generate_resource_optimization_report,
+    write_resource_optimization_report,
+)
 
 
 def generate_resource_allocation_json(result: ResourceAllocationResult) -> str:
@@ -79,4 +83,8 @@ def write_resource_allocation_report(
     json_path = output_dir / "resource_allocation_report.json"
     json_path.write_text(
         generate_resource_allocation_json(result), encoding="utf-8"
+    )
+    write_resource_optimization_report(
+        generate_resource_optimization_report(result),
+        output_dir,
     )

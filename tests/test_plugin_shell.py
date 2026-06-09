@@ -12,6 +12,7 @@ from ai_probe_router.ui.report_loader import (
     load_footprint_preview,
     load_readiness,
     load_resource_allocation,
+    load_resource_optimization,
 )
 from ai_probe_router.ui.vtk_3d_view import _create_board_plane, build_3d_scene
 
@@ -98,6 +99,34 @@ class TestReportLoader:
         assert len(result.power) == 1
         assert result.power[0].domain == "3V3"
 
+    def test_load_resource_optimization(self, tmp_path):
+        data = {
+            "schema_version": 1,
+            "ok": True,
+            "recommendations": [
+                {
+                    "recommendation_id": "ROPT-BUS-SPLIT-I2C-1",
+                    "severity": "warning",
+                    "category": "bus",
+                    "scope": "I2C-1",
+                    "module_name": "",
+                    "applies_to": ["sensor"],
+                    "current_assignment": "I2C-1 has 5 modules",
+                    "recommendation": "Move lower-priority modules to I2C-2.",
+                    "expected_impact": "Reduces bus fanout.",
+                    "safe_to_apply_automatically": False,
+                }
+            ],
+            "notes": ["advisory"],
+        }
+        path = _write_json(tmp_path, "resource_optimization_report.json", data)
+        result = load_resource_optimization(path)
+        assert result is not None
+        assert result.ok
+        assert len(result.recommendations) == 1
+        assert result.recommendations[0].scope == "I2C-1"
+        assert not result.recommendations[0].safe_to_apply_automatically
+
     def test_load_readiness(self, tmp_path):
         data = {
             "verdict": "PASS_WITH_REVIEW",
@@ -175,9 +204,15 @@ class TestPluginShellImport:
             "readiness_report.json",
             {"verdict": "PASS", "run_id": "", "blockers": [], "warnings": []},
         )
+        _write_json(
+            tmp_path,
+            "resource_optimization_report.json",
+            {"ok": True, "recommendations": [], "notes": []},
+        )
         shell = KiCadPluginShell(tmp_path)
         shell.load_reports()
         assert shell.footprint_data is not None
+        assert shell.resource_optimization_data is not None
         assert shell.readiness_data is not None
         assert shell.readiness_data.verdict == "PASS"
 

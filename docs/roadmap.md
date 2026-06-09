@@ -61,9 +61,11 @@
 ## Future PRs (not yet scheduled)
 
 ### PR8 — Interactive Resource Optimization
-- GUI-based bus and rail reassignment
-- Compare headroom, write recommendation report
-- No automatic schematic mutation
+- [x] Compare bus pressure and power-domain headroom.
+- [x] Write `resource_optimization_report.json`.
+- [x] Surface recommendations in unified report loading and plugin shell resource tab.
+- [x] No automatic schematic mutation.
+- [ ] GUI-based apply flow for bus and rail reassignment.
 
 ### PR9 — Candidate PCB Visual Diff
 - Load `*.module-preview.kicad_pcb`

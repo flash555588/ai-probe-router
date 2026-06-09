@@ -232,6 +232,9 @@ functional_modules:
     required: true
     rails: [VDD_3V3]
     telemetry_bus: i2c
+
+resource_allocator:
+  enable: true
 """
     (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
     cfg = load_config(tmp_path / "config.yaml")
@@ -249,6 +252,8 @@ functional_modules:
     assert (tmp_path / "output" / "power_report.txt").exists()
     assert (tmp_path / "output" / "routing_feasibility_report.txt").exists()
     assert (tmp_path / "output" / "module_placement_report.txt").exists()
+    assert (tmp_path / "output" / "resource_allocation_report.json").exists()
+    assert (tmp_path / "output" / "resource_optimization_report.json").exists()
     assert (tmp_path / "output" / "readiness_report.txt").exists()
     assert (tmp_path / "output" / "design_process_report.txt").exists()
     manifest = tmp_path / "output" / "decision_manifest.json"

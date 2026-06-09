@@ -1,6 +1,6 @@
 """Cross-PR pipeline integration test.
 
-Verifies that output artifacts from PR2–PR7 can be loaded together
+Verifies that output artifacts from PR2–PR8 can be loaded together
 without errors by the unified report reader.
 """
 
@@ -24,7 +24,7 @@ def _write_json(tmp_path: Path, name: str, data: dict) -> Path:
 
 class TestPipelineIntegration:
     def test_load_all_reports_from_output_dir(self, tmp_path):
-        """PR2–PR7 reports load together without error."""
+        """PR2–PR8 reports load together without error."""
         # PR6 — footprint preview
         fp_data = {
             "schema_version": 1,
@@ -80,6 +80,16 @@ class TestPipelineIntegration:
             },
         }
         _write_json(tmp_path, "resource_allocation_report.json", ra_data)
+        _write_json(
+            tmp_path,
+            "resource_optimization_report.json",
+            {
+                "schema_version": 1,
+                "ok": True,
+                "recommendations": [],
+                "notes": [],
+            },
+        )
 
         # PR2 — readiness
         rd_data = {
@@ -94,6 +104,7 @@ class TestPipelineIntegration:
         assert reports.has_any
         assert reports.footprint_preview is not None
         assert reports.resource_allocation is not None
+        assert reports.resource_optimization is not None
         assert reports.readiness is not None
         assert reports.all_ok
         assert reports.total_blockers == 0
@@ -141,6 +152,29 @@ class TestPipelineIntegration:
         )
         _write_json(
             tmp_path,
+            "resource_optimization_report.json",
+            {
+                "schema_version": 1,
+                "ok": True,
+                "recommendations": [
+                    {
+                        "recommendation_id": "ROPT-BUS-SPLIT-I2C-1",
+                        "severity": "warning",
+                        "category": "bus",
+                        "scope": "I2C-1",
+                        "recommendation": "Split crowded bus.",
+                        "module_name": "",
+                        "applies_to": [],
+                        "current_assignment": "",
+                        "expected_impact": "",
+                        "safe_to_apply_automatically": False,
+                    }
+                ],
+                "notes": [],
+            },
+        )
+        _write_json(
+            tmp_path,
             "readiness_report.json",
             {
                 "verdict": "BLOCKED",
@@ -155,7 +189,7 @@ class TestPipelineIntegration:
         reports = load_all_reports(tmp_path)
         assert not reports.all_ok
         assert reports.total_blockers == 2  # 1 fp error + 1 readiness blocker
-        assert reports.total_warnings == 2  # 1 fp warning + 1 resource warning
+        assert reports.total_warnings == 3  # footprint + allocation + optimization
 
     def test_schema_version_present_in_footprint_report(self):
         from ai_probe_router.models.footprint_preview import FootprintPreviewResult
@@ -171,6 +205,16 @@ class TestPipelineIntegration:
         result = ResourceAllocationResult()
         json_text = generate_resource_allocation_json(result)
         data = json.loads(json_text)
+        assert data["schema_version"] == 1
+
+    def test_schema_version_present_in_resource_optimization_report(self):
+        from ai_probe_router.solvers.resource_allocator import ResourceAllocationResult
+        from ai_probe_router.solvers.resource_optimizer import (
+            generate_resource_optimization_report,
+        )
+
+        result = ResourceAllocationResult()
+        data = generate_resource_optimization_report(result).to_dict()
         assert data["schema_version"] == 1
 
     def test_readiness_codes_enum_lookup(self):
@@ -256,6 +300,29 @@ class TestPipelineIntegration:
         }
         _write_json(tmp_path, "footprint_preview_report.json", fp_data)
         _write_json(tmp_path, "resource_allocation_report.json", ra_data)
+        _write_json(
+            tmp_path,
+            "resource_optimization_report.json",
+            {
+                "schema_version": 1,
+                "ok": True,
+                "recommendations": [
+                    {
+                        "recommendation_id": "ROPT-BUS-SPLIT-I2C-1",
+                        "severity": "warning",
+                        "category": "bus",
+                        "scope": "I2C-1",
+                        "module_name": "",
+                        "applies_to": ["test_mod"],
+                        "current_assignment": "I2C-1 crowded",
+                        "recommendation": "Move lower-priority modules to I2C-2.",
+                        "expected_impact": "Reduces fanout.",
+                        "safe_to_apply_automatically": False,
+                    }
+                ],
+                "notes": [],
+            },
+        )
         _write_json(tmp_path, "readiness_report.json", rd_data)
 
         reports = load_all_reports(tmp_path)
@@ -267,6 +334,7 @@ class TestPipelineIntegration:
         assert summary.reference == "U1"
         assert len(summary.resource_assignments) == 1
         assert summary.resource_assignments[0]["bus_type"] == "i2c"
+        assert len(summary.resource_recommendations) == 1
 
     def test_step_scene_loader_fallback_on_missing_file(self, tmp_path):
         from ai_probe_router.ui.step_scene_loader import StepSceneLoader

@@ -20,6 +20,7 @@ class ModuleReportSummary:
     footprint_issues: list[dict[str, Any]] = field(default_factory=list)
     resource_assignments: list[dict[str, Any]] = field(default_factory=list)
     resource_issues: list[dict[str, Any]] = field(default_factory=list)
+    resource_recommendations: list[dict[str, Any]] = field(default_factory=list)
     route_import_issues: list[dict[str, Any]] = field(default_factory=list)
     readiness_codes: list[str] = field(default_factory=list)
 
@@ -56,6 +57,7 @@ class PluginReportModel:
             footprint_issues=self._footprint_issues(module_name, reference),
             resource_assignments=self._resource_assignments(module_name),
             resource_issues=self._resource_issues(module_name),
+            resource_recommendations=self._resource_recommendations(module_name),
             route_import_issues=self._route_import_issues(),
             readiness_codes=self._readiness_codes(module_name),
         )
@@ -131,6 +133,31 @@ class PluginReportModel:
             for warn in data.warnings
             if module_name in warn
         ]
+
+    def _resource_recommendations(self, module_name: str) -> list[dict[str, Any]]:
+        data = self.reports.resource_optimization
+        if data is None:
+            return []
+        recommendations: list[dict[str, Any]] = []
+        for rec in data.recommendations:
+            applies = set(rec.applies_to)
+            if rec.module_name and rec.module_name != module_name:
+                continue
+            if applies and module_name not in applies:
+                continue
+            recommendations.append(
+                {
+                    "id": rec.recommendation_id,
+                    "severity": rec.severity,
+                    "category": rec.category,
+                    "scope": rec.scope,
+                    "message": rec.recommendation,
+                    "current_assignment": rec.current_assignment,
+                    "expected_impact": rec.expected_impact,
+                    "safe_to_apply_automatically": rec.safe_to_apply_automatically,
+                }
+            )
+        return recommendations
 
     def _route_import_issues(self) -> list[dict[str, Any]]:
         data = self.reports.readiness
