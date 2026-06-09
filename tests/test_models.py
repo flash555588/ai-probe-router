@@ -1,7 +1,9 @@
 """Tests for data models and net classifier."""
 
+import pytest
+
 from ai_probe_router.ai.net_classifier import classify_net
-from ai_probe_router.config import load_config
+from ai_probe_router.config import ConfigValidationError, load_config
 from ai_probe_router.models.board import Board, Footprint, Pad
 from ai_probe_router.models.net import NetRole
 from ai_probe_router.models.protection import ProtectionType
@@ -99,6 +101,14 @@ development_board:
         raise AssertionError("Expected ValueError for missing dev board database")
 
 
+def test_load_config_declares_dev_board_pin_database_field():
+    from pathlib import Path
+
+    cfg = load_config(Path(__file__).parent.parent / "examples" / "full_config.yaml")
+
+    assert cfg.dev_board_pin_db == "../libraries/dev_boards/stm32_nucleo_64.yaml"
+
+
 def test_load_config_empty_nets_raises(tmp_path):
     config = """\
 project:
@@ -119,6 +129,103 @@ nets_to_expose: []
         assert "nets_to_expose" in str(exc)
     else:
         raise AssertionError("Expected ValueError for empty nets_to_expose")
+
+
+def test_load_config_rejects_malformed_top_level_section(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  net: SWDIO
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(ConfigValidationError, match="nets_to_expose must be a YAML list"):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_missing_net_name_with_field_path(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - role: debug
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(ConfigValidationError, match=r"nets_to_expose\[0\]\.net is required"):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_invalid_numeric_constraints_with_field_path(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    duplicate_probe_count: 0
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(
+        ConfigValidationError,
+        match=r"nets_to_expose\[0\]\.duplicate_probe_count must be >= 1",
+    ):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_malformed_functional_module_with_field_path(tmp_path):
+    config = """\
+schema_version: 2
+project:
+  eda_tool: kicad
+functional_modules:
+  - name: debug_access
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(ConfigValidationError, match=r"functional_modules\[0\]\.type is required"):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_malformed_process_waivers_with_field_path(tmp_path):
+    config = """\
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: SWDIO
+process_controls:
+  waivers:
+    issue_id: electrical_review_required
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(
+        ConfigValidationError,
+        match=r"process_controls\.waivers must be a YAML list",
+    ):
+        load_config(cfg_path)
+
+
+def test_load_config_rejects_unsupported_schema_version(tmp_path):
+    config = """\
+schema_version: 99
+project:
+  eda_tool: kicad
+nets_to_expose:
+  - net: SWDIO
+"""
+    cfg_path = tmp_path / "config.yaml"
+    cfg_path.write_text(config, encoding="utf-8")
+
+    with pytest.raises(ConfigValidationError, match="Unsupported schema_version 99"):
+        load_config(cfg_path)
 
 
 def test_load_schema_v2_functional_modules_without_nets(tmp_path):

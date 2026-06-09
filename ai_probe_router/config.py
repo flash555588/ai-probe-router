@@ -7,6 +7,8 @@ from pathlib import Path
 
 import yaml
 
+from .config_schema import ConfigValidationError as ConfigValidationError
+from .config_schema import validate_config
 from .models.constraints import Constraints, PlacementRules, RoutingRules
 from .models.design_graph import (
     DesignGoals,
@@ -84,14 +86,14 @@ class ProjectConfig:
     thermal_analysis: ThermalAnalysis = field(default_factory=ThermalAnalysis)
     process_controls: ProcessControls = field(default_factory=ProcessControls)
     plugin_shell: PluginShellConfig = field(default_factory=PluginShellConfig)
+    dev_board_pin_db: str = ""
     dry_run: bool = False
 
 
 def load_config(path: str | Path) -> ProjectConfig:
     text = Path(path).read_text(encoding="utf-8")
     raw = yaml.safe_load(text)
-    if not isinstance(raw, dict):
-        raise ValueError("Config must be a YAML mapping")
+    raw = validate_config(raw)
     proj = raw.get("project", {})
     cfg = ProjectConfig(
         schema_version=int(raw.get("schema_version", 1) or 1),
@@ -195,7 +197,7 @@ def load_config(path: str | Path) -> ProjectConfig:
     db = raw.get("development_board", {})
     db_path = db.get("pin_database", "")
     if db_path:
-        cfg.dev_board_pin_db = db_path
+        cfg.dev_board_pin_db = str(db_path)
         resolved = Path(path).parent / db_path
         if resolved.exists():
             cfg.development_board = load_dev_board(resolved)
