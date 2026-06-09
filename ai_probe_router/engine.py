@@ -759,6 +759,7 @@ def _run_phase1(
     tp_counter = _next_tp_ref(board)
     prot_counter = _next_prot_ref(board)
     placed_probes: list[tuple[float, float]] = []
+    placed_probe_nets: dict[str, tuple[float, float]] = {}
 
     is_pogo = cfg.probe.style == ProbeStyle.POGO_PAD
     pogo_positions: list[tuple[float, float]] = []
@@ -795,9 +796,11 @@ def _run_phase1(
                     )
                     placement = find_placement(
                         board, req, cfg.probe, cfg.constraints,
-                        placed_probes, index=i,
+                        placed_probes,
+                        index=i,
                         min_target_distance_mm=min_target_distance,
                         role=role, sub_roles=sub_roles,
+                        existing_probe_nets=placed_probe_nets,
                     )
                     if placement is None:
                         continue
@@ -854,6 +857,7 @@ def _run_phase1(
                         route_results.append(RouteResult(False, [], "no_source_pad"))
 
                 placed_probes.append((x, y))
+                placed_probe_nets[req.net_name] = (x, y)
                 placed = True
 
                 # Add keepout zone around probe pad

@@ -4,7 +4,11 @@ from ai_probe_router.models.board import Board, EdgeSegment, Footprint, Pad
 from ai_probe_router.models.constraints import Constraints
 from ai_probe_router.models.probe import ProbeConfig, ProbeRequirement
 from ai_probe_router.solvers.constraint_checker import check_placement
-from ai_probe_router.solvers.placement_solver import find_placement, place_pogo_array
+from ai_probe_router.solvers.placement_solver import (
+    _paired_probe_score,
+    find_placement,
+    place_pogo_array,
+)
 
 
 def _make_board() -> Board:
@@ -129,3 +133,24 @@ def test_pogo_array_no_board_fallback():
     positions = place_pogo_array(board, reqs, ProbeConfig(), Constraints())
     assert len(positions) == 2
     assert positions[0] != positions[1]
+
+
+def test_paired_probe_score_prefers_nearby_mate_without_overlap():
+    req = ProbeRequirement(net_name="USB_DP", role="high_speed", pair_net_name="USB_DM")
+    existing = {"USB_DM": (10.0, 10.0)}
+
+    near = _paired_probe_score(12.54, 10.0, req, existing)
+    far = _paired_probe_score(35.0, 10.0, req, existing)
+    overlap = _paired_probe_score(10.0, 10.0, req, existing)
+
+    assert near > 0
+    assert near > far
+    assert overlap < far
+
+
+def test_paired_probe_score_ignores_unplaced_or_unpaired_nets():
+    paired = ProbeRequirement(net_name="USB_DP", role="high_speed", pair_net_name="USB_DM")
+    unpaired = ProbeRequirement(net_name="UART_TX", role="digital")
+
+    assert _paired_probe_score(10.0, 10.0, paired, {}) == 0.0
+    assert _paired_probe_score(10.0, 10.0, unpaired, {"USB_DM": (12.0, 10.0)}) == 0.0

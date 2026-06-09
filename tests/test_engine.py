@@ -1,6 +1,7 @@
 """Integration test: full engine pipeline."""
 
 import json
+import math
 import shutil
 from pathlib import Path
 
@@ -216,6 +217,51 @@ thermal_analysis:
     row = next(row for row in payload["rows"] if row["net_name"] == "3V3")
     assert row["estimated_power_mw"] == 825.0
     assert row["risk"] == "medium"
+
+
+def test_engine_places_paired_probe_near_existing_mate(tmp_path):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    if not all(p.exists() for p in [pcb_src, sch_src]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+
+    config_yaml = """\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.0
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+
+nets_to_expose:
+  - net: SWDIO
+    role: high_speed
+    pair_with: SWCLK
+  - net: SWCLK
+    role: high_speed
+    pair_with: SWDIO
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+
+    report, _ = run(load_config(tmp_path / "config.yaml"), tmp_path)
+
+    swdio = next(entry for entry in report.entries if entry.net_name == "SWDIO")
+    swclk = next(entry for entry in report.entries if entry.net_name == "SWCLK")
+    assert swdio.has_testpoint
+    assert swclk.has_testpoint
+    assert math.hypot(
+        swdio.probe_x - swclk.probe_x,
+        swdio.probe_y - swclk.probe_y,
+    ) <= 8.0
 
 
 def test_engine_records_manufacturing_export_failures_in_soft_mode(

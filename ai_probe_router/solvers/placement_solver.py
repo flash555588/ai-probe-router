@@ -38,13 +38,20 @@ def find_placement(
     min_target_distance_mm: float = 0.0,
     role: NetRole = NetRole.UNKNOWN,
     sub_roles: set[NetSubRole] | None = None,
+    existing_probe_nets: dict[str, tuple[float, float]] | None = None,
 ) -> tuple[float, float] | None:
     pads = board.find_pads_by_net(req.net_name)
     target_positions = [(p.x, p.y) for _, p in pads]
     if not target_positions:
         return None
 
-    candidates = _generate_candidates(board, target_positions, probe_cfg, index)
+    pair_mate_position = (
+        existing_probe_nets.get(req.pair_net_name)
+        if req.pair_net_name and existing_probe_nets else None
+    )
+    candidates = _generate_candidates(
+        board, target_positions, probe_cfg, index, pair_mate_position,
+    )
 
     best: PlacementCandidate | None = None
     subs = sub_roles or set()
@@ -84,6 +91,7 @@ def find_placement(
         sig_adj, sig_warns = signal_score(c.x, c.y, role, subs, board)
         c.score += sig_adj
         c.warnings.extend(sig_warns)
+        c.score += _paired_probe_score(c.x, c.y, req, existing_probe_nets)
 
         if best is None or c.score > best.score:
             best = c
@@ -95,11 +103,34 @@ def find_placement(
     return None
 
 
+def _paired_probe_score(
+    x: float,
+    y: float,
+    req: ProbeRequirement,
+    existing_probe_nets: dict[str, tuple[float, float]] | None,
+) -> float:
+    if not req.pair_net_name or not existing_probe_nets:
+        return 0.0
+    mate = existing_probe_nets.get(req.pair_net_name)
+    if mate is None:
+        return 0.0
+
+    dist = math.hypot(x - mate[0], y - mate[1])
+    if dist < 1.0:
+        return -25.0
+    if dist <= 5.0:
+        return 18.0 - dist
+    if dist <= 15.0:
+        return max(0.0, 12.0 - (dist - 5.0))
+    return -min((dist - 15.0) * 0.5, 20.0)
+
+
 def _generate_candidates(
     board: Board,
     target_positions: list[tuple[float, float]],
     probe_cfg: ProbeConfig,
     index: int,
+    paired_mate_position: tuple[float, float] | None = None,
 ) -> list[PlacementCandidate]:
     grid = probe_cfg.preferred_grid_mm
     candidates: list[PlacementCandidate] = []
@@ -110,6 +141,18 @@ def _generate_candidates(
     radii = [step, step * 1.5, step * 2, step * 3, step * 5]
     angle_count = 16
     angle_offset = (index % angle_count) * (math.tau / angle_count / 2)
+
+    if paired_mate_position is not None:
+        mx, my = paired_mate_position
+        pair_radii = [step, step * 1.5, step * 2, step * 3]
+        for radius in pair_radii:
+            for angle_i in range(angle_count):
+                angle = math.tau * angle_i / angle_count + angle_offset
+                cx = _snap(mx + math.cos(angle) * radius, grid)
+                cy = _snap(my + math.sin(angle) * radius, grid)
+                score = 150.0 - radius * 2.0
+                _add_candidate(candidates, seen, board, cx, cy, score)
+
     for target_i, (tx, ty) in enumerate(target_positions):
         for radius in radii:
             for angle_i in range(angle_count):
