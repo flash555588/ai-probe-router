@@ -37,22 +37,20 @@ from .models.net import NetRole
 from .models.probe import ProbeRequirement, ProbeStyle
 from .pipeline.autorouter import run_autorouter
 from .pipeline.delivery_artifacts import write_delivery_artifacts
+from .pipeline.module_planning import (
+    run_module_planning,
+    write_module_planning_reports,
+)
 from .pipeline.native_tools import (
     apply_native_validation,
     run_manufacturing_exports,
     run_native_validation,
 )
-from .routing.module_corridor import analyze_routing_feasibility
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.grid_router import RouteResult, route_grid
-from .solvers.module_graph import build_module_graph
-from .solvers.module_placement import plan_module_placement
-from .solvers.module_selector import select_modules
 from .solvers.pin_mapper import solve_mapping
 from .solvers.placement_solver import find_placement, place_pogo_array
 from .synthesis.module_instantiator import instantiate_module_sheets
-from .verification.bom_report import BomReport
-from .verification.bus_report import BusReport
 from .verification.decision_manifest import (
     artifact_paths,
     collect_artifact_manifest,
@@ -62,23 +60,9 @@ from .verification.decision_manifest import (
 from .verification.design_process_report import generate_design_process_report
 from .verification.diff_pair_skew_report import generate_diff_pair_skew_report
 from .verification.manufacturing_report import generate_manufacturing_report
-from .verification.module_compatibility_report import (
-    ModuleCompatibilityReport,
-    analyze_module_compatibility,
-)
-from .verification.module_graph_report import ModuleGraphReport
-from .verification.module_instantiation_report import ModuleInstantiationReport
-from .verification.module_library_preflight_report import (
-    ModuleLibraryPreflightReport,
-    validate_module_library,
-)
-from .verification.module_placement_report import ModulePlacementReport
-from .verification.module_report import ModuleReport
 from .verification.pin_report import PinMapReport
-from .verification.power_report import PowerReport
 from .verification.readiness_report import generate_readiness_report
 from .verification.report import CoverageReport, NetCoverage
-from .verification.routing_feasibility_report import RoutingFeasibilityReport
 
 
 def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, PinMapReport | None]:
@@ -99,62 +83,9 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     out_dir.mkdir(exist_ok=True)
     prior_manifest = read_prior_manifest(out_dir / "decision_manifest.json")
 
-    module_selection = None
-    module_graph_result = None
-    module_placement_result = None
-    routing_feasibility = None
-    module_instantiation_result = None
-    module_compatibility_result = None
-    module_library_preflight_result = None
-    resource_allocation_result = None
-    footprint_preview_result = None
+    module_plan = run_module_planning(cfg, board)
     autoroute_result = None
-    if cfg.functional_modules:
-        module_library_preflight_result = validate_module_library(cfg.functional_modules)
-        if not _module_plan_blocked(
-            module_library_preflight_result,
-            module_selection,
-            module_graph_result,
-            module_compatibility_result,
-            resource_allocation_result,
-        ):
-            module_selection = select_modules(cfg.functional_modules)
-            if cfg.resource_allocator.enable and module_selection is not None:
-                from .solvers.resource_allocator import allocate_resources
-                resource_allocation_result = allocate_resources(
-                    module_selection.selected, cfg,
-                )
-            module_graph_result = build_module_graph(cfg, module_selection, board)
-            module_compatibility_result = analyze_module_compatibility(module_graph_result)
-            if not _module_plan_blocked(
-                module_library_preflight_result,
-                module_selection,
-                module_graph_result,
-                module_compatibility_result,
-                resource_allocation_result,
-            ):
-                module_placement_result = plan_module_placement(
-                    module_graph_result.graph,
-                    board,
-                )
-                if cfg.module_footprint_preview.enable and module_selection is not None:
-                    from .solvers.module_footprint_planner import plan_module_footprints
-                    footprint_preview_result = plan_module_footprints(
-                        module_selection.selected,
-                        board,
-                        cfg.module_footprint_preview,
-                    )
-                routing_feasibility = analyze_routing_feasibility(
-                    board, module_graph_result.graph, cfg.routing_strategy,
-                )
-    if _module_plan_blocked(
-        module_library_preflight_result,
-        module_selection,
-        module_graph_result,
-        module_compatibility_result,
-        resource_allocation_result,
-        footprint_preview_result,
-    ):
+    if module_plan.blocked:
         coverage = CoverageReport(
             run_id=run_id,
             total_nets_requested=len(cfg.nets_to_expose),
@@ -164,19 +95,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             "Module planning blocked generation; no PCB or schematic changes were written"
         )
         mfg_report = generate_manufacturing_report(board, coverage)
-        _write_module_planning_reports(
-            out_dir,
-            run_id,
-            module_library_preflight_result,
-            module_selection,
-            module_graph_result,
-            module_compatibility_result,
-            module_placement_result,
-            module_instantiation_result,
-            routing_feasibility,
-            resource_allocation_result,
-            footprint_preview_result,
-        )
+        write_module_planning_reports(out_dir, run_id, module_plan)
         mfg_report.write(out_dir / "manufacturing_report.txt")
         artifacts = collect_artifact_manifest(out_dir)
         planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
@@ -185,9 +104,9 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             run_id=run_id,
             board=board,
             coverage=coverage,
-            module_graph_result=module_graph_result,
-            module_compatibility_result=module_compatibility_result,
-            routing_feasibility=routing_feasibility,
+            module_graph_result=module_plan.module_graph_result,
+            module_compatibility_result=module_plan.module_compatibility_result,
+            routing_feasibility=module_plan.routing_feasibility,
             manufacturing_report=mfg_report,
             autoroute_result=autoroute_result,
             prior_manifest=prior_manifest,
@@ -197,17 +116,17 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         readiness = generate_readiness_report(
             coverage,
             run_id=run_id,
-            module_library_preflight=module_library_preflight_result,
-            module_selection=module_selection,
-            module_graph_result=module_graph_result,
-            module_compatibility_result=module_compatibility_result,
-            module_placement_result=module_placement_result,
-            module_instantiation_result=module_instantiation_result,
-            routing_feasibility=routing_feasibility,
+            module_library_preflight=module_plan.module_library_preflight_result,
+            module_selection=module_plan.module_selection,
+            module_graph_result=module_plan.module_graph_result,
+            module_compatibility_result=module_plan.module_compatibility_result,
+            module_placement_result=module_plan.module_placement_result,
+            module_instantiation_result=module_plan.module_instantiation_result,
+            routing_feasibility=module_plan.routing_feasibility,
             manufacturing_report=mfg_report,
             process_report=process_report,
-            resource_allocation_result=resource_allocation_result,
-            footprint_preview_result=footprint_preview_result,
+            resource_allocation_result=module_plan.resource_allocation_result,
+            footprint_preview_result=module_plan.footprint_preview_result,
         )
         readiness.write(out_dir / "readiness_report.txt")
         coverage.write(out_dir / "testpoint_report.txt")
@@ -219,10 +138,10 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
             coverage=coverage,
             readiness_report=readiness,
             process_report=process_report,
-            module_selection=module_selection,
-            module_graph_result=module_graph_result,
-            module_compatibility_result=module_compatibility_result,
-            routing_feasibility=routing_feasibility,
+            module_selection=module_plan.module_selection,
+            module_graph_result=module_plan.module_graph_result,
+            module_compatibility_result=module_plan.module_compatibility_result,
+            routing_feasibility=module_plan.routing_feasibility,
             autoroute_result=autoroute_result,
             prior_manifest=prior_manifest,
             artifacts=artifacts,
@@ -236,10 +155,10 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
     coverage = _run_phase1(cfg, board, sch)
     coverage.run_id = run_id
 
-    if module_graph_result is not None:
-        module_instantiation_result = instantiate_module_sheets(
+    if module_plan.module_graph_result is not None:
+        module_plan.module_instantiation_result = instantiate_module_sheets(
             sch,
-            module_graph_result.graph,
+            module_plan.module_graph_result.graph,
             out_dir,
             run_id=run_id,
         )
@@ -303,19 +222,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         cfg,
     )
 
-    _write_module_planning_reports(
-        out_dir,
-        run_id,
-        module_library_preflight_result,
-        module_selection,
-        module_graph_result,
-        module_compatibility_result,
-        module_placement_result,
-        module_instantiation_result,
-        routing_feasibility,
-        resource_allocation_result,
-        footprint_preview_result,
-    )
+    write_module_planning_reports(out_dir, run_id, module_plan)
     if pin_report is not None:
         pin_report.write(out_dir / "pin_mapping_report.txt")
 
@@ -361,18 +268,18 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         coverage=coverage,
         manufacturing_report=mfg_report,
         prior_manifest=prior_manifest,
-        module_library_preflight_result=module_library_preflight_result,
-        module_selection=module_selection,
-        module_graph_result=module_graph_result,
-        module_compatibility_result=module_compatibility_result,
-        module_placement_result=module_placement_result,
-        module_instantiation_result=module_instantiation_result,
-        routing_feasibility=routing_feasibility,
+        module_library_preflight_result=module_plan.module_library_preflight_result,
+        module_selection=module_plan.module_selection,
+        module_graph_result=module_plan.module_graph_result,
+        module_compatibility_result=module_plan.module_compatibility_result,
+        module_placement_result=module_plan.module_placement_result,
+        module_instantiation_result=module_plan.module_instantiation_result,
+        routing_feasibility=module_plan.routing_feasibility,
         pin_report=pin_report,
         diff_pair_report=dp_report,
         autoroute_result=autoroute_result,
-        resource_allocation_result=resource_allocation_result,
-        footprint_preview_result=footprint_preview_result,
+        resource_allocation_result=module_plan.resource_allocation_result,
+        footprint_preview_result=module_plan.footprint_preview_result,
     )
 
     return coverage, pin_report
@@ -639,76 +546,6 @@ def _json_safe(value: object) -> object:
         json.dumps(value, sort_keys=True)
     except TypeError:
         return repr(value)
-def _module_plan_blocked(
-    module_library_preflight_result,
-    module_selection,
-    module_graph_result,
-    module_compatibility_result,
-    resource_allocation_result=None,
-    footprint_preview_result=None,
-) -> bool:
-    return any(
-        result is not None and not result.ok
-        for result in (
-            module_library_preflight_result,
-            module_selection,
-            module_graph_result,
-            module_compatibility_result,
-            resource_allocation_result,
-            footprint_preview_result,
-        )
-    )
-
-
-def _write_module_planning_reports(
-    out_dir: Path,
-    run_id: str,
-    module_library_preflight_result,
-    module_selection,
-    module_graph_result,
-    module_compatibility_result,
-    module_placement_result,
-    module_instantiation_result,
-    routing_feasibility,
-    resource_allocation_result=None,
-    footprint_preview_result=None,
-) -> None:
-    if module_library_preflight_result is not None:
-        ModuleLibraryPreflightReport(module_library_preflight_result).write(
-            out_dir / "module_library_preflight_report.txt",
-        )
-    if module_selection is not None:
-        ModuleReport(module_selection).write(out_dir / "module_report.txt")
-    if module_graph_result is not None:
-        ModuleGraphReport(module_graph_result).write(out_dir / "module_graph_report.txt")
-        BusReport(module_graph_result).write(out_dir / "bus_report.txt")
-        PowerReport(module_graph_result).write(out_dir / "power_report.txt")
-        BomReport(module_graph_result, run_id=run_id).write(out_dir / "bom_report.csv")
-    if module_compatibility_result is not None:
-        ModuleCompatibilityReport(module_compatibility_result).write(
-            out_dir / "module_compatibility_report.txt",
-        )
-    if module_placement_result is not None:
-        ModulePlacementReport(module_placement_result).write(
-            out_dir / "module_placement_report.txt",
-        )
-    if module_instantiation_result is not None:
-        ModuleInstantiationReport(module_instantiation_result).write(
-            out_dir / "module_instantiation_report.txt",
-        )
-    if routing_feasibility is not None:
-        RoutingFeasibilityReport(routing_feasibility).write(
-            out_dir / "routing_feasibility_report.txt",
-        )
-    if resource_allocation_result is not None:
-        from .solvers.resource_allocator_report import write_resource_allocation_report
-
-        write_resource_allocation_report(resource_allocation_result, out_dir)
-    if footprint_preview_result is not None:
-        from .verification.footprint_preview_report import write_footprint_preview_report
-        write_footprint_preview_report(footprint_preview_result, out_dir)
-
-
 def _run_phase1(
     cfg: ProjectConfig,
     board: Board | None,
