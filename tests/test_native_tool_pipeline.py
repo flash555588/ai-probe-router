@@ -12,6 +12,7 @@ from ai_probe_router.pipeline.native_tools import (
     run_manufacturing_exports,
     run_native_validation,
 )
+from ai_probe_router.verification.native_validation_runner import NativeValidationRun
 from ai_probe_router.verification.report import CoverageReport
 
 
@@ -20,11 +21,24 @@ def test_run_native_validation_records_available_artifacts(tmp_path: Path, monke
     sch = tmp_path / "main.kicad_sch"
     pcb.write_text("(kicad_pcb)", encoding="utf-8")
     sch.write_text("(kicad_sch)", encoding="utf-8")
-    drc_result = CheckResult(ok=False, violations=[{"type": "clearance"}])
-    erc_result = CheckResult(ok=True)
-
-    monkeypatch.setattr(native_tools, "run_drc", lambda *args: drc_result)
-    monkeypatch.setattr(native_tools, "run_erc", lambda *args: erc_result)
+    shared_result = NativeValidationRun(
+        return_code=1,
+        summary={
+            "checks": {
+                "drc": {"exit_code": 5, "json_exists": True},
+                "erc": {"exit_code": 0, "json_exists": True},
+            }
+        },
+        report_dir=tmp_path / "native_validation",
+        findings=[{"source": "drc", "type": "clearance"}],
+        grouped_findings=[],
+        regression_result={},
+    )
+    monkeypatch.setattr(
+        native_tools,
+        "run_shared_native_validation",
+        lambda *args, **kwargs: shared_result,
+    )
 
     coverage = CoverageReport()
     result = run_native_validation(pcb, sch, tmp_path)
@@ -87,15 +101,27 @@ def test_native_validation_strict_signoff_blocks_missing_kicad():
 
 
 def test_run_native_validation_skips_missing_artifacts(tmp_path: Path, monkeypatch):
-    calls: list[str] = []
-    monkeypatch.setattr(native_tools, "run_drc", lambda *args: calls.append("drc"))
-    monkeypatch.setattr(native_tools, "run_erc", lambda *args: calls.append("erc"))
+    calls = []
+    shared_result = NativeValidationRun(
+        return_code=0,
+        summary={"checks": {}},
+        report_dir=tmp_path / "native_validation",
+        findings=[],
+        grouped_findings=[],
+        regression_result={},
+    )
+
+    def fake_shared_runner(*args, **kwargs):
+        calls.append(args)
+        return shared_result
+
+    monkeypatch.setattr(native_tools, "run_shared_native_validation", fake_shared_runner)
 
     result = run_native_validation(tmp_path / "missing.kicad_pcb", None, tmp_path)
 
     assert result.drc is None
     assert result.erc is None
-    assert calls == []
+    assert len(calls) == 1
 
 
 def test_manufacturing_exports_record_success_notes(tmp_path: Path, monkeypatch):

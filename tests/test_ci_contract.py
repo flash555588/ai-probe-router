@@ -27,12 +27,22 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
     assert "ghcr.io/inti-cmnb/kicad9_auto:1.8.5" in workflow
     assert "kicad8_auto:latest" not in workflow
     assert "kicad9_auto:latest" not in workflow
-    assert (
-        "python scripts/kicad_native_validate.py "
-        "examples/audio_player_project --require-kicad"
-    ) in workflow
+    assert "continue-on-error: true" in native_job
+    assert "--report-dir \"$PWD/validation/reports/audio\"" in workflow
+    assert "--report-dir \"$PWD/validation/reports/smoke\"" in workflow
+    assert "--require-kicad" in workflow
+    assert "--strict" in workflow
     assert "--exit-code-violations" in (
-        Path(__file__).parent.parent / "scripts" / "kicad_native_validate.py"
+        Path(__file__).parent.parent
+        / "ai_probe_router"
+        / "verification"
+        / "native_validation_runner.py"
+    ).read_text(encoding="utf-8")
+    assert "--schematic-parity" in (
+        Path(__file__).parent.parent
+        / "ai_probe_router"
+        / "verification"
+        / "native_validation_runner.py"
     ).read_text(encoding="utf-8")
     assert "Generate strict native sample" in workflow
     assert "apr generate /tmp/apr-native-smoke/config.yaml -d /tmp/apr-native-smoke" in workflow
@@ -40,8 +50,13 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
     assert "require_manufacturing_exports: true" in workflow
     assert "Validate generated native sample" in workflow
     assert "/tmp/apr-native-smoke/output" in workflow
+    assert "Verify native report artifacts" in workflow
+    assert "validation/reports/audio/summary.json" in workflow
+    assert "validation/reports/audio/artifact_manifest.json" in workflow
     assert "if: always()" in workflow
-    assert "name: native-kicad-reports" in workflow
-    assert "examples/audio_player_project/build/kicad/" in workflow
-    assert "/tmp/apr-native-smoke/output/build/kicad/" in workflow
-    assert "if-no-files-found: warn" in workflow
+    assert "name: native-validation-reports" in workflow
+    assert "path: validation/reports/**" in workflow
+    assert "if-no-files-found: error" in workflow
+    assert "examples/audio_player_project/build/kicad/" not in workflow
+    assert "/tmp/apr-native-smoke/output/build/kicad/" not in workflow
+    assert "Fail on native validation result" in workflow

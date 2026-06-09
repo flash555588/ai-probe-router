@@ -79,7 +79,15 @@ jobs:
         run: uv pip install -e ".[dev]" --system
 
       - name: Required native KiCad validation
-        run: python scripts/kicad_native_validate.py examples/audio_player_project --require-kicad
+        id: audio_native
+        continue-on-error: true
+        run: |
+          mkdir -p validation/reports/audio
+          python scripts/kicad_native_validate.py \
+            examples/audio_player_project \
+            --report-dir "$PWD/validation/reports/audio" \
+            --require-kicad \
+            --strict
 
       - name: Generate strict native sample
         run: |
@@ -122,17 +130,35 @@ jobs:
           test -f /tmp/apr-native-smoke/output/manufacturing/placement.csv
 
       - name: Validate generated native sample
+        id: smoke_native
+        continue-on-error: true
         run: |
+          mkdir -p validation/reports/smoke
           python scripts/kicad_native_validate.py \
             /tmp/apr-native-smoke/output \
-            --require-kicad
+            --report-dir "$PWD/validation/reports/smoke" \
+            --require-kicad \
+            --strict
+
+      - name: Verify native report artifacts
+        if: always()
+        run: |
+          test -f validation/reports/audio/summary.json
+          test -f validation/reports/audio/kicad-version.txt
+          test -f validation/reports/audio/file-list.txt
+          test -f validation/reports/audio/artifact_manifest.json
+          test -f validation/reports/audio/erc/erc.json
+          test -f validation/reports/audio/drc/drc.json
+          test -f validation/reports/audio/parity/parity.json
 
       - name: Upload native KiCad reports
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: native-kicad-reports
-          path: |
-            examples/audio_player_project/build/kicad/
-            /tmp/apr-native-smoke/output/build/kicad/
-          if-no-files-found: warn
+          name: native-validation-reports
+          path: validation/reports/**
+          if-no-files-found: error
+
+      - name: Fail on native validation result
+        if: steps.audio_native.outcome == 'failure' || steps.smoke_native.outcome == 'failure'
+        run: exit 1

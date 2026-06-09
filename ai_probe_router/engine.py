@@ -183,6 +183,7 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         coverage,
         run_native_validation(out_pcb_path, out_sch_path, out_dir),
         cfg,
+        defer_failures=True,
     )
 
     write_module_planning_reports(out_dir, run_id, module_plan)
@@ -221,7 +222,13 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
 
     mfg_dir = out_dir / "manufacturing"
     if out_pcb_path is not None:
-        run_manufacturing_exports(cfg, coverage, out_pcb_path, mfg_dir)
+        run_manufacturing_exports(
+            cfg,
+            coverage,
+            out_pcb_path,
+            mfg_dir,
+            defer_failures=True,
+        )
 
     write_delivery_artifacts(
         out_dir=out_dir,
@@ -245,7 +252,30 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         footprint_preview_result=module_plan.footprint_preview_result,
     )
 
+    _raise_deferred_signoff_failure(cfg, coverage)
     return coverage, pin_report
+
+
+def _raise_deferred_signoff_failure(cfg: ProjectConfig, coverage: CoverageReport) -> None:
+    if not (
+        cfg.process_controls.strict_signoff
+        or cfg.process_controls.require_manufacturing_exports
+    ):
+        return
+    blocking_prefixes = (
+        "DRC validation failed:",
+        "DRC validation skipped:",
+        "ERC validation failed:",
+        "ERC validation skipped:",
+        "Schematic parity validation failed:",
+        "Schematic parity validation skipped:",
+        "Gerber export failed:",
+        "Drill export failed:",
+        "Pick&Place export failed:",
+    )
+    for note in coverage.notes:
+        if note.startswith(blocking_prefixes):
+            raise RuntimeError(note)
 
 
 _THERMAL_FIELDS = [

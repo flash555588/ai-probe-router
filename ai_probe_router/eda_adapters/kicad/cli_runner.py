@@ -43,7 +43,17 @@ def run_erc(schematic_path: str | Path, output_dir: str | Path | None = None) ->
     sch = Path(schematic_path)
     out_dir = Path(output_dir) if output_dir else sch.parent
     report = out_dir / (sch.stem + "_erc.json")
-    cmd = [cli, "sch", "erc", "--format", "json", "--output", str(report), str(sch)]
+    cmd = [
+        cli,
+        "sch",
+        "erc",
+        "--format",
+        "json",
+        "--output",
+        str(report),
+        "--exit-code-violations",
+        str(sch),
+    ]
     return _run(cmd, report)
 
 
@@ -54,7 +64,18 @@ def run_drc(pcb_path: str | Path, output_dir: str | Path | None = None) -> Check
     pcb = Path(pcb_path)
     out_dir = Path(output_dir) if output_dir else pcb.parent
     report = out_dir / (pcb.stem + "_drc.json")
-    cmd = [cli, "pcb", "drc", "--format", "json", "--output", str(report), str(pcb)]
+    cmd = [
+        cli,
+        "pcb",
+        "drc",
+        "--format",
+        "json",
+        "--output",
+        str(report),
+        "--schematic-parity",
+        "--exit-code-violations",
+        str(pcb),
+    ]
     return _run(cmd, report)
 
 
@@ -73,12 +94,11 @@ def _run(cmd: list[str], report_path: Path) -> CheckResult:
     if report_path.exists():
         try:
             data = json.loads(report_path.read_text(encoding="utf-8"))
-            reported = data.get("violations", data.get("errors", []))
+            reported = list(data.get("violations", data.get("errors", [])))
             reported += data.get("unconnected_items", [])
             violations = [
                 v for v in reported
-                if v.get("severity", "error") == "error"
-                and v.get("type") not in ("lib_footprint_mismatch", "lib_footprint_issues")
+                if isinstance(v, dict) and v.get("severity", "error") == "error"
             ]
             report_loaded = True
         except (json.JSONDecodeError, KeyError):
