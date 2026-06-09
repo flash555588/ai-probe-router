@@ -51,17 +51,10 @@ from .solvers.grid_router import RouteResult, route_grid
 from .solvers.pin_mapper import solve_mapping
 from .solvers.placement_solver import find_placement, place_pogo_array
 from .synthesis.module_instantiator import instantiate_module_sheets
-from .verification.decision_manifest import (
-    artifact_paths,
-    collect_artifact_manifest,
-    read_prior_manifest,
-    write_decision_manifest,
-)
-from .verification.design_process_report import generate_design_process_report
+from .verification.decision_manifest import read_prior_manifest
 from .verification.diff_pair_skew_report import generate_diff_pair_skew_report
 from .verification.manufacturing_report import generate_manufacturing_report
 from .verification.pin_report import PinMapReport
-from .verification.readiness_report import generate_readiness_report
 from .verification.report import CoverageReport, NetCoverage
 
 
@@ -97,54 +90,24 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         mfg_report = generate_manufacturing_report(board, coverage)
         write_module_planning_reports(out_dir, run_id, module_plan)
         mfg_report.write(out_dir / "manufacturing_report.txt")
-        artifacts = collect_artifact_manifest(out_dir)
-        planned_artifacts = artifact_paths(artifacts) | {"decision_manifest.json"}
-        process_report = generate_design_process_report(
-            cfg,
+        write_delivery_artifacts(
+            out_dir=out_dir,
+            cfg=cfg,
             run_id=run_id,
             board=board,
             coverage=coverage,
-            module_graph_result=module_plan.module_graph_result,
-            module_compatibility_result=module_plan.module_compatibility_result,
-            routing_feasibility=module_plan.routing_feasibility,
             manufacturing_report=mfg_report,
-            autoroute_result=autoroute_result,
             prior_manifest=prior_manifest,
-            generated_artifacts=planned_artifacts,
-        )
-        process_report.write(out_dir / "design_process_report.txt")
-        readiness = generate_readiness_report(
-            coverage,
-            run_id=run_id,
-            module_library_preflight=module_plan.module_library_preflight_result,
+            module_library_preflight_result=module_plan.module_library_preflight_result,
             module_selection=module_plan.module_selection,
             module_graph_result=module_plan.module_graph_result,
             module_compatibility_result=module_plan.module_compatibility_result,
             module_placement_result=module_plan.module_placement_result,
             module_instantiation_result=module_plan.module_instantiation_result,
             routing_feasibility=module_plan.routing_feasibility,
-            manufacturing_report=mfg_report,
-            process_report=process_report,
             resource_allocation_result=module_plan.resource_allocation_result,
             footprint_preview_result=module_plan.footprint_preview_result,
-        )
-        readiness.write(out_dir / "readiness_report.txt")
-        coverage.write(out_dir / "testpoint_report.txt")
-        artifacts = collect_artifact_manifest(out_dir)
-        write_decision_manifest(
-            out_dir / "decision_manifest.json",
-            run_id=run_id,
-            cfg=cfg,
-            coverage=coverage,
-            readiness_report=readiness,
-            process_report=process_report,
-            module_selection=module_plan.module_selection,
-            module_graph_result=module_plan.module_graph_result,
-            module_compatibility_result=module_plan.module_compatibility_result,
-            routing_feasibility=module_plan.routing_feasibility,
             autoroute_result=autoroute_result,
-            prior_manifest=prior_manifest,
-            artifacts=artifacts,
         )
         return coverage, None
 

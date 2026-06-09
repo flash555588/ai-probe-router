@@ -544,6 +544,23 @@ nets_to_expose:
     ).read_text(encoding="utf-8")
     readiness = (out_dir / "readiness_report.txt").read_text(encoding="utf-8")
     assert "Verdict:   BLOCKED" in readiness
+    for artifact in (
+        "design_process_report.txt",
+        "manufacturing_report.txt",
+        "testpoint_report.txt",
+        "readiness_report.txt",
+        "decision_manifest.json",
+    ):
+        assert (out_dir / artifact).exists()
+    manifest = json.loads((out_dir / "decision_manifest.json").read_text(encoding="utf-8"))
+    manifest_artifacts = {artifact["path"] for artifact in manifest["artifacts"]}
+    assert manifest["readiness"]["verdict"] == "BLOCKED"
+    assert manifest["coverage"]["missing"] == 1
+    assert "module_graph_report.txt" in manifest_artifacts
+    assert "manufacturing_report.txt" in manifest_artifacts
+    assert "design_process_report.txt" in manifest_artifacts
+    assert "testpoint_report.txt" in manifest_artifacts
+    assert "decision_manifest.json" not in manifest_artifacts
     assert not (out_dir / "main.kicad_pcb").exists()
     assert not (out_dir / "main.kicad_sch").exists()
 
