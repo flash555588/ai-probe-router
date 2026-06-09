@@ -27,7 +27,17 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
         "python scripts/kicad_native_validate.py "
         "examples/audio_player_project --require-kicad"
     ) in workflow
+    assert "--exit-code-violations" in (
+        Path(__file__).parent.parent / "scripts" / "kicad_native_validate.py"
+    ).read_text(encoding="utf-8")
+    assert "Generate strict native sample" in workflow
+    assert "apr generate /tmp/apr-native-smoke/config.yaml -d /tmp/apr-native-smoke" in workflow
+    assert "strict_signoff: true" in workflow
+    assert "require_manufacturing_exports: true" in workflow
+    assert "Validate generated native sample" in workflow
+    assert "/tmp/apr-native-smoke/output" in workflow
     assert "if: always()" in workflow
     assert "name: native-kicad-reports" in workflow
-    assert "path: examples/audio_player_project/build/kicad/" in workflow
+    assert "examples/audio_player_project/build/kicad/" in workflow
+    assert "/tmp/apr-native-smoke/output/build/kicad/" in workflow
     assert "if-no-files-found: warn" in workflow

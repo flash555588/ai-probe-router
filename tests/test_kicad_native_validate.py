@@ -43,6 +43,8 @@ def test_native_validate_runs_expected_kicad_commands(tmp_path: Path, monkeypatc
     assert commands[1][0][1:4] == ["sch", "export", "netlist"]
     assert commands[2][0][1:3] == ["sch", "erc"]
     assert commands[3][0][1:3] == ["pcb", "drc"]
+    assert "--exit-code-violations" in commands[2][0]
+    assert "--exit-code-violations" in commands[3][0]
     assert all(cwd == tmp_path for _, cwd, _ in commands)
     assert all(check is True for _, _, check in commands)
 

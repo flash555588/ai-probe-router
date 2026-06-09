@@ -75,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             str(build_dir / "erc.json"),
             "--format",
             "json",
+            "--exit-code-violations",
             str(schematic),
         ],
         [
@@ -86,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
             "--format",
             "json",
             "--schematic-parity",
+            "--exit-code-violations",
             str(pcb),
         ],
     ]
