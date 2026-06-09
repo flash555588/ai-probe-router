@@ -263,10 +263,13 @@ Text reports, `bom_report.csv`, and generated module sheets include a determinis
 
 ```bash
 # Run tests
-pytest
+pytest --tb=short -ra -q
 
 # Lint
 ruff check .
+
+# Audit Python dependencies
+pip-audit --progress-spinner off
 ```
 
 ## License

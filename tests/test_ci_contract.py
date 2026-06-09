@@ -9,6 +9,16 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
     ).read_text(encoding="utf-8")
 
     assert "pytest --tb=short -ra -q" in workflow
+    assert "permissions:\n  contents: read" in workflow
+    assert "actions/checkout@v6" in workflow
+    assert "actions/setup-python@v6" in workflow
+    assert "astral-sh/setup-uv@v8.2.0" in workflow
+    assert "actions/checkout@v4" not in workflow
+    assert "actions/setup-python@v5" not in workflow
+    assert "astral-sh/setup-uv@v4" not in workflow
+    assert "dependency-audit:" in workflow
+    assert 'uv pip install -e ".[dev]" --system' in workflow
+    assert "pip-audit --progress-spinner off" in workflow
     assert "native-kicad:" in workflow
     assert "workflow_dispatch:" in workflow
     assert "ghcr.io/inti-cmnb/kicad8_auto:latest" in workflow
