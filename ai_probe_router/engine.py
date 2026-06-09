@@ -904,6 +904,10 @@ def _run_phase1(
             _trace_length(result.points)
             for result in route_results if result.ok
         )
+        total_route_bends = sum(
+            result.bend_count
+            for result in route_results if result.ok
+        )
         if not placed:
             route_status = "not_placed"
         elif total_routes == 0:
@@ -929,6 +933,7 @@ def _run_phase1(
             routed_connections=routed,
             total_connections=total_routes,
             trace_length_mm=round(total_trace_length, 3),
+            route_bends=total_route_bends,
             routing_notes=route_notes,
         ))
         report.routed_connections += routed

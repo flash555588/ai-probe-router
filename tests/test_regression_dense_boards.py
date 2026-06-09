@@ -92,6 +92,52 @@ def test_grid_router_keeps_route_out_of_board_cutout():
         )
 
 
+def test_grid_router_reports_route_quality_metrics():
+    board = Board(
+        nets={"SIG": 1, "BLOCK": 2},
+        edges=[
+            EdgeSegment(0, 0, 20, 0),
+            EdgeSegment(20, 0, 20, 12),
+            EdgeSegment(20, 12, 0, 12),
+            EdgeSegment(0, 12, 0, 0),
+        ],
+        raw=["kicad_pcb"],
+    )
+    add_track_segment(board, "BLOCK", 10.0, 0.0, 10.0, 8.0, width=0.4)
+
+    result = route_grid(
+        board, "SIG", (2.0, 4.0), (18.0, 4.0),
+        width=0.2, clearance=0.2, grid=1.0,
+    )
+
+    assert result.ok
+    assert result.length_mm > 16.0
+    assert result.bend_count > 0
+
+
+def test_grid_router_penalizes_unnecessary_meanders():
+    board = Board(
+        nets={"SIG": 1, "BLOCK": 2},
+        edges=[
+            EdgeSegment(0, 0, 20, 0),
+            EdgeSegment(20, 0, 20, 20),
+            EdgeSegment(20, 20, 0, 20),
+            EdgeSegment(0, 20, 0, 0),
+        ],
+        raw=["kicad_pcb"],
+    )
+    add_track_segment(board, "BLOCK", 9.0, 9.0, 11.0, 11.0, width=0.4)
+
+    result = route_grid(
+        board, "SIG", (2.0, 2.0), (18.0, 18.0),
+        width=0.2, clearance=0.2, grid=1.0, bend_penalty=4.0,
+    )
+
+    assert result.ok
+    assert result.bend_count == 1
+    assert len(result.points) == 3
+
+
 def _segments_intersect(
     a1: tuple[float, float],
     a2: tuple[float, float],

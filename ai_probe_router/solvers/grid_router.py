@@ -14,6 +14,8 @@ class RouteResult:
     ok: bool
     points: list[tuple[float, float]]
     reason: str = ""
+    length_mm: float = 0.0
+    bend_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -39,11 +41,12 @@ def route_grid(
     side: str = "top",
     clearance: float = 0.20,
     grid: float = 0.5,
+    bend_penalty: float = 0.75,
     max_expansions: int = 60000,
 ) -> RouteResult:
     """Route a single-net connection on a board-aligned grid."""
     if _points_close(start, end):
-        return RouteResult(True, [start, end])
+        return _successful_route([start, end])
 
     bounds = board.board_bounds()
     if bounds is None:
@@ -55,7 +58,7 @@ def route_grid(
     tracks = _track_keepouts(board, net_name, width, clearance, route_layer)
 
     if _segment_clear(board, start, end, pads, tracks, width, grid):
-        return RouteResult(True, [start, end])
+        return _successful_route([start, end])
 
     min_ix = math.floor(bounds.min_x / grid) - 2
     min_iy = math.floor(bounds.min_y / grid) - 2
@@ -95,6 +98,7 @@ def route_grid(
         tracks,
         width,
         grid,
+        max(bend_penalty, 0.0),
         max_expansions,
     )
     if not path:
@@ -105,7 +109,7 @@ def route_grid(
     route.append(end)
     route = _dedupe_points(route)
     route = _compress_collinear(route)
-    return RouteResult(True, route)
+    return _successful_route(route)
 
 
 def _astar(
@@ -118,13 +122,16 @@ def _astar(
     tracks: list[_TrackKeepout],
     width: float,
     grid: float,
+    bend_penalty: float,
     max_expansions: int,
 ) -> list[tuple[int, int]]:
-    open_heap: list[tuple[float, int, tuple[int, int]]] = []
-    heapq.heappush(open_heap, (0.0, 0, start_node))
-    came_from: dict[tuple[int, int], tuple[int, int]] = {}
-    g_score: dict[tuple[int, int], float] = {start_node: 0.0}
-    closed: set[tuple[int, int]] = set()
+    State = tuple[int, int, int, int]
+    start_state: State = (start_node[0], start_node[1], 0, 0)
+    open_heap: list[tuple[float, int, State]] = []
+    heapq.heappush(open_heap, (0.0, 0, start_state))
+    came_from: dict[State, State] = {}
+    g_score: dict[State, float] = {start_state: 0.0}
+    closed: set[State] = set()
     counter = 0
     expansions = 0
 
@@ -133,32 +140,40 @@ def _astar(
         _f, _counter, current = heapq.heappop(open_heap)
         if current in closed:
             continue
-        if current == end_node:
+        current_node = (current[0], current[1])
+        current_dir = (current[2], current[3])
+        if current_node == end_node:
             return _reconstruct_path(came_from, current)
 
         closed.add(current)
         expansions += 1
-        current_point = to_point(current)
+        current_point = to_point(current_node)
 
         for dx, dy in neighbors:
-            neighbor = (current[0] + dx, current[1] + dy)
-            if neighbor in closed or not in_bounds(neighbor):
+            neighbor_node = (current_node[0] + dx, current_node[1] + dy)
+            neighbor_state: State = (neighbor_node[0], neighbor_node[1], dx, dy)
+            if neighbor_state in closed or not in_bounds(neighbor_node):
                 continue
-            neighbor_point = to_point(neighbor)
+            neighbor_point = to_point(neighbor_node)
             if not _point_clear(board, neighbor_point, pads, tracks, width):
                 continue
             if not _segment_clear(
                 board, current_point, neighbor_point, pads, tracks, width, grid,
             ):
                 continue
-            tentative = g_score[current] + grid
-            if tentative >= g_score.get(neighbor, float("inf")):
+            turn_cost = (
+                bend_penalty
+                if current_dir != (0, 0) and current_dir != (dx, dy)
+                else 0.0
+            )
+            tentative = g_score[current] + grid + turn_cost
+            if tentative >= g_score.get(neighbor_state, float("inf")):
                 continue
-            came_from[neighbor] = current
-            g_score[neighbor] = tentative
+            came_from[neighbor_state] = current
+            g_score[neighbor_state] = tentative
             counter += 1
-            f_score = tentative + _manhattan(neighbor, end_node) * grid
-            heapq.heappush(open_heap, (f_score, counter, neighbor))
+            f_score = tentative + _manhattan(neighbor_node, end_node) * grid
+            heapq.heappush(open_heap, (f_score, counter, neighbor_state))
 
     return []
 
@@ -441,15 +456,24 @@ def _find_node(node: list, key: str) -> list | None:
 
 
 def _reconstruct_path(
-    came_from: dict[tuple[int, int], tuple[int, int]],
-    current: tuple[int, int],
+    came_from: dict[tuple[int, int, int, int], tuple[int, int, int, int]],
+    current: tuple[int, int, int, int],
 ) -> list[tuple[int, int]]:
-    path = [current]
+    path = [(current[0], current[1])]
     while current in came_from:
         current = came_from[current]
-        path.append(current)
+        path.append((current[0], current[1]))
     path.reverse()
     return path
+
+
+def _successful_route(points: list[tuple[float, float]]) -> RouteResult:
+    return RouteResult(
+        True,
+        points,
+        length_mm=_route_length(points),
+        bend_count=_bend_count(points),
+    )
 
 
 def _dedupe_points(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
@@ -476,6 +500,31 @@ def _compress_collinear(points: list[tuple[float, float]]) -> list[tuple[float, 
             result.append(current)
     result.append(points[-1])
     return result
+
+
+def _route_length(points: list[tuple[float, float]]) -> float:
+    return sum(
+        math.hypot(b[0] - a[0], b[1] - a[1])
+        for a, b in zip(points, points[1:])
+    )
+
+
+def _bend_count(points: list[tuple[float, float]]) -> int:
+    if len(points) < 3:
+        return 0
+    bends = 0
+    for a, b, c in zip(points, points[1:], points[2:]):
+        if not _same_direction(a, b, c):
+            bends += 1
+    return bends
+
+
+def _same_direction(
+    a: tuple[float, float],
+    b: tuple[float, float],
+    c: tuple[float, float],
+) -> bool:
+    return abs((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])) <= 1e-9
 
 
 def _manhattan(a: tuple[int, int], b: tuple[int, int]) -> int:

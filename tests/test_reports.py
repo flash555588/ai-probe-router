@@ -64,6 +64,7 @@ def test_coverage_report_separates_placement_from_routing():
                 route_status="unrouted",
                 routed_connections=0,
                 total_connections=1,
+                route_bends=2,
                 routing_notes=["grid_route_not_found"],
             ),
         ],
@@ -71,6 +72,7 @@ def test_coverage_report_separates_placement_from_routing():
     text = report.summary_text()
     assert "Routing:          UNROUTED (0/1 connections)" in text
     assert "YES      0/1" in text
+    assert "2 bend(s)" in text
     assert "grid_route_not_found" in text
 
 

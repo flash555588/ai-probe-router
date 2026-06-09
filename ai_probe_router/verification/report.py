@@ -24,6 +24,7 @@ class NetCoverage:
     routed_connections: int = 0
     total_connections: int = 0
     trace_length_mm: float = 0.0
+    route_bends: int = 0
     routing_notes: list[str] = field(default_factory=list)
     placement_warnings: list[str] = field(default_factory=list)
 
@@ -128,6 +129,8 @@ class CoverageReport:
                 f"{placed:>6}  {route:>7}  {rev:>6}  {e.trace_width_mm:>5.2f}  "
                 f"{e.clearance_mm:>4.2f}  {loc}"
             )
+            if e.route_bends:
+                lines.append(f"    route: {e.route_bends} bend(s)")
             for note in e.routing_notes:
                 lines.append(f"    route: {note}")
             for warn in e.placement_warnings:
