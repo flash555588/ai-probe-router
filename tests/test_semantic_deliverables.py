@@ -45,6 +45,8 @@ def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path):
     assert manifest["readiness"]["verdict"] == "PASS_WITH_REVIEW"
     assert isinstance(manifest["native_tools"]["kicad_cli"]["available"], bool)
     assert "path" in manifest["native_tools"]["kicad_cli"]
+    assert "version" in manifest["native_tools"]["kicad_cli"]
+    assert "version_error" in manifest["native_tools"]["kicad_cli"]
 
     for net_name in covered_nets:
         assert net_name in board.nets
@@ -76,6 +78,12 @@ def test_decision_manifest_records_native_tool_presence(tmp_path: Path, monkeypa
         "which",
         lambda name: f"/usr/bin/{name}" if name in {"kicad-cli", "java"} else None,
     )
+    monkeypatch.setattr(decision_manifest, "find_freerouting", lambda: None)
+    monkeypatch.setattr(
+        decision_manifest,
+        "_probe_version",
+        lambda cmd, stderr_version=False: (" ".join(cmd), ""),
+    )
 
     path = tmp_path / "decision_manifest.json"
     write_decision_manifest(
@@ -89,9 +97,46 @@ def test_decision_manifest_records_native_tool_presence(tmp_path: Path, monkeypa
     )
 
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    assert manifest["native_tools"]["kicad_cli"] == {
-        "available": True,
-        "path": "/usr/bin/kicad-cli",
-    }
+    assert manifest["native_tools"]["kicad_cli"]["available"] is True
+    assert manifest["native_tools"]["kicad_cli"]["path"] == "/usr/bin/kicad-cli"
+    assert manifest["native_tools"]["kicad_cli"]["version"] == "kicad-cli version"
     assert manifest["native_tools"]["java"]["available"] is True
-    assert manifest["native_tools"]["freerouting"] == {"available": False, "path": ""}
+    assert manifest["native_tools"]["java"]["version"] == "java -version"
+    assert manifest["native_tools"]["freerouting"]["available"] is False
+    assert manifest["native_tools"]["freerouting"]["path"] == ""
+    assert "version" in manifest["native_tools"]["freerouting"]
+
+
+def test_decision_manifest_records_freerouting_jar_java_dependency(
+    tmp_path: Path,
+    monkeypatch,
+):
+    from ai_probe_router.verification import decision_manifest
+    from ai_probe_router.verification.decision_manifest import write_decision_manifest
+    from ai_probe_router.verification.design_process_report import DesignProcessReport
+    from ai_probe_router.verification.readiness_report import ReadinessReport
+    from ai_probe_router.verification.report import CoverageReport
+
+    jar_path = tmp_path / "freerouting.jar"
+    jar_path.write_text("jar", encoding="utf-8")
+    monkeypatch.setattr(decision_manifest, "find_freerouting", lambda: str(jar_path))
+    monkeypatch.setattr(decision_manifest.shutil, "which", lambda name: None)
+
+    path = tmp_path / "decision_manifest.json"
+    write_decision_manifest(
+        path,
+        run_id="APR-TEST",
+        cfg=load_config(Path(__file__).parent.parent / "examples" / "sample_config.yaml"),
+        coverage=CoverageReport(total_nets_requested=0, covered=0, missing=0),
+        readiness_report=ReadinessReport(run_id="APR-TEST"),
+        process_report=DesignProcessReport(run_id="APR-TEST"),
+        artifacts=[],
+    )
+
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    freerouting = manifest["native_tools"]["freerouting"]
+    assert freerouting["available"] is True
+    assert freerouting["path"] == str(jar_path)
+    assert freerouting["kind"] == "jar"
+    assert freerouting["java_available"] is False
+    assert freerouting["version_error"] == "java not found in PATH"

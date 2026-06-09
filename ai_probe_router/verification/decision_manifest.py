@@ -6,11 +6,13 @@ import hashlib
 import json
 import platform
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 from ai_probe_router import __version__
+from ai_probe_router.routing.freerouting_bridge import find_freerouting
 
 
 def read_prior_manifest(path: str | Path) -> dict[str, Any] | None:
@@ -115,20 +117,100 @@ def _tool_versions() -> dict[str, str]:
     }
 
 
-def _native_tools() -> dict[str, dict[str, str | bool]]:
+def _native_tools() -> dict[str, dict[str, str | bool | None]]:
+    freerouting_path = find_freerouting()
     return {
-        "kicad_cli": _tool_presence("kicad-cli"),
-        "java": _tool_presence("java"),
-        "freerouting": _tool_presence("freerouting"),
+        "kicad_cli": _executable_tool("kicad-cli", ["kicad-cli", "version"]),
+        "java": _executable_tool("java", ["java", "-version"], stderr_version=True),
+        "freerouting": _freerouting_tool(freerouting_path),
     }
 
 
-def _tool_presence(name: str) -> dict[str, str | bool]:
+def _tool_presence(name: str) -> dict[str, str | bool | None]:
     path = shutil.which(name)
     return {
         "available": path is not None,
         "path": path or "",
+        "version": "",
+        "version_error": "",
     }
+
+
+def _executable_tool(
+    name: str,
+    version_cmd: list[str],
+    *,
+    stderr_version: bool = False,
+) -> dict[str, str | bool | None]:
+    info = _tool_presence(name)
+    if not info["available"]:
+        return info
+    version, error = _probe_version(version_cmd, stderr_version=stderr_version)
+    info["version"] = version
+    info["version_error"] = error
+    return info
+
+
+def _freerouting_tool(path: str | None) -> dict[str, str | bool | None]:
+    if path is None:
+        return {
+            "available": False,
+            "path": "",
+            "version": "",
+            "version_error": "",
+            "kind": "",
+            "java_available": shutil.which("java") is not None,
+        }
+    info: dict[str, str | bool | None] = {
+        "available": True,
+        "path": path,
+        "version": "",
+        "version_error": "",
+        "kind": "jar" if path.lower().endswith(".jar") else "executable",
+        "java_available": shutil.which("java") is not None,
+    }
+    if info["kind"] == "jar":
+        java = shutil.which("java")
+        if java is None:
+            info["version_error"] = "java not found in PATH"
+            return info
+        cmd = [java, "-jar", path, "--version"]
+    else:
+        cmd = [path, "--version"]
+    version, error = _probe_version(cmd)
+    info["version"] = version
+    info["version_error"] = error
+    return info
+
+
+def _probe_version(
+    cmd: list[str],
+    *,
+    stderr_version: bool = False,
+) -> tuple[str, str]:
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        return "", str(exc)
+    except subprocess.TimeoutExpired:
+        return "", "version probe timed out"
+
+    output = proc.stderr if stderr_version else proc.stdout
+    if not output.strip() and stderr_version:
+        output = proc.stdout
+    if not output.strip():
+        output = proc.stderr
+    first_line = output.strip().splitlines()[0] if output.strip() else ""
+    if proc.returncode != 0 and not first_line:
+        return "", f"version probe exited with code {proc.returncode}"
+    if proc.returncode != 0:
+        return first_line, f"version probe exited with code {proc.returncode}"
+    return first_line, ""
 
 
 def _modules(module_graph_result) -> list[dict[str, Any]]:
