@@ -97,6 +97,19 @@ def _native_result_from_run(run: NativeValidationRun) -> NativeValidationResult:
     )
 
 
+# KiCad DRC/ERC severities that must not block manufacturing signoff. Library
+# bookkeeping findings (lib_footprint_mismatch / lib_footprint_issues) and
+# user-acknowledged items are reported as warnings, not manufacturability
+# defects, so they are recorded in the native report but never raised on.
+# A finding without an explicit severity is treated as blocking.
+_NON_BLOCKING_SEVERITIES = frozenset({"warning", "exclusion", "ignore"})
+
+
+def _is_blocking_finding(finding: dict) -> bool:
+    severity = str(finding.get("severity", "")).strip().lower()
+    return severity not in _NON_BLOCKING_SEVERITIES
+
+
 def _check_result(
     key: str,
     check: dict | None,
@@ -105,6 +118,7 @@ def _check_result(
     if check is None:
         return None
     relevant = [finding for finding in findings if finding.get("source") == key]
+    blocking = [finding for finding in relevant if _is_blocking_finding(finding)]
     exit_code = check.get("exit_code")
     json_exists = bool(check.get("json_exists"))
     if key == "netlist":
@@ -112,13 +126,14 @@ def _check_result(
     elif key in {"erc", "drc"} and not json_exists:
         ok = None
     else:
-        ok = len(relevant) == 0 and exit_code in (0, None)
+        # Only error-severity findings block signoff; warnings are advisory.
+        ok = len(blocking) == 0
     error = ""
     if ok is None:
         error = "native KiCad report was not produced"
     elif ok is False:
-        error = f"{len(relevant)} violation(s)"
-    return CheckResult(ok=ok, violations=relevant, error=error)
+        error = f"{len(blocking)} violation(s)"
+    return CheckResult(ok=ok, violations=blocking, error=error)
 
 
 def apply_native_validation(

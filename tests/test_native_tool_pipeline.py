@@ -51,6 +51,41 @@ def test_run_native_validation_records_available_artifacts(tmp_path: Path, monke
     assert coverage.notes == ["DRC validation failed: 1 violation(s)"]
 
 
+def test_native_validation_warnings_do_not_block_signoff(tmp_path: Path, monkeypatch):
+    pcb = tmp_path / "main.kicad_pcb"
+    sch = tmp_path / "main.kicad_sch"
+    pcb.write_text("(kicad_pcb)", encoding="utf-8")
+    sch.write_text("(kicad_sch)", encoding="utf-8")
+    shared_result = NativeValidationRun(
+        return_code=1,
+        summary={"checks": {"drc": {"exit_code": 5, "json_exists": True}}},
+        report_dir=tmp_path / "native_validation",
+        findings=[
+            {"source": "drc", "type": "lib_footprint_mismatch", "severity": "warning"},
+            {"source": "drc", "type": "lib_footprint_issues", "severity": "warning"},
+        ],
+        grouped_findings=[],
+        regression_result={},
+    )
+    monkeypatch.setattr(
+        native_tools,
+        "run_shared_native_validation",
+        lambda *args, **kwargs: shared_result,
+    )
+
+    cfg = ProjectConfig()
+    cfg.process_controls.strict_signoff = True
+    coverage = CoverageReport()
+    result = run_native_validation(pcb, sch, tmp_path)
+    # Warning-severity findings must not raise even under strict signoff.
+    apply_native_validation(coverage, result, cfg)
+
+    assert result.drc.ok is True
+    assert coverage.drc_ok is True
+    assert coverage.drc_violations == 0
+    assert not any("DRC validation failed" in note for note in coverage.notes)
+
+
 def test_native_validation_records_missing_tool_as_soft_note():
     coverage = CoverageReport()
     result = native_tools.NativeValidationResult(
