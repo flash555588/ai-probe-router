@@ -13,6 +13,7 @@ from typing import Any
 
 from ai_probe_router import __version__
 from ai_probe_router.routing.freerouting_bridge import find_freerouting
+from ai_probe_router.subprocess_utils import run_text_tool
 
 
 def read_prior_manifest(path: str | Path) -> dict[str, Any] | None:
@@ -190,12 +191,9 @@ def _probe_version(
     stderr_version: bool = False,
 ) -> tuple[str, str]:
     try:
-        proc = subprocess.run(
+        proc = run_text_tool(
             cmd,
             capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
             timeout=5,
         )
     except (FileNotFoundError, OSError) as exc:

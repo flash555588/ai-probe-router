@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from ai_probe_router import subprocess_utils
 from ai_probe_router.verification import native_validation_runner
 from scripts import kicad_native_validate
 
@@ -43,7 +44,7 @@ def test_native_validate_writes_evidence_and_absolute_kicad_commands(
 
     monkeypatch.setattr(native_validation_runner, "find_kicad_cli", lambda: "kicad-cli")
     monkeypatch.setattr(
-        native_validation_runner.subprocess,
+        subprocess_utils.subprocess,
         "run",
         _fake_kicad_run(commands, erc_exit=0, drc_exit=0, severity="warning"),
     )
@@ -68,6 +69,9 @@ def test_native_validate_writes_evidence_and_absolute_kicad_commands(
     assert all(kwargs["check"] is False for _, kwargs in commands)
     assert all(kwargs["capture_output"] is True for _, kwargs in commands)
     assert all(kwargs["text"] is True for _, kwargs in commands)
+    assert all(kwargs["encoding"] == "utf-8" for _, kwargs in commands)
+    assert all(kwargs["errors"] == "replace" for _, kwargs in commands)
+    assert all(kwargs["shell"] is False for _, kwargs in commands)
 
     assert (report_dir / "kicad-version.txt").read_text(encoding="utf-8") == "9.0.2\n"
     assert (report_dir / "netlist" / "main.net").read_text(
@@ -107,7 +111,7 @@ def test_native_validate_runs_all_commands_before_reporting_failure(
 
     monkeypatch.setattr(native_validation_runner, "find_kicad_cli", lambda: "kicad-cli")
     monkeypatch.setattr(
-        native_validation_runner.subprocess,
+        subprocess_utils.subprocess,
         "run",
         _fake_kicad_run(commands, erc_exit=5, drc_exit=0),
     )
@@ -131,7 +135,7 @@ def test_native_validate_warning_findings_do_not_fail(tmp_path: Path, monkeypatc
 
     monkeypatch.setattr(native_validation_runner, "find_kicad_cli", lambda: "kicad-cli")
     monkeypatch.setattr(
-        native_validation_runner.subprocess,
+        subprocess_utils.subprocess,
         "run",
         _fake_kicad_run(commands, erc_exit=5, drc_exit=5, severity="warning"),
     )
@@ -159,7 +163,7 @@ def test_native_validate_blocks_new_regressions_against_baseline(
 
     monkeypatch.setattr(native_validation_runner, "find_kicad_cli", lambda: "kicad-cli")
     monkeypatch.setattr(
-        native_validation_runner.subprocess,
+        subprocess_utils.subprocess,
         "run",
         _fake_kicad_run(commands, erc_exit=5, drc_exit=0),
     )
@@ -193,7 +197,7 @@ def test_native_validate_allows_existing_baseline_findings(
 
     monkeypatch.setattr(native_validation_runner, "find_kicad_cli", lambda: "kicad-cli")
     monkeypatch.setattr(
-        native_validation_runner.subprocess,
+        subprocess_utils.subprocess,
         "run",
         _fake_kicad_run(commands, erc_exit=5, drc_exit=5),
     )
@@ -243,7 +247,7 @@ def test_native_validate_missing_baseline_fails_regression_gate(
 
     monkeypatch.setattr(native_validation_runner, "find_kicad_cli", lambda: "kicad-cli")
     monkeypatch.setattr(
-        native_validation_runner.subprocess,
+        subprocess_utils.subprocess,
         "run",
         _fake_kicad_run(commands, erc_exit=0, drc_exit=0),
     )

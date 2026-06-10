@@ -14,6 +14,13 @@ from ai_probe_router.models.net import NetRole
 from ai_probe_router.pipeline.native_tools import NativeValidationResult
 
 
+def _successful_native_validation(*args, **kwargs) -> NativeValidationResult:
+    return NativeValidationResult(
+        drc=CheckResult(ok=True),
+        erc=CheckResult(ok=True),
+    )
+
+
 def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path, monkeypatch):
     repo_root = Path(__file__).parent.parent
     examples = repo_root / "examples"
@@ -28,10 +35,7 @@ def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path, mo
     # installed locally; native validation is exercised by dedicated tests.
     monkeypatch.setattr(
         "ai_probe_router.engine.run_native_validation",
-        lambda *args: NativeValidationResult(
-            drc=CheckResult(ok=True),
-            erc=CheckResult(ok=True),
-        ),
+        _successful_native_validation,
     )
 
     cfg = load_config(tmp_path / "config.yaml")

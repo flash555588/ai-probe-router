@@ -8,6 +8,8 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ai_probe_router.subprocess_utils import run_text_tool
+
 
 @dataclass
 class CheckResult:
@@ -81,9 +83,7 @@ def run_drc(pcb_path: str | Path, output_dir: str | Path | None = None) -> Check
 
 def _run(cmd: list[str], report_path: Path) -> CheckResult:
     try:
-        proc = subprocess.run(
-            cmd, capture_output=True, text=True, encoding="utf-8", timeout=120,
-        )
+        proc = run_text_tool(cmd, capture_output=True, timeout=120)
     except FileNotFoundError:
         return CheckResult(ok=None, error=f"Command not found: {cmd[0]}")
     except subprocess.TimeoutExpired:
