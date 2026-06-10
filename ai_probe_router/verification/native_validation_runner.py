@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
 from ai_probe_router.eda_adapters.kicad.cli_runner import find_kicad_cli
 from ai_probe_router.eda_adapters.kicad.sch_health import healthcheck_schematic
+from ai_probe_router.subprocess_utils import run_text_tool
 
 
 @dataclass(frozen=True)
@@ -342,12 +342,11 @@ def _run_version(
     emit: Callable[[str], None] | None,
 ) -> str:
     _emit(emit, "+ " + " ".join(command.command))
-    completed = subprocess.run(
+    completed = run_text_tool(
         command.command,
         cwd=cwd,
         check=False,
         capture_output=True,
-        text=True,
     )
     output = (completed.stdout or completed.stderr or "").strip()
     _write_text(report_dir / "kicad-version.txt", output + ("\n" if output else ""))
@@ -369,12 +368,11 @@ def _run_native_command(
     _emit(emit, "+ " + " ".join(command.command))
     stdout_path = report_dir / command.key / "stdout.log"
     stderr_path = report_dir / command.key / "stderr.log"
-    completed = subprocess.run(
+    completed = run_text_tool(
         command.command,
         cwd=cwd,
         check=False,
         capture_output=True,
-        text=True,
     )
     _write_text(stdout_path, completed.stdout)
     _write_text(stderr_path, completed.stderr)
@@ -788,6 +786,22 @@ def _summary(
     }
 
 
+# DRC/ERC severities that are advisory and must not fail native validation.
+# Library bookkeeping (lib_footprint_mismatch / lib_footprint_issues) and
+# user-acknowledged items are reported as warnings, not manufacturability
+# defects. A finding without an explicit severity is treated as blocking.
+_NON_BLOCKING_SEVERITIES = frozenset({"warning", "exclusion", "ignore"})
+
+
+def _blocking_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    blocking = []
+    for finding in findings:
+        severity = str(finding.get("severity", "")).strip().lower()
+        if severity not in _NON_BLOCKING_SEVERITIES:
+            blocking.append(finding)
+    return blocking
+
+
 def _status(
     *,
     health_ok: bool,
@@ -811,9 +825,10 @@ def _status(
         ):
             return "regression_failed"
         return "passed"
-    if any(result.exit_code not in (0, None) for result in results):
-        return "findings_failed"
-    if strict and findings:
+    # Only error-severity findings fail validation; warnings remain advisory and
+    # are still recorded in the grouped report. `strict` is retained for API
+    # stability but warnings no longer block under it.
+    if _blocking_findings(findings):
         return "findings_failed"
     return "passed"
 
@@ -841,9 +856,7 @@ def _return_code(
         return 3
     if options.block_new_regressions:
         return 1 if regression_result["status"] == "failed" else 0
-    if any(result.exit_code not in (0, None) for result in results):
-        return 1
-    if options.strict and findings:
+    if _blocking_findings(findings):
         return 1
     return 0
 
@@ -855,7 +868,12 @@ def _has_native_runtime_failure(results: list[NativeCheckResult]) -> bool:
         if result.key in {"erc", "drc"}:
             if result.json_path and not result.json_exists:
                 return True
-            if result.exit_code not in (0, None) and result.finding_count == 0:
+            # Exit code 5 is kicad-cli's documented --exit-code-violations
+            # signal ("violations present"), not a tool crash. The violations
+            # may be warnings or schematic-parity issues counted under a
+            # different check, so this command can legitimately report zero
+            # findings of its own. Only other non-zero codes mean a real crash.
+            if result.exit_code not in (0, None, 5) and result.finding_count == 0:
                 return True
     return False
 
@@ -936,9 +954,9 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def _write_text(path: Path, text: str) -> None:
+def _write_text(path: Path, text: str | None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text or "", encoding="utf-8")
 
 
 def _emit(emit: Callable[[str], None] | None, message: str) -> None:

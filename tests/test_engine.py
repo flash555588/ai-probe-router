@@ -12,6 +12,13 @@ from ai_probe_router.pipeline.native_tools import NativeValidationResult
 from ai_probe_router.routing.freerouting_bridge import RoutingResult
 
 
+def _successful_native_validation(*args, **kwargs) -> NativeValidationResult:
+    return NativeValidationResult(
+        drc=CheckResult(ok=True),
+        erc=CheckResult(ok=True),
+    )
+
+
 def test_engine_phase1(tmp_path):
     examples = Path(__file__).parent.parent / "examples"
     config_src = examples / "sample_config.yaml"
@@ -317,10 +324,7 @@ def test_engine_strict_signoff_blocks_manufacturing_export_failure(
 
     monkeypatch.setattr(
         "ai_probe_router.engine.run_native_validation",
-        lambda *args: NativeValidationResult(
-            drc=CheckResult(ok=True),
-            erc=CheckResult(ok=True),
-        ),
+        _successful_native_validation,
     )
     monkeypatch.setattr(
         "ai_probe_router.pipeline.native_tools.export_gerbers",
@@ -351,7 +355,7 @@ def test_engine_strict_signoff_blocks_native_validation_failure(
 
     monkeypatch.setattr(
         "ai_probe_router.engine.run_native_validation",
-        lambda *args: NativeValidationResult(
+        lambda *args, **kwargs: NativeValidationResult(
             drc=CheckResult(ok=False, error="native DRC failed"),
         ),
     )
@@ -381,6 +385,10 @@ def test_engine_required_manufacturing_exports_block_failure(
         "  require_manufacturing_exports: true\n",
     )
 
+    monkeypatch.setattr(
+        "ai_probe_router.engine.run_native_validation",
+        _successful_native_validation,
+    )
     monkeypatch.setattr(
         "ai_probe_router.pipeline.native_tools.export_gerbers",
         lambda *args: CheckResult(ok=False, error="gerber failed"),

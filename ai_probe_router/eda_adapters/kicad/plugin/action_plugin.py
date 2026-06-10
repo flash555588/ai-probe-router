@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pcbnew
 
+from ai_probe_router.subprocess_utils import run_text_tool
+
 # wxPython is bundled with KiCad; gracefully degrade if absent (tests/CI)
 try:
     from .dialog import NetSelectorDialog
@@ -126,10 +128,9 @@ class AiProbeRouterActionPlugin(pcbnew.ActionPlugin):
             "-d", str(project_dir),
         ]
         try:
-            proc = subprocess.run(
+            proc = run_text_tool(
                 cmd,
                 capture_output=True,
-                text=True,
                 timeout=300,
                 cwd=str(project_dir),
             )
