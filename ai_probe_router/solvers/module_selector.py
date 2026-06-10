@@ -94,8 +94,8 @@ def load_module_library(
     library_dirs: list[str | Path] | None = None,
 ) -> list[ModuleDefinition]:
     if library_dirs is None:
-        repo_root = Path(__file__).resolve().parents[2]
-        library_dirs = [repo_root / "libraries" / "modules"]
+        package_root = Path(__file__).resolve().parents[1]
+        library_dirs = [package_root / "libraries" / "modules"]
 
     definitions: list[ModuleDefinition] = []
     for directory in library_dirs:

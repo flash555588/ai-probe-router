@@ -16,23 +16,23 @@ def test_manufacturing_files_generated(tmp_path):
     examples = repo_root / "examples"
     config_src = examples / "iot_sensor_node_advanced_config.yaml"
     project_src = examples / "iot_sensor_node_project"
-    dev_board = repo_root / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
+    dev_board = repo_root / "ai_probe_router" / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
 
     for f in ["main.kicad_pcb", "main.kicad_sch"]:
         shutil.copy(project_src / f, tmp_path / f)
     shutil.copy(config_src, tmp_path / "config.yaml")
-    mcu_profile_src = repo_root / "libraries" / "mcu_profiles" / "esp32_s3.yaml"
+    mcu_profile_src = repo_root / "ai_probe_router" / "libraries" / "mcu_profiles" / "esp32_s3.yaml"
     if mcu_profile_src.exists():
         shutil.copy(mcu_profile_src, tmp_path / "esp32_s3.yaml")
 
     def _fix_paths(config_path: Path, dev_board_path: Path) -> None:
         text = config_path.read_text(encoding="utf-8")
         text = text.replace(
-            "../libraries/dev_boards/stm32_nucleo_64.yaml",
+            "../ai_probe_router/libraries/dev_boards/stm32_nucleo_64.yaml",
             str(dev_board_path).replace("\\", "/"),
         )
         text = text.replace(
-            "../libraries/mcu_profiles/esp32_s3.yaml",
+            "../ai_probe_router/libraries/mcu_profiles/esp32_s3.yaml",
             "esp32_s3.yaml",
         )
         config_path.write_text(text, encoding="utf-8")

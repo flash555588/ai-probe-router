@@ -55,7 +55,7 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-exclude = ["render_*.py", "examples/**", "scripts/**"]
+exclude = ["examples/**", "scripts/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

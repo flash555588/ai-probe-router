@@ -106,7 +106,7 @@ def test_load_config_declares_dev_board_pin_database_field():
 
     cfg = load_config(Path(__file__).parent.parent / "examples" / "full_config.yaml")
 
-    assert cfg.dev_board_pin_db == "../libraries/dev_boards/stm32_nucleo_64.yaml"
+    assert cfg.dev_board_pin_db == "../ai_probe_router/libraries/dev_boards/stm32_nucleo_64.yaml"
 
 
 def test_load_config_empty_nets_raises(tmp_path):

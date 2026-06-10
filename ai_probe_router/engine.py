@@ -46,6 +46,10 @@ from .pipeline.native_tools import (
     run_manufacturing_exports,
     run_native_validation,
 )
+from .solvers.connector_allocator import (
+    allocate_connector_pins,
+    optimize_connector_assignments,
+)
 from .solvers.constraint_checker import validate_all_probes
 from .solvers.grid_router import RouteResult, route_grid
 from .solvers.pin_mapper import solve_mapping
@@ -112,8 +116,20 @@ def run(cfg: ProjectConfig, project_dir: str | Path) -> tuple[CoverageReport, Pi
         return coverage, None
 
     pin_report: PinMapReport | None = None
+    connector_opt_warnings: list[str] = []
     if cfg.development_board is not None and cfg.nets_to_expose:
-        pin_report = _run_phase2(cfg, board, sch, cfg.development_board)
+        pin_report, connector_opt_warnings = _run_phase2(
+            cfg, board, sch, cfg.development_board,
+        )
+
+    if (
+        cfg.resource_allocator.enable
+        and pin_report is not None
+        and cfg.development_board is not None
+    ):
+        _attach_connector_allocation(
+            cfg, module_plan, pin_report, connector_opt_warnings,
+        )
 
     coverage = _run_phase1(cfg, board, sch)
     coverage.run_id = run_id
@@ -780,15 +796,23 @@ def _run_phase2(
     board: Board | None,
     sch: Schematic | None,
     dev_board: DevelopmentBoard,
-) -> PinMapReport:
+) -> tuple[PinMapReport, list[str]]:
     result = solve_mapping(cfg.nets_to_expose, dev_board)
+    opt_warnings: list[str] = []
+    if cfg.resource_allocator.enable and result.assignments:
+        result.assignments, opt_warnings = optimize_connector_assignments(
+            result,
+            dev_board,
+            cfg.nets_to_expose,
+            cfg.resource_allocator.connector_allocation_strategy,
+        )
     pin_report = PinMapReport(
         board_name=dev_board.name,
         result=result,
     )
 
     if cfg.probe.style != ProbeStyle.CONNECTOR:
-        return pin_report
+        return pin_report, opt_warnings
 
     if result.assignments:
         rows = dev_board.rows
@@ -829,7 +853,35 @@ def _run_phase2(
                 conn_w + 2.0, conn_h + 2.0,
             )
 
-    return pin_report
+    return pin_report, opt_warnings
+
+
+def _attach_connector_allocation(
+    cfg: ProjectConfig,
+    module_plan,
+    pin_report: PinMapReport,
+    opt_warnings: list[str],
+) -> None:
+    from .solvers.resource_allocator import ResourceAllocationResult
+
+    connector_result = allocate_connector_pins(
+        pin_report.result,
+        cfg.development_board,
+        cfg.nets_to_expose,
+        strategy=cfg.resource_allocator.connector_allocation_strategy,
+        near_limit_threshold=cfg.resource_allocator.near_limit_threshold,
+    )
+    connector_result.warnings.extend(opt_warnings)
+
+    alloc = module_plan.resource_allocation_result
+    if alloc is None:
+        alloc = ResourceAllocationResult()
+        module_plan.resource_allocation_result = alloc
+    alloc.connector_result = connector_result
+    alloc.warnings.extend(connector_result.warnings)
+    alloc.errors.extend(connector_result.errors)
+    if connector_result.errors:
+        alloc.ok = False
 
 
 def _net_class_for_role(role: NetRole, current_ma: float) -> tuple[float, float]:

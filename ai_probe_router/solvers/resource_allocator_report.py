@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .module_allocation_graph import build_allocated_module_graph
 from .resource_allocator import ResourceAllocationResult
 from .resource_optimizer import (
     generate_resource_optimization_report,
@@ -12,7 +13,35 @@ from .resource_optimizer import (
 )
 
 
+def _connector_result_data(result: ResourceAllocationResult) -> dict | None:
+    connector = result.connector_result
+    if connector is None:
+        return None
+    return {
+        "strategy": connector.strategy,
+        "connector_type": connector.connector_type,
+        "rows": connector.rows,
+        "pins_per_row": connector.pins_per_row,
+        "used_pins": connector.used_pins,
+        "free_pins": connector.free_pins,
+        "utilization_percent": connector.utilization_percent,
+        "spread_span": connector.spread_span,
+        "near_limit": connector.near_limit,
+        "conflicts": [
+            {
+                "pin_index": c.pin_index,
+                "pin_name": c.pin_name,
+                "nets": c.nets,
+            }
+            for c in connector.conflicts
+        ],
+        "warnings": connector.warnings,
+        "errors": connector.errors,
+    }
+
+
 def generate_resource_allocation_json(result: ResourceAllocationResult) -> str:
+    graph = build_allocated_module_graph(result)
     data = {
         "schema_version": 1,
         "ok": result.ok,
@@ -70,6 +99,15 @@ def generate_resource_allocation_json(result: ResourceAllocationResult) -> str:
                 }
                 for d in result.power_result.near_limit_domains
             ],
+        },
+        "connector_result": _connector_result_data(result),
+        "allocation_graph": {
+            "ok": graph.ok,
+            "bus_assignments": graph.bus_assignments,
+            "power_assignments": graph.power_assignments,
+            "connector_reservations": graph.connector_reservations,
+            "warnings": graph.warnings,
+            "errors": graph.errors,
         },
     }
     return json.dumps(data, indent=2)

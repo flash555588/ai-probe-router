@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from ..models.readiness_codes import ReadinessCode
 from .bus_allocator import BusAllocationResult, allocate_buses
+from .connector_allocator import ConnectorAllocationResult
 from .power_domain_solver import PowerAllocationResult, allocate_power
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ class ResourceAllocationResult:
     ok: bool = True
     bus_result: BusAllocationResult = field(default_factory=BusAllocationResult)
     power_result: PowerAllocationResult = field(default_factory=PowerAllocationResult)
+    connector_result: ConnectorAllocationResult | None = None
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     simulated: bool = False

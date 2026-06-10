@@ -128,7 +128,8 @@ def test_reset_mapping():
 
 
 def test_load_dev_board():
-    yaml_path = Path(__file__).parent.parent / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
+    repo_root = Path(__file__).parent.parent
+    yaml_path = repo_root / "ai_probe_router" / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
     if not yaml_path.exists():
         return
     board = load_dev_board(yaml_path)

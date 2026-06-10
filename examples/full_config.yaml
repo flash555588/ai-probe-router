@@ -56,7 +56,7 @@ placement_rules:
   group_by_function: true
 
 development_board:
-  pin_database: ../libraries/dev_boards/stm32_nucleo_64.yaml
+  pin_database: ../ai_probe_router/libraries/dev_boards/stm32_nucleo_64.yaml
 
 protection:
   enabled: true

@@ -218,7 +218,7 @@ def review(sch_file: str, pcb: str | None, mcu: str | None):
             mcu_profile = load_mcu_profile(mcu_path)
         else:
             builtin = (
-                Path(__file__).parent.parent
+                Path(__file__).parent
                 / "libraries"
                 / "mcu_profiles"
                 / f"{mcu.replace('-', '_')}.yaml"

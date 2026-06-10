@@ -42,9 +42,33 @@ Sums module currents per voltage domain:
 - Reports overloads as errors
 - Reports headroom below 20% as warnings
 
-### Connector allocation (placeholder)
+### Connector allocation
 
-Reserved for PR6. Will track pin usage for probes, signals, and reserved pins.
+Runs after pin mapping when both `resource_allocator.enable` and a
+`development_board` are configured. It classifies every connector pin into a
+reservation status and optionally rearranges assignments before the connector
+symbol/footprint are written.
+
+Strategies (`connector_allocation_strategy`):
+
+- `minimize_spread` (default) — relocates movable assignments inward so the
+  used pin index span shrinks. Assignments on preferred pins, fixed pins, or
+  differential-pair members are never moved.
+- `group_by_function` — repacks movable assignments in role-priority order
+  (debug, reset, power, ground, communication, digital, analog, gpio) onto the
+  lowest capability-valid indices.
+- `none` — keeps the pin mapper's original assignments.
+
+Unknown strategy values leave assignments unchanged and emit a warning.
+
+Reservation statuses per pin: `probe`, `power`, `ground`, `reserved`
+(fixed pins without an assignment), `free`.
+
+Outputs:
+
+- `connector_allocation_report.txt` — per-pin reservation table with run ID.
+- `resource_allocation_report.json` gains a `connector_result` summary node and
+  an `allocation_graph` node with the full reservation list.
 
 ## Readiness integration
 
@@ -55,6 +79,9 @@ When enabled, the resource allocator feeds into the readiness report:
 - `POWER_DOMAIN_OVERLOAD` → error
 - `POWER_DOMAIN_NEAR_LIMIT` → warning
 - `RESOURCE_ALLOCATOR_DISABLED` → info (when disabled)
+- `CONNECTOR_PIN_CONFLICT` → error (two nets share one pin index)
+- `CONNECTOR_RESERVED_PIN_OVERRIDE` → error (assignment on a fixed pin without capability overlap)
+- `CONNECTOR_ALLOCATION_NEAR_LIMIT` → warning (utilization at or above 80%)
 
 ## Safety
 

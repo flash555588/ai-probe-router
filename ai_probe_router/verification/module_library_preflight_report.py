@@ -148,8 +148,8 @@ def validate_module_library(
 def _library_dirs(library_dirs: list[str | Path] | None) -> list[Path]:
     if library_dirs is not None:
         return [Path(directory) for directory in library_dirs]
-    repo_root = Path(__file__).resolve().parents[2]
-    return [repo_root / "libraries" / "modules"]
+    package_root = Path(__file__).resolve().parents[1]
+    return [package_root / "libraries" / "modules"]
 
 
 def _read_yaml(

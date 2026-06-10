@@ -646,3 +646,106 @@ process_controls:
 {process_controls or "  strict_signoff: false\n"}
 """
     (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+
+
+def test_engine_connector_allocation_reports(tmp_path):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    dev_board = (
+        Path(__file__).parent.parent
+        / "ai_probe_router" / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
+    )
+    if not all(p.exists() for p in [pcb_src, sch_src, dev_board]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+
+    config_yaml = f"""\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: connector
+  side: top
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+  - net: GND
+    role: ground
+    required: true
+
+development_board:
+  pin_database: {dev_board.as_posix()}
+
+resource_allocator:
+  enable: true
+  connector_allocation_strategy: minimize_spread
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+
+    _, pin_report = run(load_config(tmp_path / "config.yaml"), tmp_path)
+
+    assert pin_report is not None
+    assert pin_report.result.ok
+
+    txt_report = tmp_path / "output" / "connector_allocation_report.txt"
+    assert txt_report.exists()
+    txt = txt_report.read_text(encoding="utf-8")
+    assert "Connector Allocation Report" in txt
+    assert "Run ID:           APR-" in txt
+    assert "minimize_spread" in txt
+    assert "SWDIO" in txt
+
+    json_report = tmp_path / "output" / "resource_allocation_report.json"
+    assert json_report.exists()
+    data = json.loads(json_report.read_text(encoding="utf-8"))
+    connector = data["connector_result"]
+    assert connector is not None
+    assert connector["strategy"] == "minimize_spread"
+    assert connector["used_pins"] >= 2
+    reservations = data["allocation_graph"]["connector_reservations"]
+    assert any(r["net_name"] == "SWDIO" for r in reservations)
+    assert any(r["status"] == "free" for r in reservations)
+
+
+def test_engine_connector_allocation_absent_when_disabled(tmp_path):
+    examples = Path(__file__).parent.parent / "examples"
+    pcb_src = examples / "minimal_project" / "main.kicad_pcb"
+    sch_src = examples / "minimal_project" / "main.kicad_sch"
+    dev_board = (
+        Path(__file__).parent.parent
+        / "ai_probe_router" / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
+    )
+    if not all(p.exists() for p in [pcb_src, sch_src, dev_board]):
+        return
+
+    shutil.copy(pcb_src, tmp_path / "main.kicad_pcb")
+    shutil.copy(sch_src, tmp_path / "main.kicad_sch")
+
+    config_yaml = f"""\
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+nets_to_expose:
+  - net: GND
+    role: ground
+    required: true
+
+development_board:
+  pin_database: {dev_board.as_posix()}
+"""
+    (tmp_path / "config.yaml").write_text(config_yaml, encoding="utf-8")
+
+    _, pin_report = run(load_config(tmp_path / "config.yaml"), tmp_path)
+
+    assert pin_report is not None
+    assert not (tmp_path / "output" / "connector_allocation_report.txt").exists()
+    assert not (tmp_path / "output" / "resource_allocation_report.json").exists()

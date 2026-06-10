@@ -10,7 +10,7 @@ from ai_probe_router.engine import run
 def _fix_dev_board_path(config_path: Path, dev_board_path: Path) -> None:
     text = config_path.read_text(encoding="utf-8")
     text = text.replace(
-        "../libraries/dev_boards/stm32_nucleo_64.yaml",
+        "../ai_probe_router/libraries/dev_boards/stm32_nucleo_64.yaml",
         str(dev_board_path).replace("\\", "/"),
     )
     config_path.write_text(text, encoding="utf-8")
@@ -21,7 +21,7 @@ def test_iot_sensor_node_full_pipeline(tmp_path):
     config_src = examples / "iot_sensor_node_config.yaml"
     pcb_src = examples / "minimal_project" / "main.kicad_pcb"
     sch_src = examples / "minimal_project" / "main.kicad_sch"
-    dev_board = repo_root / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
+    dev_board = repo_root / "ai_probe_router" / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
 
     assert config_src.exists(), f"Config missing: {config_src}"
     assert pcb_src.exists(), f"PCB missing: {pcb_src}"
@@ -119,7 +119,7 @@ def test_iot_sensor_node_config_validation(tmp_path):
     config_src = examples / "iot_sensor_node_config.yaml"
     pcb_src = examples / "minimal_project" / "main.kicad_pcb"
     sch_src = examples / "minimal_project" / "main.kicad_sch"
-    dev_board = repo_root / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
+    dev_board = repo_root / "ai_probe_router" / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
 
     assert all(p.exists() for p in [config_src, pcb_src, sch_src, dev_board])
 
@@ -158,7 +158,7 @@ def test_iot_sensor_node_constraint_pass(tmp_path):
     config_src = examples / "iot_sensor_node_config.yaml"
     pcb_src = examples / "minimal_project" / "main.kicad_pcb"
     sch_src = examples / "minimal_project" / "main.kicad_sch"
-    dev_board = repo_root / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
+    dev_board = repo_root / "ai_probe_router" / "libraries" / "dev_boards" / "stm32_nucleo_64.yaml"
 
     assert all(p.exists() for p in [config_src, pcb_src, sch_src, dev_board])
 

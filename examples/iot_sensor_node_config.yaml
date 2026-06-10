@@ -108,7 +108,7 @@ routing_strategy:
   sensitive_net_spacing_mm: 5
 
 development_board:
-  pin_database: ../libraries/dev_boards/stm32_nucleo_64.yaml
+  pin_database: ../ai_probe_router/libraries/dev_boards/stm32_nucleo_64.yaml
 
 protection:
   enabled: true

@@ -3,7 +3,7 @@ project:
   description: "ESP32-S3 portable Bluetooth audio pickup board"
   board_file: "main.kicad_pcb"
   schematic_file: "main.kicad_sch"
-  mcu_profile: "../../libraries/mcu_profiles/esp32_s3.yaml"
+  mcu_profile: "../../ai_probe_router/libraries/mcu_profiles/esp32_s3.yaml"
 
 probe_interface:
   type: "test_pad"

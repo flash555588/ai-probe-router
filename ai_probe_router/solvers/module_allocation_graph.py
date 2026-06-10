@@ -74,8 +74,27 @@ def build_allocated_module_graph(
             f"headroom={n.headroom_percent:.0f}%"
         )
 
-    # Connector reservations are computed later from pin mapping
-    # This placeholder keeps the API stable for PR6.
-    graph.connector_reservations = []
+    connector = allocation_result.connector_result
+    if connector is not None:
+        for r in connector.reservations:
+            graph.connector_reservations.append(
+                {
+                    "pin_name": r.pin_name,
+                    "pin_index": r.pin_index,
+                    "row": r.row,
+                    "column": r.column,
+                    "status": r.status,
+                    "net_name": r.net_name,
+                    "role": r.role,
+                    "fixed": r.fixed,
+                }
+            )
+        for c in connector.conflicts:
+            graph.errors.append(
+                f"CONNECTOR_PIN_CONFLICT pin={c.pin_name} "
+                f"index={c.pin_index} nets={c.nets}"
+            )
+        if connector.near_limit:
+            graph.warnings.append("CONNECTOR_ALLOCATION_NEAR_LIMIT")
 
     return graph

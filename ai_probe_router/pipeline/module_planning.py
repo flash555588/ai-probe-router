@@ -169,6 +169,15 @@ def write_module_planning_reports(
         from ..solvers.resource_allocator_report import write_resource_allocation_report
 
         write_resource_allocation_report(result.resource_allocation_result, out_dir)
+        connector_result = result.resource_allocation_result.connector_result
+        if connector_result is not None:
+            from ..verification.connector_allocation_report import (
+                ConnectorAllocationReport,
+            )
+
+            ConnectorAllocationReport(connector_result, run_id=run_id).write(
+                out_dir / "connector_allocation_report.txt",
+            )
     if result.footprint_preview_result is not None:
         from ..verification.footprint_preview_report import write_footprint_preview_report
 

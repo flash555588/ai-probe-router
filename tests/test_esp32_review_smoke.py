@@ -13,7 +13,8 @@ from ai_probe_router.solvers.signal_aware_scoring import signal_score
 
 def _esp32_profile():
     return load_mcu_profile(
-        Path(__file__).parent.parent / "libraries" / "mcu_profiles" / "esp32_s3.yaml"
+        Path(__file__).parent.parent
+        / "ai_probe_router" / "libraries" / "mcu_profiles" / "esp32_s3.yaml"
     )
 
 

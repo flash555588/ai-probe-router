@@ -4,7 +4,7 @@ project:
   eda_tool: kicad
   board_file: main.kicad_pcb
   schematic_file: main.kicad_sch
-  mcu_profile: ../libraries/mcu_profiles/esp32_s3.yaml
+  mcu_profile: ../ai_probe_router/libraries/mcu_profiles/esp32_s3.yaml
 
 design_goals:
   optimize_for:
@@ -222,7 +222,7 @@ routing_strategy:
   sensitive_net_spacing_mm: 3
 
 development_board:
-  pin_database: ../libraries/dev_boards/stm32_nucleo_64.yaml
+  pin_database: ../ai_probe_router/libraries/dev_boards/stm32_nucleo_64.yaml
 
 protection:
   enabled: true

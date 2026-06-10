@@ -1,6 +1,6 @@
 """DRC/ERC repair agent: suggests fixes for common violations.
 
-This module implements the "AI repair loop" described in pcb.txt §8.
+This module implements the "AI repair loop" described in docs/pcb.txt §8.
 It consumes ERC/DRC violation dictionaries and proposes concrete schematic
 or layout changes, staying on the *suggestion* side of the AI/deterministic
 boundary.

@@ -210,6 +210,7 @@ feedback, and reproducibility manifests.
 ai_probe_router/
 ├── ai/                  # Net classifier
 ├── eda_adapters/kicad/  # S-expression parser, PCB/schematic read/write
+├── libraries/           # Bundled module/chip/dev-board/MCU-profile YAML libraries
 ├── models/              # Board, Net, Probe, Constraints, DevBoard, Protection
 ├── solvers/             # Constraint checker, placement solver, pin mapper, routing cost
 ├── routing/             # DSN export for autorouter
@@ -245,6 +246,7 @@ Text reports, `bom_report.csv`, and generated module sheets include a determinis
 | `module_graph_report.txt` | Module instances, dependencies, generated resources, graph diagnostics |
 | `module_compatibility_report.txt` | Module, implementation, chip, footprint, and alternate compatibility matrix |
 | `resource_allocation_report.json` | Deterministic bus and power allocation data for schema-v2 modules |
+| `connector_allocation_report.txt` | Per-pin connector reservation table with conflict and utilization diagnostics |
 | `resource_optimization_report.json` | Advisory bus/rail optimization recommendations with no automatic mutation |
 | `bus_report.txt` | Module bus grouping, I2C address conflicts, pull-up coverage |
 | `power_report.txt` | Module voltage-domain and rail usage |

@@ -14,7 +14,8 @@ from ai_probe_router.models.mcu_profile import (
 
 @pytest.fixture()
 def esp32s3_profile() -> McuProfile:
-    yaml_path = Path(__file__).parent.parent / "libraries" / "mcu_profiles" / "esp32_s3.yaml"
+    repo_root = Path(__file__).parent.parent
+    yaml_path = repo_root / "ai_probe_router" / "libraries" / "mcu_profiles" / "esp32_s3.yaml"
     return load_mcu_profile(yaml_path)
 
 

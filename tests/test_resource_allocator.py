@@ -12,7 +12,10 @@ from ai_probe_router.models.power_domain import PowerDomain
 from ai_probe_router.models.readiness_codes import ReadinessCode
 from ai_probe_router.solvers.bus_allocator import allocate_buses
 from ai_probe_router.solvers.power_domain_solver import allocate_power
-from ai_probe_router.solvers.resource_allocator import allocate_resources
+from ai_probe_router.solvers.resource_allocator import (
+    ResourceAllocationResult,
+    allocate_resources,
+)
 
 
 def _sel(
@@ -285,3 +288,63 @@ class TestResourceAllocatorProduction:
         result = allocate_resources(modules, cfg)
         assert not result.ok
         assert ReadinessCode.POWER_DOMAIN_OVERLOAD in result.errors
+
+
+class TestConnectorResultIntegration:
+    def test_connector_result_defaults_to_none(self):
+        result = ResourceAllocationResult()
+        assert result.connector_result is None
+
+    def test_json_report_contains_connector_and_graph_nodes(self):
+        import json as _json
+
+        from ai_probe_router.solvers.resource_allocator_report import (
+            generate_resource_allocation_json,
+        )
+
+        data = _json.loads(
+            generate_resource_allocation_json(ResourceAllocationResult())
+        )
+        assert data["connector_result"] is None
+        assert data["allocation_graph"]["connector_reservations"] == []
+        assert data["allocation_graph"]["ok"] is True
+
+    def test_json_report_serializes_connector_result(self):
+        import json as _json
+
+        from ai_probe_router.models.dev_board import DevBoardPin, DevelopmentBoard
+        from ai_probe_router.models.probe import ProbeRequirement
+        from ai_probe_router.solvers.connector_allocator import (
+            allocate_connector_pins,
+        )
+        from ai_probe_router.solvers.pin_mapper import (
+            MappingResult,
+            PinAssignment,
+        )
+        from ai_probe_router.solvers.resource_allocator_report import (
+            generate_resource_allocation_json,
+        )
+
+        board = DevelopmentBoard(
+            name="t", rows=1, pins_per_row=2,
+            pins=[
+                DevBoardPin(name="P0", capabilities=["GPIO"]),
+                DevBoardPin(name="P1", capabilities=["GPIO"]),
+            ],
+        )
+        connector = allocate_connector_pins(
+            MappingResult(assignments=[
+                PinAssignment(net_name="LED", pin_name="P0", pin_index=0),
+            ]),
+            board,
+            [ProbeRequirement(net_name="LED", role="gpio")],
+            strategy="minimize_spread",
+        )
+        result = ResourceAllocationResult(connector_result=connector)
+
+        data = _json.loads(generate_resource_allocation_json(result))
+        assert data["connector_result"]["used_pins"] == 1
+        assert data["connector_result"]["strategy"] == "minimize_spread"
+        reservations = data["allocation_graph"]["connector_reservations"]
+        assert reservations[0]["net_name"] == "LED"
+        assert reservations[1]["status"] == "free"

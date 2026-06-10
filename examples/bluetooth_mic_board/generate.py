@@ -865,7 +865,7 @@ CONFIG_YAML = """\
 project:
   name: "bluetooth_mic_board"
   description: "ESP32-S3 portable Bluetooth audio pickup board"
-  mcu_profile: "libraries/mcu_profiles/esp32_s3.yaml"
+  mcu_profile: "ai_probe_router/libraries/mcu_profiles/esp32_s3.yaml"
 
 requirements:
   - net_name: "ADC_MIC_GPIO1"

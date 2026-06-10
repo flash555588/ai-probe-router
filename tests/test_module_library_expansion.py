@@ -8,7 +8,7 @@ from ai_probe_router.models.module import parse_functional_module
 
 
 def test_wifi_module_parsing():
-    src = Path("libraries/modules/communication/wifi_interface.yaml")
+    src = Path("ai_probe_router/libraries/modules/communication/wifi_interface.yaml")
     assert src.exists()
     mod = parse_functional_module({"name": "wifi_test", "type": "wifi_interface"})
     assert mod.name == "wifi_test"
@@ -16,42 +16,42 @@ def test_wifi_module_parsing():
 
 
 def test_lora_module_parsing():
-    src = Path("libraries/modules/communication/lora_interface.yaml")
+    src = Path("ai_probe_router/libraries/modules/communication/lora_interface.yaml")
     assert src.exists()
     mod = parse_functional_module({"name": "lora_test", "type": "lora_interface"})
     assert mod.type == "lora_interface"
 
 
 def test_gnss_module_parsing():
-    src = Path("libraries/modules/communication/gnss_module.yaml")
+    src = Path("ai_probe_router/libraries/modules/communication/gnss_module.yaml")
     assert src.exists()
     mod = parse_functional_module({"name": "gnss_test", "type": "gnss_module"})
     assert mod.type == "gnss_module"
 
 
 def test_motor_driver_module_parsing():
-    src = Path("libraries/modules/power/motor_driver.yaml")
+    src = Path("ai_probe_router/libraries/modules/power/motor_driver.yaml")
     assert src.exists()
     mod = parse_functional_module({"name": "motor_test", "type": "motor_driver"})
     assert mod.type == "motor_driver"
 
 
 def test_usb_c_pd_module_parsing():
-    src = Path("libraries/modules/power/usb_c_pd.yaml")
+    src = Path("ai_probe_router/libraries/modules/power/usb_c_pd.yaml")
     assert src.exists()
     mod = parse_functional_module({"name": "usbpd_test", "type": "usb_c_pd"})
     assert mod.type == "usb_c_pd"
 
 
 def test_sd_card_module_parsing():
-    src = Path("libraries/modules/expansion/sd_card.yaml")
+    src = Path("ai_probe_router/libraries/modules/expansion/sd_card.yaml")
     assert src.exists()
     mod = parse_functional_module({"name": "sd_test", "type": "sd_card"})
     assert mod.type == "sd_card"
 
 
 def test_audio_codec_module_parsing():
-    src = Path("libraries/modules/expansion/audio_codec.yaml")
+    src = Path("ai_probe_router/libraries/modules/expansion/audio_codec.yaml")
     assert src.exists()
     mod = parse_functional_module({"name": "audio_test", "type": "audio_codec"})
     assert mod.type == "audio_codec"
