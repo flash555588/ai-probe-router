@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
 from ai_probe_router.eda_adapters.kicad.cli_runner import find_kicad_cli
 from ai_probe_router.eda_adapters.kicad.sch_health import healthcheck_schematic
+from ai_probe_router.subprocess_utils import run_text_tool
 
 
 @dataclass(frozen=True)
@@ -342,14 +342,11 @@ def _run_version(
     emit: Callable[[str], None] | None,
 ) -> str:
     _emit(emit, "+ " + " ".join(command.command))
-    completed = subprocess.run(
+    completed = run_text_tool(
         command.command,
         cwd=cwd,
         check=False,
         capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
     )
     output = (completed.stdout or completed.stderr or "").strip()
     _write_text(report_dir / "kicad-version.txt", output + ("\n" if output else ""))
@@ -371,14 +368,11 @@ def _run_native_command(
     _emit(emit, "+ " + " ".join(command.command))
     stdout_path = report_dir / command.key / "stdout.log"
     stderr_path = report_dir / command.key / "stderr.log"
-    completed = subprocess.run(
+    completed = run_text_tool(
         command.command,
         cwd=cwd,
         check=False,
         capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
     )
     _write_text(stdout_path, completed.stdout)
     _write_text(stderr_path, completed.stderr)

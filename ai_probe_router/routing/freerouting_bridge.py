@@ -19,6 +19,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from ai_probe_router.subprocess_utils import run_text_tool
+
 
 @dataclass
 class RoutingResult:
@@ -114,12 +116,9 @@ def run_freerouting(
 
     start = time.time()
     try:
-        proc = subprocess.run(
+        proc = run_text_tool(
             cmd,
             capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
             timeout=timeout_sec,
         )
     except subprocess.TimeoutExpired:
