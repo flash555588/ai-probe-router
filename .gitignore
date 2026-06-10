@@ -19,6 +19,8 @@ build/
 .pytest_cache/
 htmlcov/
 .coverage
+.artifacts/
+/validation/reports/
 
 # Linting
 .ruff_cache/

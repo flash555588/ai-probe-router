@@ -77,3 +77,40 @@ The gate fails when a new issue category appears or an existing category count
 increases. Existing baseline findings and resolved findings do not block. A real
 baseline must be captured and reviewed in an environment with KiCad 9 installed;
 do not replace that review with an empty placeholder baseline.
+
+The audio CI step now runs the same comparison through
+`scripts/kicad_native_validate.py --baseline ... --block-new-regressions`. The
+committed KiCad 9 baseline is
+`examples/audio_player_project/ci/native-baseline.kicad9.json`; it records the
+known warning-level audio parity backlog and blocks only new categories or count
+increases. The `smoke_native` step intentionally has no baseline and remains a
+zero-tolerance generated-board check.
+
+Baseline maintenance helpers:
+
+```bash
+./scripts/capture-baseline.sh
+
+python scripts/kicad_native_baseline_create.py \
+  --summary .artifacts/baseline-capture/native-validation-reports/audio/summary.json \
+  --output examples/audio_player_project/ci/native-baseline.kicad9.json \
+  --repo flash555588/ai-probe-router \
+  --workflow ci.yml \
+  --job native-kicad \
+  --artifact native-validation-reports \
+  --report-subdir validation/reports/audio \
+  --commit-sha <source-commit> \
+  --run-url <source-run-url> \
+  --generated-at-utc <timestamp>
+
+python scripts/kicad_native_baseline_review.py \
+  --baseline examples/audio_player_project/ci/native-baseline.kicad9.json \
+  --summary .artifacts/baseline-capture/native-validation-reports/audio/summary.json
+```
+
+`kicad_native_baseline_create.py` recomputes stale or missing fingerprints using
+the six-field SHA-1 rule (`source`, `severity`, `type`, `message`, `item`,
+`path`). `kicad_native_baseline_review.py` checks required metadata, ISO
+timestamps, count consistency, KiCad version consistency, 40-character lowercase
+fingerprints, and suspect short or garbled messages. Baseline-changing PRs also
+run `.github/workflows/baseline-pr-check.yml`.

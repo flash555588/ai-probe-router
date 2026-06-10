@@ -89,6 +89,8 @@ jobs:
           python scripts/kicad_native_validate.py \
             examples/audio_player_project \
             --report-dir "$PWD/validation/reports/audio" \
+            --baseline "$PWD/examples/audio_player_project/ci/native-baseline.kicad9.json" \
+            --block-new-regressions \
             --require-kicad \
             --strict
 

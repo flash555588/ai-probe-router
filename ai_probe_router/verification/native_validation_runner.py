@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
 from ai_probe_router.eda_adapters.kicad.cli_runner import find_kicad_cli
 from ai_probe_router.eda_adapters.kicad.sch_health import healthcheck_schematic
+from ai_probe_router.native_findings import finding_fingerprint, group_findings
 from ai_probe_router.subprocess_utils import run_text_tool
 
 
@@ -522,51 +524,15 @@ def normalize_finding(source: str, row: Any, project_root: Path) -> dict[str, An
     }
 
 
-def finding_fingerprint(finding: dict[str, Any]) -> str:
-    parts = [
-        finding.get("source", ""),
-        finding.get("severity", ""),
-        finding.get("type", ""),
-        finding.get("message", ""),
-        finding.get("item", ""),
-        finding.get("path", ""),
-    ]
-    raw = "\x1f".join(str(part) for part in parts)
-    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
-
-
-def group_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, str, str], dict[str, Any]] = {}
-    for finding in findings:
-        key = (
-            str(finding.get("source", "")),
-            str(finding.get("severity", "")),
-            str(finding.get("type", "")),
-            str(finding.get("message", "")),
-        )
-        group = grouped.setdefault(
-            key,
-            {
-                "source": key[0],
-                "severity": key[1],
-                "type": key[2],
-                "message": key[3],
-                "count": 0,
-                "examples": [],
-            },
-        )
-        group["count"] += 1
-        if len(group["examples"]) < 3:
-            group["examples"].append(finding)
-    return sorted(
-        grouped.values(),
-        key=lambda row: (-int(row["count"]), row["source"], row["type"], row["message"]),
-    )
-
-
 def grouped_findings_markdown(grouped: list[dict[str, Any]]) -> str:
     lines = [
         "# Native Validation Findings by Class",
+        "",
+        "## Severity Distribution",
+        "",
+        *_severity_distribution_markdown(grouped),
+        "",
+        "## Top Categories",
         "",
         "| Rank | Source | Severity | Type | Count | Message | Example |",
         "|---:|---|---|---|---:|---|---|",
@@ -580,6 +546,59 @@ def grouped_findings_markdown(grouped: list[dict[str, Any]]) -> str:
         )
     lines.append("")
     return "\n".join(lines)
+
+
+def _severity_distribution_markdown(grouped: list[dict[str, Any]]) -> list[str]:
+    severities = _ordered_values(str(group.get("severity", "")) for group in grouped)
+    sources = _ordered_values(str(group.get("source", "")) for group in grouped)
+    if not severities:
+        severities = ["none"]
+    if not sources:
+        sources = ["all"]
+
+    counts: dict[tuple[str, str], int] = {}
+    for group in grouped:
+        source = str(group.get("source", ""))
+        severity = str(group.get("severity", ""))
+        counts[(source, severity)] = counts.get((source, severity), 0) + int(group.get("count", 0))
+
+    header = ["Source", *[_display_value(severity) for severity in severities], "Total"]
+    lines = [
+        "| " + " | ".join(header) + " |",
+        "|---" + "|---:" * (len(header) - 1) + "|",
+    ]
+    totals_by_severity = {severity: 0 for severity in severities}
+    grand_total = 0
+    for source in sources:
+        row_total = 0
+        row = [_display_value(source)]
+        for severity in severities:
+            count = counts.get((source, severity), 0)
+            totals_by_severity[severity] += count
+            row_total += count
+            row.append(str(count))
+        grand_total += row_total
+        row.append(str(row_total))
+        lines.append("| " + " | ".join(row) + " |")
+
+    total_row = ["**Total**"]
+    for severity in severities:
+        total_row.append(f"**{totals_by_severity[severity]}**")
+    total_row.append(f"**{grand_total}**")
+    lines.append("| " + " | ".join(total_row) + " |")
+    return lines
+
+
+def _ordered_values(values: Iterable[str]) -> list[str]:
+    preferred = ["error", "warning", "info", "exclusion", "ignore", ""]
+    seen = {str(value) for value in values}
+    ordered = [value for value in preferred if value in seen]
+    ordered.extend(sorted(seen - set(preferred)))
+    return ordered
+
+
+def _display_value(value: str) -> str:
+    return value if value else "none"
 
 
 def compare_findings_to_baseline(
@@ -599,12 +618,30 @@ def compare_findings_to_baseline(
                 "baseline_total": 0,
                 "existing": 0,
                 "new_regressions": 0,
+                "new_categories": 0,
                 "resolved": 0,
+                "resolved_categories": 0,
                 "increased": 0,
+                "increased_categories": 0,
+                "reduced": 0,
+                "reduced_categories": 0,
+                "unchanged": 0,
+                "unchanged_categories": 0,
+                "net_change": len(findings),
             },
             "new_regressions": [],
             "resolved": [],
             "increased": [],
+            "reduced": [],
+            "unchanged": [],
+            "comparison": {
+                "new_regressions": [],
+                "increased": [],
+                "reduced": [],
+                "unchanged": [],
+                "resolved": [],
+            },
+            "category_key_stability_warning": None,
             "notes": [],
         }
     if baseline_path is None:
@@ -655,7 +692,50 @@ def compare_findings_to_baseline(
         for key in current_keys & baseline_keys
         if current_categories[key]["count"] > baseline_categories[key]["count"]
     )
+    reduced_keys = sorted(
+        key
+        for key in current_keys & baseline_keys
+        if current_categories[key]["count"] < baseline_categories[key]["count"]
+    )
+    unchanged_keys = sorted(
+        key
+        for key in current_keys & baseline_keys
+        if current_categories[key]["count"] == baseline_categories[key]["count"]
+    )
     failed = bool(new_keys or increased_keys)
+    new_regressions = [_with_delta(current_categories[key], 0) for key in new_keys]
+    resolved = [
+        _with_delta(baseline_categories[key], baseline_categories[key]["count"], 0)
+        for key in resolved_keys
+    ]
+    increased = [
+        _with_delta(
+            current_categories[key],
+            baseline_categories[key]["count"],
+        )
+        for key in increased_keys
+    ]
+    reduced = [
+        _with_delta(
+            current_categories[key],
+            baseline_categories[key]["count"],
+        )
+        for key in reduced_keys
+    ]
+    unchanged = [
+        _with_delta(
+            current_categories[key],
+            baseline_categories[key]["count"],
+        )
+        for key in unchanged_keys
+    ]
+    stability_warning = _category_key_stability_warning(
+        new_count=len(new_keys),
+        resolved_count=len(resolved_keys),
+        baseline_count=len(baseline_keys),
+        current_count=len(current_keys),
+    )
+    notes = [stability_warning["message"]] if stability_warning else []
     return {
         "enabled": True,
         "status": "failed" if failed else "passed",
@@ -665,19 +745,76 @@ def compare_findings_to_baseline(
             "baseline_total": len(baseline_findings),
             "existing": len(current_keys & baseline_keys),
             "new_regressions": len(new_keys),
+            "new_categories": len(new_keys),
             "resolved": len(resolved_keys),
+            "resolved_categories": len(resolved_keys),
             "increased": len(increased_keys),
+            "increased_categories": len(increased_keys),
+            "reduced": len(reduced_keys),
+            "reduced_categories": len(reduced_keys),
+            "unchanged": len(unchanged_keys),
+            "unchanged_categories": len(unchanged_keys),
+            "net_change": len(findings) - len(baseline_findings),
         },
-        "new_regressions": [current_categories[key] for key in new_keys],
-        "resolved": [baseline_categories[key] for key in resolved_keys],
-        "increased": [
-            {
-                **current_categories[key],
-                "baseline_count": baseline_categories[key]["count"],
-            }
-            for key in increased_keys
-        ],
-        "notes": [],
+        "new_regressions": new_regressions,
+        "resolved": resolved,
+        "increased": increased,
+        "reduced": reduced,
+        "unchanged": unchanged,
+        "comparison": {
+            "new_regressions": new_regressions,
+            "increased": increased,
+            "reduced": reduced,
+            "unchanged": unchanged,
+            "resolved": resolved,
+        },
+        "category_key_stability_warning": stability_warning,
+        "notes": notes,
+    }
+
+
+def _with_delta(
+    category: dict[str, Any],
+    baseline_count: int,
+    current_count: int | None = None,
+) -> dict[str, Any]:
+    current = int(category["count"] if current_count is None else current_count)
+    baseline = int(baseline_count)
+    absolute_delta = current - baseline
+    percentage_delta = None
+    if baseline:
+        percentage_delta = round((absolute_delta / baseline) * 100, 1)
+    return {
+        **category,
+        "baseline_count": baseline,
+        "current_count": current,
+        "absolute_delta": absolute_delta,
+        "percentage_delta": percentage_delta,
+    }
+
+
+def _category_key_stability_warning(
+    *,
+    new_count: int,
+    resolved_count: int,
+    baseline_count: int,
+    current_count: int,
+) -> dict[str, Any] | None:
+    if baseline_count == 0 or current_count == 0:
+        return None
+    disappeared_ratio = resolved_count / baseline_count
+    new_ratio = new_count / current_count
+    if disappeared_ratio <= 0.2 or new_ratio <= 0.2:
+        return None
+    return {
+        "enabled": True,
+        "baseline_disappeared_ratio": round(disappeared_ratio, 3),
+        "current_new_ratio": round(new_ratio, 3),
+        "message": (
+            "More than 20% of baseline categories disappeared while more than "
+            "20% of current categories are new; this may indicate a KiCad "
+            "version or message text change rather than true design churn."
+        ),
     }
 
 
@@ -728,12 +865,30 @@ def _regression_error(
             "baseline_total": 0,
             "existing": 0,
             "new_regressions": 0,
+            "new_categories": 0,
             "resolved": 0,
+            "resolved_categories": 0,
             "increased": 0,
+            "increased_categories": 0,
+            "reduced": 0,
+            "reduced_categories": 0,
+            "unchanged": 0,
+            "unchanged_categories": 0,
+            "net_change": current_total,
         },
         "new_regressions": [],
         "resolved": [],
         "increased": [],
+        "reduced": [],
+        "unchanged": [],
+        "comparison": {
+            "new_regressions": [],
+            "increased": [],
+            "reduced": [],
+            "unchanged": [],
+            "resolved": [],
+        },
+        "category_key_stability_warning": None,
         "notes": [note],
     }
 

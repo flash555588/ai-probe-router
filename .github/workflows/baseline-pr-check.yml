@@ -1,0 +1,62 @@
+name: Baseline PR Check
+
+on:
+  pull_request:
+    paths:
+      - "validation/**/*native-baseline*.json"
+      - "validation/native-baseline*.json"
+      - "examples/**/native-baseline*.json"
+      - "examples/**/ci/*native-baseline*.json"
+      - "scripts/kicad_native_baseline_review.py"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  baseline-pr-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Validate changed native baselines
+        id: validate
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mapfile -t baselines < <(
+            git diff --name-only "$BASE_REF" "$HEAD_REF" -- \
+              'validation/**/*native-baseline*.json' \
+              'validation/native-baseline*.json' \
+              'examples/**/native-baseline*.json' \
+              'examples/**/ci/*native-baseline*.json'
+          )
+          if [ "${#baselines[@]}" -eq 0 ]; then
+            echo "No native baseline files changed."
+            exit 0
+          fi
+          for baseline in "${baselines[@]}"; do
+            python scripts/kicad_native_baseline_review.py \
+              --baseline "$baseline" \
+              --check-commit \
+              --markdown-output "validation/reports/$(basename "$baseline").review.md"
+          done
+
+      - name: Remind about baseline PR evidence
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !contains(github.event.pull_request.body || '', 'Native KiCad Baseline') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr comment "$PR_URL" --body \
+            "Native baseline files changed. Please add a 'Native KiCad Baseline' section to the PR body with the source run, KiCad version, and review rationale."
