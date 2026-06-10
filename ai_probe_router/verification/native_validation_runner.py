@@ -792,6 +792,22 @@ def _summary(
     }
 
 
+# DRC/ERC severities that are advisory and must not fail native validation.
+# Library bookkeeping (lib_footprint_mismatch / lib_footprint_issues) and
+# user-acknowledged items are reported as warnings, not manufacturability
+# defects. A finding without an explicit severity is treated as blocking.
+_NON_BLOCKING_SEVERITIES = frozenset({"warning", "exclusion", "ignore"})
+
+
+def _blocking_findings(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    blocking = []
+    for finding in findings:
+        severity = str(finding.get("severity", "")).strip().lower()
+        if severity not in _NON_BLOCKING_SEVERITIES:
+            blocking.append(finding)
+    return blocking
+
+
 def _status(
     *,
     health_ok: bool,
@@ -815,9 +831,10 @@ def _status(
         ):
             return "regression_failed"
         return "passed"
-    if any(result.exit_code not in (0, None) for result in results):
-        return "findings_failed"
-    if strict and findings:
+    # Only error-severity findings fail validation; warnings remain advisory and
+    # are still recorded in the grouped report. `strict` is retained for API
+    # stability but warnings no longer block under it.
+    if _blocking_findings(findings):
         return "findings_failed"
     return "passed"
 
@@ -845,9 +862,7 @@ def _return_code(
         return 3
     if options.block_new_regressions:
         return 1 if regression_result["status"] == "failed" else 0
-    if any(result.exit_code not in (0, None) for result in results):
-        return 1
-    if options.strict and findings:
+    if _blocking_findings(findings):
         return 1
     return 0
 
@@ -859,7 +874,12 @@ def _has_native_runtime_failure(results: list[NativeCheckResult]) -> bool:
         if result.key in {"erc", "drc"}:
             if result.json_path and not result.json_exists:
                 return True
-            if result.exit_code not in (0, None) and result.finding_count == 0:
+            # Exit code 5 is kicad-cli's documented --exit-code-violations
+            # signal ("violations present"), not a tool crash. The violations
+            # may be warnings or schematic-parity issues counted under a
+            # different check, so this command can legitimately report zero
+            # findings of its own. Only other non-zero codes mean a real crash.
+            if result.exit_code not in (0, None, 5) and result.finding_count == 0:
                 return True
     return False
 

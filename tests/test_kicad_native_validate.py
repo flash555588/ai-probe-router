@@ -45,7 +45,7 @@ def test_native_validate_writes_evidence_and_absolute_kicad_commands(
     monkeypatch.setattr(
         native_validation_runner.subprocess,
         "run",
-        _fake_kicad_run(commands, erc_exit=0, drc_exit=0),
+        _fake_kicad_run(commands, erc_exit=0, drc_exit=0, severity="warning"),
     )
 
     report_dir = tmp_path / "native-reports"
@@ -121,6 +121,27 @@ def test_native_validate_runs_all_commands_before_reporting_failure(
     assert summary["status"] == "findings_failed"
     assert summary["checks"]["erc"]["exit_code"] == 5
     assert summary["checks"]["drc"]["exit_code"] == 0
+
+
+def test_native_validate_warning_findings_do_not_fail(tmp_path: Path, monkeypatch):
+    """Warning-severity findings (and the exit-code-5 violations signal) must
+    not fail native validation, even under --strict."""
+    _write_project(tmp_path)
+    commands: list[tuple[list[str], dict[str, Any]]] = []
+
+    monkeypatch.setattr(native_validation_runner, "find_kicad_cli", lambda: "kicad-cli")
+    monkeypatch.setattr(
+        native_validation_runner.subprocess,
+        "run",
+        _fake_kicad_run(commands, erc_exit=5, drc_exit=5, severity="warning"),
+    )
+
+    result = kicad_native_validate.main([str(tmp_path), "--strict"])
+
+    summary = json.loads((tmp_path / "build" / "kicad" / "summary.json").read_text())
+    assert result == 0
+    assert summary["status"] == "passed"
+    assert summary["finding_count"] == 3
 
 
 def test_native_validate_blocks_new_regressions_against_baseline(
@@ -256,6 +277,7 @@ def _fake_kicad_run(
     *,
     erc_exit: int,
     drc_exit: int,
+    severity: str = "error",
 ):
     def fake_run(command: list[str], **kwargs: Any):
         commands.append((command, kwargs))
@@ -271,7 +293,7 @@ def _fake_kicad_run(
                     {
                         "violations": [
                             {
-                                "severity": "error",
+                                "severity": severity,
                                 "code": "unconnected_pin",
                                 "message": "Pin is not connected",
                                 "item": "U1 pin 1",
@@ -294,14 +316,14 @@ def _fake_kicad_run(
                     {
                         "violations": [
                             {
-                                "severity": "error",
+                                "severity": severity,
                                 "code": "clearance",
                                 "message": "Clearance violation",
                                 "item": "Net-(J1-Pad1)",
                                 "file": "main.kicad_pcb",
                             },
                             {
-                                "severity": "error",
+                                "severity": severity,
                                 "code": "schematic_parity_mismatch",
                                 "message": "Schematic parity mismatch",
                                 "item": "R1",
