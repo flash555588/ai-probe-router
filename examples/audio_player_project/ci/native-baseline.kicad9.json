@@ -1,0 +1,113 @@
+{
+  "counts": {
+    "finding_total": 8,
+    "group_total": 8
+  },
+  "findings": [
+    {
+      "fingerprint": "a08c1b53fb796a864c7ade1e866712574af1abe5",
+      "item": "",
+      "message": "Missing footprint J1 (USB-C)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    },
+    {
+      "fingerprint": "965810465cbcfa106d67e74d0965fc7cc5d29d2f",
+      "item": "",
+      "message": "Missing footprint U1 (STM32F405RGT6)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    },
+    {
+      "fingerprint": "ef31d5f3a2076379c1b47616dbd55919cb2acae0",
+      "item": "",
+      "message": "Missing footprint U2 (W25Q128JVSIM)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    },
+    {
+      "fingerprint": "472d235489ddb065b9af57129f5691af25932dd8",
+      "item": "",
+      "message": "Missing footprint U3 (ES9018K2M)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    },
+    {
+      "fingerprint": "204959d73007ad42ed85408dbe6a4f37dc261d25",
+      "item": "",
+      "message": "Missing footprint U4 (ES9601K)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    },
+    {
+      "fingerprint": "7697dc7d9bb5e8e0f02f2837719f17dbb03aa2a1",
+      "item": "",
+      "message": "Missing footprint U5 (MAX98357A_L)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    },
+    {
+      "fingerprint": "fa239998f7c087a3a34a409e7436bbc26e2e6e81",
+      "item": "",
+      "message": "Missing footprint U6 (MAX98357A_R)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    },
+    {
+      "fingerprint": "7722e77e8fc50507e826d5c87b4b3bf96e758de9",
+      "item": "",
+      "message": "Missing footprint Y1 (SG-210STF 38.4MHz)",
+      "path": "",
+      "severity": "warning",
+      "source": "parity",
+      "type": "missing_footprint"
+    }
+  ],
+  "generated_from": {
+    "artifact": "native-validation-reports",
+    "commit_sha": "ac52869ced02d6cd3257a807a176a2ba0b2b7a52",
+    "generated_at_utc": "2026-06-10T05:04:25Z",
+    "job": "native-kicad",
+    "repo": "flash555588/ai-probe-router",
+    "report_subdir": "validation/reports/audio",
+    "run_url": "https://github.com/flash555588/ai-probe-router/actions/runs/27254483296",
+    "summary": ".artifacts/baseline-capture/native-validation-reports/audio/summary.json",
+    "workflow": "ci.yml"
+  },
+  "kicad_major": 9,
+  "kicad_version": "9.0.7",
+  "policy": {
+    "allows_existing_findings": true,
+    "blocks_new_findings": true,
+    "category_key_fields": [
+      "source",
+      "severity",
+      "type",
+      "message"
+    ],
+    "fingerprint_fields": [
+      "source",
+      "severity",
+      "type",
+      "message",
+      "item",
+      "path"
+    ],
+    "fingerprint_format": "sha1-lowercase-hex-40"
+  },
+  "schema_version": 1
+}

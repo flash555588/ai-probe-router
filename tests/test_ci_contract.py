@@ -30,6 +30,15 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
     assert "continue-on-error: true" in native_job
     assert "--report-dir \"$PWD/validation/reports/audio\"" in workflow
     assert "--report-dir \"$PWD/validation/reports/smoke\"" in workflow
+    assert (
+        "--baseline \"$PWD/examples/audio_player_project/ci/native-baseline.kicad9.json\""
+        in workflow
+    )
+    assert "--block-new-regressions" in workflow
+    smoke_step = workflow.split("Validate generated native sample", 1)[1]
+    smoke_step = smoke_step.split("Verify native report artifacts", 1)[0]
+    assert "--baseline" not in smoke_step
+    assert "--block-new-regressions" not in smoke_step
     assert "--require-kicad" in workflow
     assert "--strict" in workflow
     assert "--exit-code-violations" in (
