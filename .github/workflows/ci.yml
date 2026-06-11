@@ -29,7 +29,7 @@ jobs:
         uses: astral-sh/setup-uv@v8.2.0
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --system
+        run: uv pip install -e ".[dev]" --system --locked
 
       - name: Lint
         run: ruff check .
@@ -55,7 +55,7 @@ jobs:
         uses: astral-sh/setup-uv@v8.2.0
 
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --system
+        run: uv pip install -e ".[dev]" --system --locked
 
       - name: Upgrade pip (fix PYSEC-2026-196 in the runner toolchain)
         run: python -m pip install --upgrade "pip>=26.1.2"
@@ -77,9 +77,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.2.0
-
       - name: Install dependencies
-        run: uv pip install -e ".[dev]" --system
+        run: uv pip install -e ".[dev]" --system --locked
 
       - name: Required native KiCad validation
         id: audio_native
@@ -129,7 +128,9 @@ jobs:
             require_autorouter_feedback: false
             require_manufacturing_exports: true
           YAML
-          apr generate /tmp/apr-native-smoke/config.yaml -d /tmp/apr-native-smoke
+          apr generate /tmp/apr-native-smoke/config.yaml \
+            -d /tmp/apr-native-smoke \
+            --quality-gate "$PWD/ci/thresholds/minimal.json"
           test -f /tmp/apr-native-smoke/output/main.kicad_pcb
           test -f /tmp/apr-native-smoke/output/main.kicad_sch
           test -f /tmp/apr-native-smoke/output/manufacturing/placement.csv

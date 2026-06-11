@@ -238,6 +238,7 @@ Text reports, `bom_report.csv`, and generated module sheets include a determinis
 |------|-------------|
 | `*.kicad_pcb` | Updated PCB with testpoints, connector, fiducials, tooling holes, keepouts |
 | `*.kicad_sch` | Updated schematic with testpoint symbols, connector, protection circuits |
+| `*.kicad_pro` | KiCad project file carrying the configured design rules so native DRC validates against them |
 | `testpoint_report.txt` | Coverage report with net class recommendations and review gates |
 | `pin_mapping_report.txt` | Development board pin assignment table |
 | `module_report.txt` | Schema v2 module selections, rejected alternatives, and review gates |
