@@ -43,3 +43,4 @@ Thumbs.db
 
 # Lock file (uv managed)
 uv.lock
+.history
