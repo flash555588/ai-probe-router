@@ -23,6 +23,7 @@ _TOP_LEVEL_SECTION_TYPES: dict[str, type | tuple[type, ...]] = {
     "nets_to_expose": list,
     "routing_rules": dict,
     "placement_rules": dict,
+    "fabrication": dict,
     "development_board": dict,
     "protection": dict,
     "impedance_control": dict,
@@ -128,6 +129,7 @@ _NET_KEYS = {
 _ROUTING_RULE_KEYS = {
     "analog_trace_width_mm",
     "avoid_under_components",
+    "backend",
     "default_trace_width_mm",
     "diff_pair_routing",
     "max_vias_per_signal",
@@ -140,6 +142,13 @@ _DIFF_PAIR_ROUTING_KEYS = {
     "max_skew_ps",
     "min_gap_mm",
     "trace_width_mm",
+}
+_FABRICATION_KEYS = {
+    "min_clearance_mm",
+    "min_drill_mm",
+    "min_trace_width_mm",
+    "preferred_via_drill_mm",
+    "soldermask_expansion_mm",
 }
 _PLACEMENT_RULE_KEYS = {
     "avoid_tall_components",
@@ -261,6 +270,7 @@ def validate_config(raw: Any) -> dict[str, Any]:
     _validate_routing_rules(raw.get("routing_rules", {}))
     _validate_placement_rules(raw.get("placement_rules", {}))
     _validate_development_board(raw.get("development_board", {}))
+    _validate_fabrication(raw.get("fabrication", {}))
     _validate_crystal(raw.get("crystal", {}))
     _validate_protection(raw.get("protection", {}))
     _validate_impedance_control(raw.get("impedance_control", {}))
@@ -481,6 +491,11 @@ def _validate_routing_rules(raw: Mapping[str, Any]) -> None:
     _optional_number(raw, "min_clearance_mm", "routing_rules.min_clearance_mm", minimum=0)
     _optional_int(raw, "max_vias_per_signal", "routing_rules.max_vias_per_signal", minimum=0)
     _optional_bool(raw, "avoid_under_components", "routing_rules.avoid_under_components")
+    backend = raw.get("backend")
+    if backend is not None and backend not in {"freerouting", "grid", "auto"}:
+        raise ConfigValidationError(
+            f"routing_rules.backend must be one of 'freerouting', 'grid', 'auto'; got '{backend}'"
+        )
     _optional_number(
         raw,
         "analog_trace_width_mm",
@@ -499,6 +514,34 @@ def _validate_routing_rules(raw: Mapping[str, Any]) -> None:
             _optional_number(spec, "impedance_ohm", f"{spec_path}.impedance_ohm", minimum=0)
             _optional_number(spec, "max_skew_ps", f"{spec_path}.max_skew_ps", minimum=0)
 
+
+def _validate_fabrication(raw: Mapping[str, Any]) -> None:
+    _reject_unknown_keys(raw, _FABRICATION_KEYS, "fabrication")
+    _optional_number(
+        raw,
+        "min_trace_width_mm",
+        "fabrication.min_trace_width_mm",
+        minimum=0.05,
+    )
+    _optional_number(
+        raw,
+        "min_clearance_mm",
+        "fabrication.min_clearance_mm",
+        minimum=0.05,
+    )
+    _optional_number(raw, "min_drill_mm", "fabrication.min_drill_mm", minimum=0.05)
+    _optional_number(
+        raw,
+        "preferred_via_drill_mm",
+        "fabrication.preferred_via_drill_mm",
+        minimum=0.05,
+    )
+    _optional_number(
+        raw,
+        "soldermask_expansion_mm",
+        "fabrication.soldermask_expansion_mm",
+        minimum=0,
+    )
 
 def _validate_placement_rules(raw: Mapping[str, Any]) -> None:
     _reject_unknown_keys(raw, _PLACEMENT_RULE_KEYS, "placement_rules")

@@ -7,9 +7,11 @@ from dataclasses import dataclass
 class RoutingRules:
     default_trace_width_mm: float = 0.15
     power_trace_width_mm: float = 0.5
+    analog_trace_width_mm: float = 0.2
     min_clearance_mm: float = 0.15
     max_vias_per_signal: int = 2
     avoid_under_components: bool = True
+    backend: str = "freerouting"
 
 
 @dataclass

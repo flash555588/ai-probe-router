@@ -48,6 +48,9 @@ class CoverageReport:
     unrouted_connections: int = 0
     routing_messages: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    # Final verdict copied from the ReadinessReport once delivery artifacts
+    # are written: "PASS" | "PASS_WITH_REVIEW" | "BLOCKED" | None (not run).
+    readiness_verdict: str | None = None
 
     @property
     def coverage_pct(self) -> float:

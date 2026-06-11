@@ -9,7 +9,7 @@ import yaml
 
 from .config_schema import ConfigValidationError as ConfigValidationError
 from .config_schema import validate_config
-from .models.constraints import Constraints, PlacementRules, RoutingRules
+from .models.constraints import Constraints, ManufacturingRules, PlacementRules, RoutingRules
 from .models.design_graph import (
     DesignGoals,
     HardwarePlatform,
@@ -183,9 +183,11 @@ def load_config(path: str | Path) -> ProjectConfig:
     cfg.constraints.routing = RoutingRules(
         default_trace_width_mm=rr.get("default_trace_width_mm", 0.15),
         power_trace_width_mm=rr.get("power_trace_width_mm", 0.5),
+        analog_trace_width_mm=rr.get("analog_trace_width_mm", 0.2),
         min_clearance_mm=rr.get("min_clearance_mm", 0.15),
         max_vias_per_signal=rr.get("max_vias_per_signal", 2),
         avoid_under_components=rr.get("avoid_under_components", True),
+        backend=rr.get("backend", "freerouting"),
     )
     pr = raw.get("placement_rules", {})
     cfg.constraints.placement = PlacementRules(
@@ -194,6 +196,15 @@ def load_config(path: str | Path) -> ProjectConfig:
         min_distance_from_board_edge_mm=pr.get("min_distance_from_board_edge_mm", 2.0),
         group_by_function=pr.get("group_by_function", True),
     )
+    fab = raw.get("fabrication", {})
+    if fab:
+        cfg.constraints.manufacturing = ManufacturingRules(
+            min_trace_width_mm=fab.get("min_trace_width_mm", 0.15),
+            min_clearance_mm=fab.get("min_clearance_mm", 0.15),
+            min_drill_mm=fab.get("min_drill_mm", 0.3),
+            preferred_via_drill_mm=fab.get("preferred_via_drill_mm", 0.3),
+            soldermask_expansion_mm=fab.get("soldermask_expansion_mm", 0.05),
+        )
     db = raw.get("development_board", {})
     db_path = db.get("pin_database", "")
     if db_path:

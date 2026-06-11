@@ -283,7 +283,6 @@ def _effective_min_clearance(constraints: Constraints) -> float:
     return max(
         constraints.manufacturing.min_clearance_mm,
         constraints.routing.min_clearance_mm,
-        0.20,
     )
 
 
