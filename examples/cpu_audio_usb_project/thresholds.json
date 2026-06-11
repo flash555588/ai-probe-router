@@ -1,0 +1,9 @@
+{
+  "min_coverage_pct": 70.0,
+  "max_unrouted_connections": 0,
+  "require_routing_pass": false,
+  "require_erc_pass": false,
+  "require_drc_pass": false,
+  "max_erc_violations": 0,
+  "max_drc_violations": 15
+}

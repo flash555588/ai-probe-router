@@ -1,0 +1,92 @@
+schema_version: 2
+
+project:
+  name: "cpu-audio-usb-demo"
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+
+fabrication:
+  min_trace_width_mm: 0.15
+  min_clearance_mm: 0.15
+  min_drill_mm: 0.3
+
+routing_rules:
+  default_trace_width_mm: 0.15
+  power_trace_width_mm: 0.5
+  analog_trace_width_mm: 0.2
+  min_clearance_mm: 0.15
+  max_vias_per_signal: 2
+  avoid_under_components: true
+  backend: freerouting
+
+nets_to_expose:
+  # Audio nets - 3.5mm headphone jack
+  - net: HP_L
+    role: analog
+    required: true
+  - net: HP_R
+    role: analog
+    required: true
+  - net: HP_MIC
+    role: analog
+    required: true
+  - net: HP_GND
+    role: ground
+    required: true
+    duplicate_probe_count: 2
+  - net: HP_DETECT
+    role: digital
+    required: false
+
+  # USB nets - Type-C connector
+  - net: USB_DP
+    role: communication
+    required: true
+    pair_with: USB_DM
+  - net: USB_DM
+    role: communication
+    required: true
+    pair_with: USB_DP
+  - net: USB_VBUS
+    role: power
+    required: true
+    current_ma: 500
+  - net: USB_GND
+    role: ground
+    required: true
+    duplicate_probe_count: 2
+  - net: USB_ID
+    role: digital
+    required: false
+
+  # System nets
+  - net: GND
+    role: ground
+    required: true
+    duplicate_probe_count: 4
+  - net: "3V3"
+    role: power
+    required: true
+    current_ma: 300
+
+  # Debug nets
+  - net: SWDIO
+    role: debug
+    required: true
+  - net: SWCLK
+    role: debug
+    required: true
+
+process_controls:
+  strict_signoff: false
+  require_autorouter_feedback: false
+  require_manufacturing_exports: false

@@ -1,0 +1,165 @@
+project:
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.2
+  min_probe_spacing_mm: 5.08
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+  require_fiducials: true
+  require_tooling_holes: true
+
+nets_to_expose:
+  # Debug / reset
+  - net: SWDIO
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA13]
+  - net: SWCLK
+    role: debug
+    required: true
+    preferred_devboard_pins: [PA14]
+  - net: NRST
+    role: reset
+    required: false
+
+  # Communication
+  - net: CAN_TX
+    role: communication
+    required: true
+    preferred_devboard_pins: [D8_PA9]
+  - net: CAN_RX
+    role: communication
+    required: true
+    preferred_devboard_pins: [D2_PA10]
+  - net: UART_TX
+    role: communication
+    required: false
+    preferred_devboard_pins: [D1_PA2]
+  - net: UART_RX
+    role: communication
+    required: false
+    preferred_devboard_pins: [D0_PA3]
+
+  # Three-phase PWM (STM32 TIM3 -> GD8353)
+  - net: PWM_AH
+    role: digital
+    required: true
+    preferred_devboard_pins: [D11_PA7]
+  - net: PWM_AL
+    role: digital
+    required: true
+    preferred_devboard_pins: [D12_PA6]
+  - net: PWM_BH
+    role: digital
+    required: true
+    preferred_devboard_pins: [A3_PB0]
+  - net: PWM_BL
+    role: digital
+    required: true
+    preferred_devboard_pins: [A4_PC1]
+  - net: PWM_CH
+    role: digital
+    required: true
+    preferred_devboard_pins: [D5_PB4]
+  - net: PWM_CL
+    role: digital
+    required: true
+    preferred_devboard_pins: [D4_PB5]
+
+  # Quadrature encoder
+  - net: ENC_A
+    role: digital
+    required: false
+  - net: ENC_B
+    role: digital
+    required: false
+
+  # Current sensing (3-shunt)
+  - net: I_SENSE_A
+    role: analog
+    required: true
+    preferred_devboard_pins: [A0_PA0]
+  - net: I_SENSE_B
+    role: analog
+    required: true
+    preferred_devboard_pins: [A1_PA1]
+  - net: I_SENSE_C
+    role: analog
+    required: true
+    preferred_devboard_pins: [A2_PA4]
+
+  # Power monitoring
+  - net: VBUS_SENSE
+    role: analog
+    required: false
+  - net: DC_BUS
+    role: analog
+    required: false
+  - net: TEMP_MOTOR
+    role: analog
+    required: false
+
+  # Gate driver control
+  - net: nFAULT
+    role: digital
+    required: false
+  - net: ENABLE
+    role: digital
+    required: false
+
+  # Power / ground
+  - net: GND
+    role: ground
+    required: true
+    duplicate_probe_count: 4
+  - net: 3V3
+    role: power
+    required: true
+    current_ma: 400
+  - net: VM
+    role: power
+    required: false
+    current_ma: 2000
+
+routing_rules:
+  default_trace_width_mm: 0.2
+  power_trace_width_mm: 0.5
+  min_clearance_mm: 0.15
+  max_vias_per_signal: 2
+  avoid_under_components: true
+
+placement_rules:
+  keep_probe_pads_on_grid: true
+  avoid_tall_components: true
+  min_distance_from_board_edge_mm: 2.0
+  group_by_function: true
+
+development_board:
+  pin_database: ../libraries/dev_boards/stm32_nucleo_64.yaml
+
+thermal_analysis:
+  enabled: true
+  max_junction_temp_c: 150.0
+  ambient_temp_c: 40.0
+  output_format: csv
+
+protection:
+  enabled: true
+  debug:
+    type: series_resistor
+    value: "33"
+    package: "0402"
+  reset:
+    type: series_resistor
+    value: "100"
+    package: "0402"
+  power:
+    type: ferrite_bead
+    value: "600R@100MHz"
+    package: "0603"
+    ref_prefix: FB

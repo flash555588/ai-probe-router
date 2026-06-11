@@ -1,0 +1,70 @@
+schema_version: 2
+
+project:
+  name: "ai-probe-router-demo"
+  eda_tool: kicad
+  board_file: main.kicad_pcb
+  schematic_file: main.kicad_sch
+
+probe_interface:
+  type: test_pad
+  side: top
+  pad_diameter_mm: 1.5
+  min_probe_spacing_mm: 2.54
+  preferred_grid_mm: 2.54
+  require_silkscreen_labels: true
+  require_fiducials: false
+  require_tooling_holes: false
+
+# 本轮新增: fabrication 配置段（此前硬编码 0.20，现在尊重配置）
+fabrication:
+  min_trace_width_mm: 0.15
+  min_clearance_mm: 0.15
+  min_drill_mm: 0.3
+  preferred_via_drill_mm: 0.3
+  soldermask_expansion_mm: 0.05
+
+# 本轮新增: routing_rules.backend 选择路由后端
+routing_rules:
+  default_trace_width_mm: 0.15
+  power_trace_width_mm: 0.5
+  analog_trace_width_mm: 0.2
+  min_clearance_mm: 0.15
+  max_vias_per_signal: 2
+  avoid_under_components: true
+  backend: freerouting   # freerouting | grid | auto
+
+nets_to_expose:
+  - net: SWDIO
+    role: debug
+    required: true
+  - net: SWCLK
+    role: debug
+    required: true
+  - net: GND
+    role: ground
+    required: true
+    duplicate_probe_count: 2
+  - net: 3V3
+    role: power
+    required: true
+  - net: NRST
+    role: debug
+    required: false
+  - net: UART_TX
+    role: digital
+    required: true
+  - net: UART_RX
+    role: digital
+    required: true
+  - net: I2C_SCL
+    role: digital
+    required: false
+  - net: I2C_SDA
+    role: digital
+    required: false
+
+process_controls:
+  strict_signoff: false
+  require_autorouter_feedback: false
+  require_manufacturing_exports: false
