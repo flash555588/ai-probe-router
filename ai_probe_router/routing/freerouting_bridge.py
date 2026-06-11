@@ -155,12 +155,18 @@ def route_board(
     dsn_path: str | Path,
     output_dir: str | Path | None = None,
     timeout_sec: float = 300.0,
+    *,
+    trace_width_um: int = 150,
+    clearance_um: int = 150,
 ):
     """High-level helper: export DSN, run FreeRouting, import SES."""
     from .dsn_export import export_dsn
     from .ses_import import import_ses
 
-    export_dsn(board, dsn_path)
+    export_dsn(
+        board, dsn_path,
+        trace_width_um=trace_width_um, clearance_um=clearance_um,
+    )
     result = run_freerouting(dsn_path, output_dir, timeout_sec)
     if result.ses_path:
         import_ses(board, result.ses_path)

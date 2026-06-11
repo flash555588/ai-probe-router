@@ -323,7 +323,7 @@ def test_engine_strict_signoff_blocks_manufacturing_export_failure(
     _write_export_contract_config(tmp_path, "  strict_signoff: true\n")
 
     monkeypatch.setattr(
-        "ai_probe_router.engine.run_native_validation",
+        "ai_probe_router.pipeline.native_tools.run_native_validation",
         _successful_native_validation,
     )
     monkeypatch.setattr(
@@ -354,7 +354,7 @@ def test_engine_strict_signoff_blocks_native_validation_failure(
     _write_export_contract_config(tmp_path, "  strict_signoff: true\n")
 
     monkeypatch.setattr(
-        "ai_probe_router.engine.run_native_validation",
+        "ai_probe_router.pipeline.native_tools.run_native_validation",
         lambda *args, **kwargs: NativeValidationResult(
             drc=CheckResult(ok=False, error="native DRC failed"),
         ),
@@ -384,9 +384,8 @@ def test_engine_required_manufacturing_exports_block_failure(
         tmp_path,
         "  require_manufacturing_exports: true\n",
     )
-
     monkeypatch.setattr(
-        "ai_probe_router.engine.run_native_validation",
+        "ai_probe_router.pipeline.native_tools.run_native_validation",
         _successful_native_validation,
     )
     monkeypatch.setattr(
@@ -418,7 +417,9 @@ def test_engine_records_autorouter_failure_in_soft_mode(tmp_path, monkeypatch):
         coverage.notes.append("Auto-route failed: FreeRouting not found")
         return result
 
-    monkeypatch.setattr("ai_probe_router.engine.run_autorouter", fake_autorouter)
+    monkeypatch.setattr(
+        "ai_probe_router.pipeline.autorouter.run_autorouter", fake_autorouter
+    )
 
     report, _ = run(load_config(tmp_path / "config.yaml"), tmp_path)
 
@@ -443,7 +444,10 @@ def test_engine_required_autorouter_feedback_blocks_failure(tmp_path, monkeypatc
     def fake_autorouter(*_args, **_kwargs):
         raise RuntimeError("Auto-route failed: FreeRouting failed")
 
-    monkeypatch.setattr("ai_probe_router.engine.run_autorouter", fake_autorouter)
+    monkeypatch.setattr(
+        "ai_probe_router.pipeline.engine_pipeline.autorouter_stage",
+        lambda ctx: fake_autorouter(),
+    )
 
     try:
         run(load_config(tmp_path / "config.yaml"), tmp_path)

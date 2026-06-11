@@ -86,6 +86,7 @@ def write_delivery_artifacts(
         footprint_preview_result=footprint_preview_result,
     )
     readiness.write(out_dir / "readiness_report.txt")
+    coverage.readiness_verdict = readiness.verdict
     artifacts = collect_artifact_manifest(out_dir)
     manifest = write_decision_manifest(
         out_dir / "decision_manifest.json",

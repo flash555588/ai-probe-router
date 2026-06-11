@@ -34,7 +34,7 @@ def test_sample_generation_preserves_expected_probe_semantics(tmp_path: Path, mo
     # Keep the verdict deterministic regardless of whether a real kicad-cli is
     # installed locally; native validation is exercised by dedicated tests.
     monkeypatch.setattr(
-        "ai_probe_router.engine.run_native_validation",
+        "ai_probe_router.pipeline.native_tools.run_native_validation",
         _successful_native_validation,
     )
 

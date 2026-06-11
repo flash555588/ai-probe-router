@@ -7,10 +7,18 @@ from pathlib import Path
 from ..models.board import Board
 
 
-def export_dsn(board: Board, path: str | Path) -> None:
+def export_dsn(
+    board: Board,
+    path: str | Path,
+    *,
+    trace_width_um: int = 150,
+    clearance_um: int = 150,
+) -> None:
     """Write a minimal DSN file from the board model.
 
-    Includes board outline, netlist, placement, and basic design rules.
+    *trace_width_um* and *clearance_um* are expressed in micrometres and
+    forwarded to the DSN structure rules so that the external autorouter
+    respects the same constraints as the internal grid router.
     """
     lines = ['(pcb "ai_probe_router_export"']
     lines.append("  (parser")
@@ -21,16 +29,20 @@ def export_dsn(board: Board, path: str | Path) -> None:
     lines.append("  (resolution um 10)")
     lines.append("  (unit um)")
 
-    _write_structure(lines, board)
+    _write_structure(lines, board, trace_width_um=trace_width_um, clearance_um=clearance_um)
     _write_placement(lines, board)
     _write_library(lines, board)
     _write_network(lines, board)
 
     lines.append(")")
     Path(path).write_text("\n".join(lines), encoding="utf-8")
-
-
-def _write_structure(lines: list[str], board: Board) -> None:
+def _write_structure(
+    lines: list[str],
+    board: Board,
+    *,
+    trace_width_um: int = 150,
+    clearance_um: int = 150,
+) -> None:
     lines.append("  (structure")
     bounds = board.board_bounds()
     if bounds:
@@ -46,8 +58,8 @@ def _write_structure(lines: list[str], board: Board) -> None:
 
     lines.append('    (layer TOP (type signal))')
     lines.append('    (layer BOTTOM (type signal))')
-    lines.append("    (rule (width 150))")
-    lines.append("    (rule (clearance 150))")
+    lines.append(f"    (rule (width {trace_width_um}))")
+    lines.append(f"    (rule (clearance {clearance_um}))")
     lines.append("  )")
 
 

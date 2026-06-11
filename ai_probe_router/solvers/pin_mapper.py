@@ -1,7 +1,8 @@
 """Constraint-based pin mapper: maps target nets to development-board pins.
 
-Phase 2 uses a deterministic greedy solver with backtracking.
-Future: upgrade to OR-Tools CP-SAT for global optimization.
+Phase 2 solves globally with OR-Tools CP-SAT (``pin_mapper_cp_sat``) and
+falls back to a deterministic greedy solver with backtracking when CP-SAT
+is unavailable or fails.
 """
 
 from __future__ import annotations
@@ -61,6 +62,32 @@ def load_dev_board(path: str | Path) -> DevelopmentBoard:
 
 
 def solve_mapping(
+    requirements: list[ProbeRequirement],
+    board: DevelopmentBoard,
+    use_cp_sat: bool = True,
+) -> MappingResult:
+    """Map target nets to development-board pins.
+
+    By default uses OR-Tools CP-SAT for global optimization.  Falls back to
+    the deterministic greedy solver if CP-SAT is unavailable or fails.
+    """
+    if use_cp_sat:
+        try:
+            from .pin_mapper_cp_sat import solve_mapping_cp_sat
+
+            result = solve_mapping_cp_sat(requirements, board)
+            if not result.errors:
+                return result
+            # CP-SAT returned errors; fall through to greedy
+        except Exception:
+            # CP-SAT not available or crashed; fall through to greedy
+            pass
+
+    # Greedy fallback
+    return _solve_mapping_greedy(requirements, board)
+
+
+def _solve_mapping_greedy(
     requirements: list[ProbeRequirement],
     board: DevelopmentBoard,
 ) -> MappingResult:

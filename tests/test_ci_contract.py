@@ -18,7 +18,7 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
     assert "astral-sh/setup-uv@v4" not in workflow
     assert "actions/upload-artifact@v6" in workflow
     assert "dependency-audit:" in workflow
-    assert 'uv pip install -e ".[dev]" --system' in workflow
+    assert 'uv pip install -e ".[dev]" --system --locked' in workflow
     assert "pip-audit --progress-spinner off" in workflow
     assert "native-kicad:" in workflow
     native_job = workflow.split("native-kicad:", 1)[1]
@@ -54,7 +54,8 @@ def test_ci_shows_skips_and_has_native_kicad_gate():
         / "native_validation_runner.py"
     ).read_text(encoding="utf-8")
     assert "Generate strict native sample" in workflow
-    assert "apr generate /tmp/apr-native-smoke/config.yaml -d /tmp/apr-native-smoke" in workflow
+    assert "apr generate /tmp/apr-native-smoke/config.yaml" in workflow
+    assert "-d /tmp/apr-native-smoke" in workflow
     assert "strict_signoff: true" in workflow
     assert "require_manufacturing_exports: true" in workflow
     assert "Validate generated native sample" in workflow

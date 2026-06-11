@@ -66,6 +66,14 @@ def test_dsn_rules_present(tmp_path):
     assert "(rule (width 150))" in text
     assert "(rule (clearance 150))" in text
 
+def test_dsn_custom_rules(tmp_path):
+    board = _make_board()
+    out = tmp_path / "test.dsn"
+    export_dsn(board, out, trace_width_um=200, clearance_um=250)
+    text = out.read_text(encoding="utf-8")
+    assert "(rule (width 200))" in text
+    assert "(rule (clearance 250))" in text
+
 
 def test_dsn_no_board_outline(tmp_path):
     board = Board(raw=["kicad_pcb"], nets={}, footprints=[], edges=[])

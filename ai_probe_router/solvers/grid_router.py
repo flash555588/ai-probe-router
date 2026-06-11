@@ -1,4 +1,11 @@
-"""Grid/A* electrical router with pad, track, and board keepouts."""
+"""Single-net A* grid router — debug / fallback path only.
+
+This router is intentionally lightweight: single-layer, four-neighbour,
+no rip-up-and-retry, no congestion feedback.  It is suitable for short
+pad-to-probe connections in Phase 1 and as a fallback when FreeRouting
+is unavailable.  For multi-net or dense boards, use the FreeRouting
+backend instead (routing_rules.backend: freerouting).
+"""
 
 from __future__ import annotations
 

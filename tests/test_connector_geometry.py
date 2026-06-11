@@ -1,8 +1,8 @@
 from ai_probe_router.config import ProjectConfig
-from ai_probe_router.engine import _run_phase2
 from ai_probe_router.models.board import Board, EdgeSegment
 from ai_probe_router.models.dev_board import DevBoardPin, DevelopmentBoard
 from ai_probe_router.models.probe import ProbeConfig, ProbeRequirement, ProbeStyle
+from ai_probe_router.pipeline.phase2_pinmap import run_phase2
 
 
 def test_phase2_connector_uses_dev_board_rows_and_pins_per_row():
@@ -31,7 +31,7 @@ def test_phase2_connector_uses_dev_board_rows_and_pins_per_row():
         nets_to_expose=[ProbeRequirement(net_name="GND", role="ground")],
     )
 
-    report = _run_phase2(cfg, board, None, dev_board)
+    report = run_phase2(cfg, board, None, dev_board)
 
     assert report.result.ok
     connector = next(fp for fp in board.footprints if fp.ref == "J1")

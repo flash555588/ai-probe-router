@@ -13,6 +13,7 @@ from .eda_adapters.kicad.pcb_parser import parse_pcb
 from .eda_adapters.kicad.pcb_writer import write_pcb
 from .engine import run
 from .routing.ses_import import import_ses
+from .verification.quality_gate import check_quality_gate, load_thresholds_from_json
 
 console = Console()
 
@@ -27,7 +28,9 @@ def main():
 @click.argument("config_file", type=click.Path(exists=True))
 @click.option("--project-dir", "-d", type=click.Path(exists=True), default=".",
               help="KiCad project directory")
-def generate(config_file: str, project_dir: str):
+@click.option("--quality-gate", type=click.Path(exists=True), default=None,
+              help="Path to quality-gate thresholds JSON")
+def generate(config_file: str, project_dir: str, quality_gate: str | None):
     """Generate testpoints from a YAML config."""
     cfg = load_config(config_file)
     console.print(f"[bold]Loading config:[/] {config_file}")
@@ -95,12 +98,31 @@ def generate(config_file: str, project_dir: str):
     if report.constraint_ok is not None:
         if report.constraint_ok:
             s = "[green]PASS[/]"
+    for msg in report.constraint_messages:
+        console.print(f"  [dim]- {msg}[/]")
+
+    if quality_gate:
+        thresholds = load_thresholds_from_json(quality_gate)
+        gate = check_quality_gate(report, thresholds)
+        console.print()
+        if gate.passed:
+            console.print("[green]Quality gate: PASS[/]")
         else:
-            s = f"[yellow]WARN ({report.constraint_violations})[/]"
-        console.print(f"Constraints: {s}")
-        for msg in report.constraint_messages:
-            console.print(f"  [dim]- {msg}[/]")
+            console.print("[red]Quality gate: FAIL[/]")
+            for reason in gate.failures:
+                console.print(f"  [red]- {reason}[/]")
+            raise click.ClickException(
+                f"Quality gate failed with {len(gate.failures)} issue(s)"
+            )
+
     console.print(f"\nOutput written to: {Path(project_dir) / 'output'}")
+
+    if report.readiness_verdict == "BLOCKED":
+        console.print(
+            "[red]Readiness: BLOCKED[/] (see readiness_report.txt); "
+            "artifacts were still written"
+        )
+        raise SystemExit(2)
 
 
 @main.command()
